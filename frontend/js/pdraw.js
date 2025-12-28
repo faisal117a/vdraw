@@ -233,18 +233,7 @@ function updateOpsList() {
     }).join('');
 }
 
-// Reset Ops List
-pdrawOperations = [];
-renderOpList();
 
-// Clear output/diagram
-pdrawDom.divOutput.innerHTML = `<div class="flex flex-col items-center justify-center h-full text-center text-slate-500 opacity-50">
-                                <i class="fa-solid fa-code text-4xl mb-2"></i>
-                                <p>Structure updated. Build plan to simulate.</p>
-                             </div>`;
-pdrawDom.divDiagram.innerHTML = '<p class="text-xs text-slate-600 italic">Visual representation area</p>';
-pdrawDom.lblDiag.innerText = 'Reset';
-}
 
 function renderOpParams() {
     if (!pdrawCatalog) return;

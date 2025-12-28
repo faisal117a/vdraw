@@ -191,6 +191,33 @@ function renderOpParams() {
     `).join('');
 }
 
+
+function resultValue(v) {
+    // Helper used by JSON.stringify replacer, purely visual mapping
+    return v;
+}
+
+function parseValue(val) {
+    if (typeof val !== 'string') return val;
+    val = val.trim();
+    if (val === '') return '';
+
+    // Check for quoted strings
+    if ((val.startsWith("'") && val.endsWith("'")) || (val.startsWith('"') && val.endsWith('"'))) {
+        return val.slice(1, -1);
+    }
+
+    // Check for number
+    if (!isNaN(val)) return Number(val);
+
+    // Default string (without quotes, unless it looks like boolean/null)
+    if (val.toLowerCase() === 'true') return true;
+    if (val.toLowerCase() === 'false') return false;
+    if (val.toLowerCase() === 'null') return null;
+
+    return val;
+}
+
 function addOperation() {
     const structData = pdrawCatalog.find(s => s.id === currentStructure);
     const opId = pdrawDom.selOp.value;
@@ -201,8 +228,12 @@ function addOperation() {
         const input = document.getElementById(`param-${p.name}`);
         if (input) {
             let val = input.value;
-            if (p.type === 'int') val = parseInt(val);
-            // Handle quotes for string if needed, currently assuming raw value
+            // Use smart parser unless explicitly int type
+            if (p.type === 'int') {
+                val = parseInt(val);
+            } else {
+                val = parseValue(val);
+            }
             args[p.name] = val;
         }
     });
@@ -222,29 +253,30 @@ function renderOpList() {
         return;
     }
 
-    pdrawDom.listOps.innerHTML = pdrawOperations.map((op, idx) => `
+    pdrawDom.listOps.innerHTML = pdrawOperations.map((op, idx) => {
+        // Pretty print args
+        const displayArgs = Object.entries(op.args).map(([k, v]) => {
+            const valStr = typeof v === 'string' ? `'${v}'` : v;
+            return `${k}=${valStr}`;
+        }).join(', ');
+
+        return `
         <li class="flex justify-between items-center bg-slate-800 p-2 rounded text-xs border border-slate-700 animate-fade-in-up">
             <div>
                 <span class="font-bold text-green-400">${op.label}</span>
-                <span class="text-slate-400 ml-1">(${JSON.stringify(op.args).replace(/["{}]/g, '').replace(/:/g, '=')})</span>
+                <span class="text-slate-400 ml-1">(${displayArgs})</span>
             </div>
-            <button onclick="removeOperation(${idx})" class="text-slate-500 hover:text-red-400">
+            <button onclick="window.removeOperation(${idx})" class="text-slate-500 hover:text-red-400">
                 <i class="fa-solid fa-trash"></i>
             </button>
         </li>
-    `).join('');
-
-    window.removeOperation = removeOperation;
+    `}).join('');
 }
 
 async function runSimulation() {
     const rawInit = pdrawDom.txtInit.value;
-    // Simple CSV parser
-    const initialValues = rawInit.split(',').map(s => {
-        const val = s.trim();
-        if (!isNaN(val) && val !== '') return Number(val);
-        return val;
-    }).filter(v => v !== '');
+    // Enhanced CSV parser
+    const initialValues = rawInit.split(',').map(parseValue).filter(v => v !== '');
 
     const payload = {
         structure: currentStructure,
@@ -360,19 +392,23 @@ function renderVisual(state) {
     pdrawDom.divDiagram.innerHTML = '';
 
     const container = document.createElement('div');
-    container.className = 'w-full h-full p-2';
+    // Centering: Flex container with justify-center and items-center
+    // We use a wrapper to allow scrolling if content overflows
+    container.className = 'w-full h-full flex items-center justify-center p-4 overflow-auto';
+
+    const content = document.createElement('div');
 
     if (type === 'stack') {
-        // Vertical Stack
-        container.className += ' flex flex-col-reverse justify-start items-center gap-1 overflow-y-auto';
+        // Vertical Stack (Reversed flex column to build up)
+        content.className = 'flex flex-col-reverse justify-start items-center gap-1';
 
         if (items.length === 0) {
-            container.innerHTML = '<span class="text-slate-500 text-xs mt-4">Empty Stack</span>';
+            content.innerHTML = '<span class="text-slate-500 text-xs mt-4">Empty Stack</span>';
         } else {
             items.forEach((item, i) => {
                 const box = document.createElement('div');
                 box.className = 'w-24 h-10 bg-green-900/40 border border-green-500 text-green-100 flex items-center justify-center rounded shadow font-mono text-sm relative shrink-0 transition-all';
-                box.innerText = item;
+                box.innerText = typeof item === 'string' ? `'${item}'` : item;
 
                 if (i === items.length - 1) {
                     const lbl = document.createElement('span');
@@ -380,41 +416,80 @@ function renderVisual(state) {
                     lbl.innerText = 'TOP';
                     box.appendChild(lbl);
                 }
-                container.appendChild(box);
+                content.appendChild(box);
             });
         }
     } else if (type === 'queue') {
-        // Horizontal Queue
-        container.className += ' flex flex-row justify-start items-center gap-1 overflow-x-auto';
+        // Vertical Queue (Top-down: Front at Top, Rear at Bottom)
+        content.className = 'flex flex-col justify-start items-center gap-1';
 
         if (items.length === 0) {
-            container.innerHTML = '<span class="text-slate-500 text-xs ml-4">Empty Queue</span>';
+            content.innerHTML = '<span class="text-slate-500 text-xs mt-4">Empty Queue</span>';
         } else {
             items.forEach((item, i) => {
                 const box = document.createElement('div');
-                box.className = 'min-w-[3rem] h-12 bg-blue-900/40 border border-blue-500 text-blue-100 flex items-center justify-center rounded shadow font-mono text-sm relative shrink-0 transition-all';
-                box.innerText = item;
+                box.className = 'w-24 h-10 bg-blue-900/40 border border-blue-500 text-blue-100 flex items-center justify-center rounded shadow font-mono text-sm relative shrink-0 transition-all';
+                box.innerText = typeof item === 'string' ? `'${item}'` : item;
 
                 if (i === 0) {
                     const lbl = document.createElement('span');
-                    lbl.className = 'absolute -top-3 text-[9px] text-blue-400 font-bold';
+                    lbl.className = 'absolute -right-10 text-[9px] text-blue-400 font-bold';
                     lbl.innerText = 'FRONT';
                     box.appendChild(lbl);
                 }
                 if (i === items.length - 1) {
                     const lbl = document.createElement('span');
-                    lbl.className = 'absolute -bottom-3 text-[9px] text-blue-400 font-bold';
+                    lbl.className = 'absolute -right-8 text-[9px] text-blue-400 font-bold';
                     lbl.innerText = 'REAR';
                     box.appendChild(lbl);
                 }
-                container.appendChild(box);
+                content.appendChild(box);
             });
         }
+    } else if (type === 'tuple') {
+        // Tuple: Horizontal, distinct style (Rounded pills, purple)
+        content.className = 'flex flex-row flex-wrap justify-center items-center gap-2';
+
+        if (items.length === 0) {
+            content.innerHTML = '<span class="text-slate-500 text-xs">Empty Tuple</span>';
+        } else {
+            // Tuples are immutable, visually represent with parenthesis style wrapper?
+            // Just pills for now
+            const start = document.createElement('span');
+            start.innerText = '('; start.className = "text-2xl text-purple-400 font-light mr-1";
+            content.appendChild(start);
+
+            items.forEach((item, i) => {
+                const box = document.createElement('div');
+                box.className = 'px-3 py-2 bg-purple-900/30 border border-purple-500/50 text-purple-100 flex flex-col items-center justify-center rounded-full font-mono text-sm shadow relative';
+
+                const idxLbl = document.createElement('span');
+                idxLbl.className = 'text-[8px] text-purple-400/70 mb-1';
+                idxLbl.innerText = i;
+
+                const valSpan = document.createElement('span');
+                valSpan.innerText = typeof item === 'string' ? `'${item}'` : item;
+
+                box.appendChild(idxLbl);
+                box.appendChild(valSpan);
+                content.appendChild(box);
+
+                if (i < items.length - 1) {
+                    const comma = document.createElement('span');
+                    comma.innerText = ','; comma.className = "text-purple-400 font-bold self-end mb-2";
+                    content.appendChild(comma);
+                }
+            });
+            const end = document.createElement('span');
+            end.innerText = ')'; end.className = "text-2xl text-purple-400 font-light ml-1";
+            content.appendChild(end);
+        }
+
     } else {
         // List generic
-        container.className += ' flex flex-wrap justify-center content-start gap-2 overflow-auto';
+        content.className = 'flex flex-wrap justify-center content-start gap-2';
         if (items.length === 0) {
-            container.innerHTML = '<span class="text-slate-500 text-xs mt-4">Empty List</span>';
+            content.innerHTML = '<span class="text-slate-500 text-xs mt-4">Empty List</span>';
         } else {
             items.forEach((item, i) => {
                 const box = document.createElement('div');
@@ -425,14 +500,15 @@ function renderVisual(state) {
                 idxLbl.innerText = i;
 
                 const valSpan = document.createElement('span');
-                valSpan.innerText = item;
+                valSpan.innerText = typeof item === 'string' ? `'${item}'` : item;
 
                 box.appendChild(idxLbl);
                 box.appendChild(valSpan);
-                container.appendChild(box);
+                content.appendChild(box);
             });
         }
     }
 
+    container.appendChild(content);
     pdrawDom.divDiagram.appendChild(container);
 }

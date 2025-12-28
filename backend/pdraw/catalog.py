@@ -37,7 +37,7 @@ def get_pdraw_catalog() -> CatalogResponse:
             CatalogItem(
                 id="queue",
                 label="Queue (FIFO)",
-                implementations=["list", "collections.deque"],
+                implementations=["list", "collections.deque", "queue.Queue"],
                 operations=[
                     CatalogOperation(
                         id="enqueue", 
@@ -91,6 +91,37 @@ def get_pdraw_catalog() -> CatalogResponse:
                     CatalogOperation(
                         id="remove", 
                         label="Remove Value", 
+                        params=[{"name": "value", "type": "any", "required": True}], 
+                        complexity="O(n)"
+                    ),
+                    CatalogOperation(
+                        id="sort",
+                        label="Sort",
+                        params=[],
+                        complexity="O(n log n)"
+                    ),
+                    CatalogOperation(
+                        id="reverse",
+                        label="Reverse",
+                        params=[],
+                        complexity="O(n)"
+                    )
+                ]
+            ),
+            CatalogItem(
+                id="tuple",
+                label="Tuple",
+                implementations=["tuple"],
+                operations=[
+                     CatalogOperation(
+                        id="index", 
+                        label="Index of Value", 
+                        params=[{"name": "value", "type": "any", "required": True}], 
+                        complexity="O(n)"
+                    ),
+                    CatalogOperation(
+                        id="count", 
+                        label="Count Value", 
                         params=[{"name": "value", "type": "any", "required": True}], 
                         complexity="O(n)"
                     )

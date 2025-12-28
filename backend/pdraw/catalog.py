@@ -125,10 +125,14 @@ def get_pdraw_catalog() -> CatalogResponse:
                         complexity="O(n log n)"
                     ),
                     CatalogOperation(
-                        id="reverse",
-                        label="Reverse",
-                        params=[],
-                        complexity="O(n)"
+                        id="slice",
+                        label="Slice",
+                        params=[
+                            {"name": "start", "type": "int", "required": False},
+                            {"name": "stop", "type": "int", "required": False},
+                            {"name": "step", "type": "int", "required": False}
+                        ],
+                        complexity="O(k)"
                     )
                 ]
             ),
@@ -148,6 +152,22 @@ def get_pdraw_catalog() -> CatalogResponse:
                         label="Count Value", 
                         params=[{"name": "value", "type": "any", "required": True}], 
                         complexity="O(n)"
+                    ),
+                    CatalogOperation(
+                        id="slice",
+                        label="Slice",
+                        params=[
+                            {"name": "start", "type": "int", "required": False},
+                            {"name": "stop", "type": "int", "required": False},
+                            {"name": "step", "type": "int", "required": False}
+                        ],
+                        complexity="O(k)"
+                    ),
+                    CatalogOperation(
+                        id="len",
+                        label="Length",
+                        params=[],
+                        complexity="O(1)"
                     )
                 ]
             )

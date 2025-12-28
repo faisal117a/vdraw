@@ -112,23 +112,23 @@ const OP_NAME_MAPPING = {
     // Stack
     'stack_list_push': 'append(x)',
     'stack_list_pop': 'pop()',
-    'stack_list_peek': '[-1]',
+    'stack_list_peek': 'stack[-1]',
     'stack_list_is_empty': 'len() == 0',
     'stack_collections.deque_push': 'append(x)',
     'stack_collections.deque_pop': 'pop()',
-    'stack_collections.deque_peek': '[-1]',
+    'stack_collections.deque_peek': 'stack[-1]',
     'stack_collections.deque_is_empty': 'len() == 0',
 
     // Queue
     'queue_list_enqueue': 'append(x)',
     'queue_list_dequeue': 'pop(0)',
-    'queue_list_front': '[0]',
-    'queue_list_rear': '[-1]',
+    'queue_list_front': 'queue[0]',
+    'queue_list_rear': 'queue[-1]',
 
     'queue_collections.deque_enqueue': 'append(x)',
     'queue_collections.deque_dequeue': 'popleft()',
-    'queue_collections.deque_front': '[0]',
-    'queue_collections.deque_rear': '[-1]',
+    'queue_collections.deque_front': 'queue[0]',
+    'queue_collections.deque_rear': 'queue[-1]',
 
     'queue_queue.Queue_enqueue': 'put(x)',
     'queue_queue.Queue_dequeue': 'get()',
@@ -137,7 +137,7 @@ const OP_NAME_MAPPING = {
 
     // List
     'list_list_append': 'append(x)',
-    'list_list_extend': 'extend(iter)',
+    'list_list_extend': 'extend(list)',
     'list_list_insert': 'insert(i, x)',
     'list_list_pop': 'pop([i])',
     'list_list_remove': 'remove(x)',
@@ -146,10 +146,13 @@ const OP_NAME_MAPPING = {
     'list_list_count': 'count(x)',
     'list_list_sort': 'sort()',
     'list_list_reverse': 'reverse()',
+    'list_list_slice': 'list[i:j:k]',
 
     // Tuple
     'tuple_tuple_index': 'index(x)',
-    'tuple_tuple_count': 'count(x)'
+    'tuple_tuple_count': 'count(x)',
+    'tuple_tuple_len': 'len(t)',
+    'tuple_tuple_slice': 'tuple[i:j:k]'
 };
 
 async function fetchCatalog() {

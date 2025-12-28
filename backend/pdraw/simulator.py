@@ -68,6 +68,7 @@ def _apply_operation(stype, impl, state, op, args, step_idx) -> (SimulationStepR
         pass
 
     try:
+    try:
         def style_code(text):
             return f'<span class="font-bold text-yellow-300">{text}</span>'
 
@@ -86,7 +87,7 @@ def _apply_operation(stype, impl, state, op, args, step_idx) -> (SimulationStepR
             elif op == 'peek':
                 if not state: raise IndexError("Peek from empty stack")
                 method_name = "[-1]"
-                explanation = f"Accessed top element {style_code(f'{method_name}')}={repr(state[-1])}."
+                explanation = f"Accessed top element {style_code(f'stack[-1]')}: {repr(state[-1])}."
             elif op == 'is_empty':
                 explanation = f"Checked if empty: {style_code(str(len(state) == 0))}"
                 
@@ -121,24 +122,38 @@ def _apply_operation(stype, impl, state, op, args, step_idx) -> (SimulationStepR
                     
             elif op == 'front':
                 if not state: raise IndexError("Queue is empty")
-                explanation = f"Front element is {style_code(repr(state[0]))}."
+                explanation = f"Front element is {style_code(f'queue[0]')} -> {repr(state[0])}."
 
             elif op == 'rear':
                 if not state: raise IndexError("Queue is empty")
-                explanation = f"Rear element is {style_code(repr(state[-1]))}."
+                explanation = f"Rear element is {style_code(f'queue[-1]')} -> {repr(state[-1])}."
             
         elif stype == 'list':
             if op == 'append':
                 state.append(val)
                 explanation = f"{style_code(f'append({repr(val)})')}. Appended to end."
             elif op == 'extend':
-                if isinstance(val, (list, tuple, str)):
-                    state.extend(val)
-                    explanation = f"{style_code(f'extend({repr(val)})')}. Added elements from iterable."
-                    complexity = "O(k)"
-                else:
-                     explanation = "Error: extend requires iterable."
-                     status = "error"
+                # Parse iterable
+                iterable = val
+                if isinstance(val, str):
+                    if ',' in val:
+                         # Split string "1, 2, 3" -> [1, 2, 3] trying numbers if possible
+                         parts = [x.strip() for x in val.split(',')]
+                         iterable = []
+                         for p in parts:
+                             if p.isdigit(): iterable.append(int(p))
+                             else: iterable.append(p)
+                    else:
+                        # Single item string? or chars? User intends list likely if calling extend
+                        # But strict python would require list input.
+                        # I'll enable "smart wrapping" if it's a single value
+                        iterable = [val] # Wrap single val if not comma separated, to avoid char iter
+                elif isinstance(val, (int, float, bool)):
+                    iterable = [val]
+                
+                state.extend(iterable)
+                explanation = f"{style_code(f'extend({repr(iterable)})')}. Added elements."
+                complexity = "O(k)"
             elif op == 'insert':
                 state.insert(idx, val)
                 explanation = f"{style_code(f'insert({idx}, {repr(val)})')}. Shifted elements to right."
@@ -179,6 +194,15 @@ def _apply_operation(stype, impl, state, op, args, step_idx) -> (SimulationStepR
                 state.reverse() 
                 explanation = f"{style_code('reverse()')}. Reversed list in-place."
                 complexity = "O(n)"
+            elif op == 'slice':
+                start = args.get('start')
+                stop = args.get('stop')
+                step = args.get('step')
+                # list slicing returns new list, doesn't modify
+                sliced = list(state)[start:stop:step]
+                slice_str = f"[{start if start is not None else ''}:{stop if stop is not None else ''}{f':{step}' if step is not None else ''}]"
+                explanation = f"Sliced {style_code(f'list{slice_str}')} -> {sliced}."
+                complexity = "O(k)"
                 
         elif stype == 'tuple':
             # Tuple operations are read-only
@@ -190,6 +214,18 @@ def _apply_operation(stype, impl, state, op, args, step_idx) -> (SimulationStepR
                 c = state.count(val)
                 explanation = f"{style_code(f'count({repr(val)})')} -> {c}."
                 complexity = "O(n)"
+            elif op == 'len':
+                l = len(state)
+                explanation = f"{style_code('len(tuple)')} -> {l}."
+                complexity = "O(1)"
+            elif op == 'slice':
+                start = args.get('start')
+                stop = args.get('stop')
+                step = args.get('step')
+                sliced = tuple(state)[start:stop:step]
+                slice_str = f"[{start if start is not None else ''}:{stop if stop is not None else ''}{f':{step}' if step is not None else ''}]"
+                explanation = f"Sliced {style_code(f'tuple{slice_str}')} -> {sliced}."
+                complexity = "O(k)"
     
     except Exception as e:
         status = "error"

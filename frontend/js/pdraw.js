@@ -1,4 +1,4 @@
-const API_URL = "http://127.0.0.1:8000";
+const PDRAW_API_URL = "http://127.0.0.1:8000";
 
 // --- State ---
 let pdrawCatalog = null;
@@ -6,76 +6,83 @@ let pdrawOperations = []; // List of {op: "name", args: {}}
 let currentStructure = "stack";
 let currentImpl = "list";
 let lastSimulationResult = null;
-
-// --- DOM Elements ---
-const dom = {
-    toggleV: document.getElementById('phase-vdraw'),
-    toggleP: document.getElementById('phase-pdraw'),
-    dashboardV: document.getElementById('vdraw-dashboard'),
-    dashboardP: document.getElementById('pdraw-dashboard'),
-    logoText: document.querySelector('#sidebar h1'),
-
-    // PDraw Controls
-    selStructure: document.getElementById('pdraw-structure'),
-    selImpl: document.getElementById('pdraw-impl'),
-    txtInit: document.getElementById('pdraw-init-vals'),
-    selOp: document.getElementById('pdraw-op-select'),
-    btnAddOp: document.getElementById('pdraw-add-op'),
-    divOpParams: document.getElementById('pdraw-op-params'),
-    listOps: document.getElementById('pdraw-op-list'),
-    btnSimulate: document.getElementById('pdraw-simulate'),
-    divOutput: document.getElementById('pdraw-output'),
-    divDiagram: document.getElementById('pdraw-diagram'),
-    lblDiag: document.getElementById('pdraw-diag-label')
-};
+let pdrawDom = {};
 
 // --- Initialization ---
-document.addEventListener('DOMContentLoaded', () => {
+function init() {
+    // Initialize DOM elements here to ensure they exist
+    pdrawDom = {
+        toggleV: document.getElementById('phase-vdraw'),
+        toggleP: document.getElementById('phase-pdraw'),
+        dashboardV: document.getElementById('vdraw-dashboard'),
+        dashboardP: document.getElementById('pdraw-dashboard'),
+        logoText: document.querySelector('#sidebar h1'),
+
+        // PDraw Controls
+        selStructure: document.getElementById('pdraw-structure'),
+        selImpl: document.getElementById('pdraw-impl'),
+        txtInit: document.getElementById('pdraw-init-vals'),
+        selOp: document.getElementById('pdraw-op-select'),
+        btnAddOp: document.getElementById('pdraw-add-op'),
+        divOpParams: document.getElementById('pdraw-op-params'),
+        listOps: document.getElementById('pdraw-op-list'),
+        btnSimulate: document.getElementById('pdraw-simulate'),
+        divOutput: document.getElementById('pdraw-output'),
+        divDiagram: document.getElementById('pdraw-diagram'),
+        lblDiag: document.getElementById('pdraw-diag-label')
+    };
+
     initToggle();
     initPDraw();
-});
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+} else {
+    init();
+}
 
 function initToggle() {
-    dom.toggleV.addEventListener('click', () => switchPhase('vdraw'));
-    dom.toggleP.addEventListener('click', () => switchPhase('pdraw'));
+    if (pdrawDom.toggleV) pdrawDom.toggleV.addEventListener('click', () => switchPhase('vdraw'));
+    if (pdrawDom.toggleP) pdrawDom.toggleP.addEventListener('click', () => switchPhase('pdraw'));
 }
 
 function switchPhase(phase) {
     if (phase === 'vdraw') {
         // Active Styles
-        dom.toggleV.classList.replace('text-slate-400', 'text-white');
-        dom.toggleV.classList.add('bg-brand-600', 'shadow');
-        dom.toggleV.classList.remove('hover:text-white');
+        pdrawDom.toggleV.classList.replace('text-slate-400', 'text-white');
+        pdrawDom.toggleV.classList.add('bg-brand-600', 'shadow');
+        pdrawDom.toggleV.classList.remove('hover:text-white');
 
         // Inactive Styles
-        dom.toggleP.classList.replace('text-white', 'text-slate-400');
-        dom.toggleP.classList.remove('bg-green-600', 'shadow');
-        dom.toggleP.classList.add('hover:text-white');
+        pdrawDom.toggleP.classList.replace('text-white', 'text-slate-400');
+        pdrawDom.toggleP.classList.remove('bg-green-600', 'shadow');
+        pdrawDom.toggleP.classList.add('hover:text-white');
 
         // View
-        dom.dashboardV.classList.remove('hidden');
-        dom.dashboardP.classList.add('hidden');
+        pdrawDom.dashboardV.classList.remove('hidden');
+        pdrawDom.dashboardP.classList.add('hidden');
 
         // Branding
-        dom.logoText.innerHTML = '<i class="fa-solid fa-chart-simple mr-2 text-brand-500"></i>VDraw';
+        pdrawDom.logoText.innerHTML = '<i class="fa-solid fa-chart-simple mr-2 text-brand-500"></i>VDraw';
         document.documentElement.style.setProperty('--brand-color', '#4f46e5'); // Indigo
     } else {
         // Active Styles
-        dom.toggleP.classList.replace('text-slate-400', 'text-white');
-        dom.toggleP.classList.add('bg-green-600', 'shadow');
-        dom.toggleP.classList.remove('hover:text-white');
+        pdrawDom.toggleP.classList.replace('text-slate-400', 'text-white');
+        pdrawDom.toggleP.classList.add('bg-green-600', 'shadow');
+        pdrawDom.toggleP.classList.remove('hover:text-white');
 
         // Inactive Styles
-        dom.toggleV.classList.replace('text-white', 'text-slate-400');
-        dom.toggleV.classList.remove('bg-brand-600', 'shadow');
-        dom.toggleV.classList.add('hover:text-white');
+        pdrawDom.toggleV.classList.replace('text-white', 'text-slate-400');
+        pdrawDom.toggleV.classList.remove('bg-brand-600', 'shadow');
+        pdrawDom.toggleV.classList.add('hover:text-white');
 
         // View
-        dom.dashboardV.classList.add('hidden');
-        dom.dashboardP.classList.remove('hidden');
+        pdrawDom.dashboardV.classList.add('hidden');
+        pdrawDom.dashboardP.classList.remove('hidden');
 
         // Branding
-        dom.logoText.innerHTML = '<i class="fa-solid fa-layer-group mr-2 text-green-500"></i>PDraw';
+        pdrawDom.logoText.innerHTML = '<i class="fa-solid fa-layer-group mr-2 text-green-500"></i>PDraw';
         document.documentElement.style.setProperty('--brand-color', '#16a34a'); // Green
 
         // Load Catalog execution
@@ -87,7 +94,7 @@ function switchPhase(phase) {
 
 async function fetchCatalog() {
     try {
-        const res = await fetch(`${API_URL}/api/pdraw/catalog`);
+        const res = await fetch(`${PDRAW_API_URL}/api/pdraw/catalog`);
         if (!res.ok) throw new Error("Failed to load catalog");
         const data = await res.json();
         pdrawCatalog = data.structures;
@@ -100,20 +107,20 @@ async function fetchCatalog() {
 
 function initPDraw() {
     // Event Listeners
-    dom.selStructure.addEventListener('change', (e) => {
+    pdrawDom.selStructure.addEventListener('change', (e) => {
         currentStructure = e.target.value;
         updateUIForStructure();
     });
 
-    dom.selImpl.addEventListener('change', (e) => {
+    pdrawDom.selImpl.addEventListener('change', (e) => {
         currentImpl = e.target.value;
     });
 
-    dom.selOp.addEventListener('change', renderOpParams);
+    pdrawDom.selOp.addEventListener('change', renderOpParams);
 
-    dom.btnAddOp.addEventListener('click', addOperation);
+    pdrawDom.btnAddOp.addEventListener('click', addOperation);
 
-    dom.btnSimulate.addEventListener('click', runSimulation);
+    pdrawDom.btnSimulate.addEventListener('click', runSimulation);
 }
 
 function updateUIForStructure() {
@@ -123,13 +130,13 @@ function updateUIForStructure() {
     if (!structData) return;
 
     // Update Implementations
-    dom.selImpl.innerHTML = structData.implementations.map(impl =>
+    pdrawDom.selImpl.innerHTML = structData.implementations.map(impl =>
         `<option value="${impl}">${impl}</option>`
     ).join('');
     currentImpl = structData.implementations[0]; // Select first default
 
     // Update Operations
-    dom.selOp.innerHTML = structData.operations.map(op =>
+    pdrawDom.selOp.innerHTML = structData.operations.map(op =>
         `<option value="${op.id}">${op.label}</option>`
     ).join('');
 
@@ -141,26 +148,26 @@ function updateUIForStructure() {
     renderOpList();
 
     // Clear output/diagram
-    dom.divOutput.innerHTML = `<div class="flex flex-col items-center justify-center h-full text-center text-slate-500 opacity-50">
+    pdrawDom.divOutput.innerHTML = `<div class="flex flex-col items-center justify-center h-full text-center text-slate-500 opacity-50">
                                 <i class="fa-solid fa-code text-4xl mb-2"></i>
                                 <p>Structure updated. Build plan to simulate.</p>
                              </div>`;
-    dom.divDiagram.innerHTML = '<p class="text-xs text-slate-600 italic">Visual representation area</p>';
-    dom.lblDiag.innerText = 'Reset';
+    pdrawDom.divDiagram.innerHTML = '<p class="text-xs text-slate-600 italic">Visual representation area</p>';
+    pdrawDom.lblDiag.innerText = 'Reset';
 }
 
 function renderOpParams() {
     if (!pdrawCatalog) return;
     const structData = pdrawCatalog.find(s => s.id === currentStructure);
-    const opId = dom.selOp.value;
+    const opId = pdrawDom.selOp.value;
     const opData = structData.operations.find(o => o.id === opId);
 
     if (!opData || opData.params.length === 0) {
-        dom.divOpParams.innerHTML = '';
+        pdrawDom.divOpParams.innerHTML = '';
         return;
     }
 
-    dom.divOpParams.innerHTML = opData.params.map(p => `
+    pdrawDom.divOpParams.innerHTML = opData.params.map(p => `
         <input type="${p.type === 'int' ? 'number' : 'text'}" 
                id="param-${p.name}" 
                placeholder="${p.name} (${p.type})"
@@ -170,7 +177,7 @@ function renderOpParams() {
 
 function addOperation() {
     const structData = pdrawCatalog.find(s => s.id === currentStructure);
-    const opId = dom.selOp.value;
+    const opId = pdrawDom.selOp.value;
     const opData = structData.operations.find(o => o.id === opId);
 
     const args = {};
@@ -195,11 +202,11 @@ function removeOperation(index) {
 
 function renderOpList() {
     if (pdrawOperations.length === 0) {
-        dom.listOps.innerHTML = '<li class="text-center text-slate-600 text-xs italic mt-4">No operations added.</li>';
+        pdrawDom.listOps.innerHTML = '<li class="text-center text-slate-600 text-xs italic mt-4">No operations added.</li>';
         return;
     }
 
-    dom.listOps.innerHTML = pdrawOperations.map((op, idx) => `
+    pdrawDom.listOps.innerHTML = pdrawOperations.map((op, idx) => `
         <li class="flex justify-between items-center bg-slate-800 p-2 rounded text-xs border border-slate-700 animate-fade-in-up">
             <div>
                 <span class="font-bold text-green-400">${op.label}</span>
@@ -215,7 +222,7 @@ function renderOpList() {
 }
 
 async function runSimulation() {
-    const rawInit = dom.txtInit.value;
+    const rawInit = pdrawDom.txtInit.value;
     // Simple CSV parser
     const initialValues = rawInit.split(',').map(s => {
         const val = s.trim();
@@ -230,11 +237,11 @@ async function runSimulation() {
         operations: pdrawOperations.map(o => ({ op: o.op, args: o.args }))
     };
 
-    dom.divOutput.innerHTML = '<div class="text-center text-green-400 mt-10"><i class="fa-solid fa-spinner fa-spin text-2xl"></i><p>Simulating...</p></div>';
-    dom.divDiagram.innerHTML = '<p class="text-center text-slate-500"><i class="fa-solid fa-spinner fa-spin"></i></p>';
+    pdrawDom.divOutput.innerHTML = '<div class="text-center text-green-400 mt-10"><i class="fa-solid fa-spinner fa-spin text-2xl"></i><p>Simulating...</p></div>';
+    pdrawDom.divDiagram.innerHTML = '<p class="text-center text-slate-500"><i class="fa-solid fa-spinner fa-spin"></i></p>';
 
     try {
-        const res = await fetch(`${API_URL}/api/pdraw/simulate`, {
+        const res = await fetch(`${PDRAW_API_URL}/api/pdraw/simulate`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
@@ -246,8 +253,8 @@ async function runSimulation() {
         renderSimulation(result);
 
     } catch (e) {
-        dom.divOutput.innerHTML = `<div class="text-center text-red-400 mt-10"><p>Error: ${e.message}</p></div>`;
-        dom.divDiagram.innerHTML = `<p class="text-xs text-red-400">Sync Error</p>`;
+        pdrawDom.divOutput.innerHTML = `<div class="text-center text-red-400 mt-10"><p>Error: ${e.message}</p></div>`;
+        pdrawDom.divDiagram.innerHTML = `<p class="text-xs text-red-400">Sync Error</p>`;
     }
 }
 
@@ -292,7 +299,7 @@ function renderSimulation(result) {
         `;
     });
 
-    dom.divOutput.innerHTML = html;
+    pdrawDom.divOutput.innerHTML = html;
     window.showDiagram = showDiagram;
 
     // Show last state diagram by default
@@ -315,7 +322,7 @@ function showDiagram(stepIndex) {
         label = `Step ${stepIndex + 1}: ${lastSimulationResult.steps[stepIndex].operation}`;
     }
 
-    dom.lblDiag.innerText = label;
+    pdrawDom.lblDiag.innerText = label;
     renderVisual(diagState);
 
     // Highlight active card
@@ -334,7 +341,7 @@ function showDiagram(stepIndex) {
 
 function renderVisual(state) {
     const { type, items, front, rear } = state;
-    dom.divDiagram.innerHTML = '';
+    pdrawDom.divDiagram.innerHTML = '';
 
     const container = document.createElement('div');
     container.className = 'w-full h-full p-2';
@@ -411,5 +418,6 @@ function renderVisual(state) {
         }
     }
 
-    dom.divDiagram.appendChild(container);
+    pdrawDom.divDiagram.appendChild(container);
 }
+```

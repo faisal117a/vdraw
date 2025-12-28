@@ -133,6 +133,7 @@ def _apply_operation(stype, impl, state, op, args, step_idx) -> (SimulationStepR
                 explanation = f"{style_code(f'append({repr(val)})')}. Appended to end."
             elif op == 'extend':
                 # Parse iterable
+                val = args.get('iterable', val)
                 iterable = val
                 if isinstance(val, str):
                     if ',' in val:

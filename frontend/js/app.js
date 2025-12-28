@@ -170,11 +170,26 @@ function populateSelect(selectEl, options, addAuto = false) {
     });
 }
 
-// Modal Logic
+// Modal Logic & Data Cleaning
 const modal = document.getElementById('data-modal');
 const btnViewData = document.getElementById('btn-view-data');
 const btnCloseModal = document.getElementById('btn-close-modal');
 const modalBackdrop = document.getElementById('data-modal-backdrop');
+
+// Data Cleaning Selectors
+const btnDropMissing = document.getElementById('btn-drop-missing');
+const selImputeCol = document.getElementById('sel-impute-col');
+const btnFillMean = document.getElementById('btn-fill-mean');
+const btnFillMedian = document.getElementById('btn-fill-median');
+const selFilterCol = document.getElementById('sel-filter-col');
+const selFilterOp = document.getElementById('sel-filter-op');
+const inpFilterVal = document.getElementById('inp-filter-val');
+const btnApplyFilter = document.getElementById('btn-apply-filter');
+const btnResetData = document.getElementById('btn-reset-data');
+
+let originalGlobalData = null; // Backup for reset
+
+const btnUseFiltered = document.getElementById('btn-use-filtered');
 
 // Store original list of loaded data ROWS for table view (reconstructed from globalData or stored separately?)
 // Creating "rows" from column-based globalData
@@ -193,12 +208,18 @@ function recreateRows() {
 
 if (btnViewData) {
     btnViewData.addEventListener('click', () => {
+        // Backup if not exists
+        if (!originalGlobalData && Object.keys(globalData).length > 0) {
+            originalGlobalData = JSON.parse(JSON.stringify(globalData));
+        }
+
         const rows = recreateRows();
         if (rows.length === 0) {
             alert("No data imported.");
             return;
         }
         renderDataTable(rows);
+        populateModalSelectors(); // Fill Modal Column dropdowns
         modal.classList.remove('hidden');
     });
 }
@@ -206,6 +227,163 @@ if (btnViewData) {
 function closeModal() { modal.classList.add('hidden'); }
 if (btnCloseModal) btnCloseModal.addEventListener('click', closeModal);
 if (modalBackdrop) modalBackdrop.addEventListener('click', closeModal);
+
+if (btnUseFiltered) {
+    btnUseFiltered.addEventListener('click', () => {
+        closeModal();
+        // Trigger calculation to update dashboard immediately
+        if (btnCalculate) btnCalculate.click();
+
+        // Optional: Show small feedback
+        // alert("Analysis updated with filtered data."); 
+        // Better: Rely on the dashboard update animation.
+    });
+}
+
+// --- Data Cleaning Functions ---
+
+function populateModalSelectors() {
+    const cols = Object.keys(globalData);
+    populateSelect(selImputeCol, cols);
+    populateSelect(selFilterCol, cols);
+}
+
+// 1. Drop Missing Rows
+if (btnDropMissing) {
+    btnDropMissing.addEventListener('click', () => {
+        const cols = Object.keys(globalData);
+        if (cols.length === 0) return;
+        const rowCount = globalData[cols[0]].length;
+
+        let keepIndices = [];
+
+        for (let i = 0; i < rowCount; i++) {
+            let isRowValid = true;
+            for (const col of cols) {
+                const val = globalData[col][i];
+                if (val === null || val === undefined || val === '') {
+                    isRowValid = false;
+                    break;
+                }
+            }
+            if (isRowValid) keepIndices.push(i);
+        }
+
+        if (keepIndices.length === rowCount) {
+            alert("No missing values found.");
+            return;
+        }
+
+        if (confirm(`This will remove ${rowCount - keepIndices.length} rows. Continue?`)) {
+            filterGlobalData(keepIndices);
+        }
+    });
+}
+
+// 2. Impute (Fill) Missing
+function fillMissing(method) {
+    const col = selImputeCol.value;
+    if (!col) { alert("Please select a column to fill."); return; }
+
+    const rawData = globalData[col];
+    // Filter numeric valid values for stat calc
+    const validNums = rawData.filter(v => v !== null && v !== undefined && v !== '' && !isNaN(v)).map(Number);
+
+    if (validNums.length === 0) {
+        alert("Cannot calculate mean/median: Column has no numeric data.");
+        return;
+    }
+
+    let fillVal = 0;
+    if (method === 'mean') {
+        fillVal = validNums.reduce((a, b) => a + b, 0) / validNums.length;
+    } else {
+        // Median
+        validNums.sort((a, b) => a - b);
+        const mid = Math.floor(validNums.length / 2);
+        fillVal = validNums.length % 2 !== 0 ? validNums[mid] : (validNums[mid - 1] + validNums[mid]) / 2;
+    }
+
+    // Apply Fill
+    let filledCount = 0;
+    for (let i = 0; i < rawData.length; i++) {
+        if (rawData[i] === null || rawData[i] === undefined || rawData[i] === '') {
+            globalData[col][i] = parseFloat(fillVal.toFixed(4));
+            filledCount++;
+        }
+    }
+
+    alert(`Filled ${filledCount} missing values with ${method} (${fillVal.toFixed(2)}).`);
+    refreshTable();
+}
+
+if (btnFillMean) btnFillMean.addEventListener('click', () => fillMissing('mean'));
+if (btnFillMedian) btnFillMedian.addEventListener('click', () => fillMissing('median'));
+
+// 3. Filter Data
+if (btnApplyFilter) {
+    btnApplyFilter.addEventListener('click', () => {
+        const col = selFilterCol.value;
+        const op = selFilterOp.value;
+        const valStr = inpFilterVal.value;
+
+        if (!col || !valStr) { alert("Please select column and enter a value."); return; }
+
+        const isNumCol = globalData[col].some(v => typeof v === 'number');
+        const filterVal = isNumCol ? parseFloat(valStr) : valStr.toLowerCase();
+
+        const cols = Object.keys(globalData);
+        const rowCount = globalData[cols[0]].length;
+        let keepIndices = [];
+
+        for (let i = 0; i < rowCount; i++) {
+            let rowVal = globalData[col][i];
+
+            // Handle Type
+            if (isNumCol) {
+                rowVal = parseFloat(rowVal);
+                if (isNaN(rowVal)) { continue; } // Exclude NaNs from comparison?
+            } else {
+                rowVal = String(rowVal).toLowerCase();
+            }
+
+            let match = false;
+            if (op === '>') match = rowVal > filterVal;
+            else if (op === '<') match = rowVal < filterVal;
+            else if (op === '=') match = rowVal == filterVal; // Loose equality for "5" vs 5
+            else if (op === '!=') match = rowVal != filterVal;
+            else if (op === 'contains') match = String(rowVal).includes(String(filterVal));
+
+            if (match) keepIndices.push(i);
+        }
+
+        filterGlobalData(keepIndices);
+    });
+}
+
+// 4. Reset Data
+if (btnResetData) {
+    btnResetData.addEventListener('click', () => {
+        if (originalGlobalData) {
+            globalData = JSON.parse(JSON.stringify(originalGlobalData));
+            refreshTable();
+            alert("Data reset to original upload.");
+        }
+    });
+}
+
+// Helper: Rebuild Global Data & Refresh
+function filterGlobalData(indices) {
+    const cols = Object.keys(globalData);
+    cols.forEach(c => {
+        globalData[c] = indices.map(i => globalData[c][i]);
+    });
+    refreshTable();
+}
+
+function refreshTable() {
+    renderDataTable(recreateRows());
+}
 
 function renderDataTable(rows) {
     const thead = document.getElementById('data-table-head');

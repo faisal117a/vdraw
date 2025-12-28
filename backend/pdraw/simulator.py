@@ -18,9 +18,12 @@ def simulate_pdraw(req: SimulationRequest) -> SimulationResponse:
         current_state = list(data)
     elif structure_type == 'queue':
         # Queue Model
-        current_state = deque(data)
+        if impl == 'list':
+            current_state = list(data)
+        else:
+            current_state = deque(data)
     elif structure_type == 'tuple':
-        # Tuple is immutable, but for visualization of "operations" like count/index, we hold a tuple.
+        # Tuple is immutable
         current_state = tuple(data)
     else:
         current_state = list(data)
@@ -62,28 +65,30 @@ def _apply_operation(stype, impl, state, op, args, step_idx) -> (SimulationStepR
     # helper to get mutable form if needed
     mutable_state = state
     if stype == 'tuple' and op not in ['index', 'count']:
-        # theoretically tuple doesn't support mutation.
         pass
 
     try:
+        def style_code(text):
+            return f'<span class="font-bold text-yellow-300">{text}</span>'
+
         if stype == 'stack':
             if op == 'push':
                 state.append(val)
                 method_name = "append" if impl == 'list' or impl == 'collections.deque' else "push"
-                explanation = f"{method_name}({repr(val)}). Pushed {repr(val)} onto top."
+                explanation = f"{style_code(f'{method_name}({repr(val)})')}. Pushed {repr(val)} onto top."
                 complexity = "O(1)"
             elif op == 'pop':
                 if not state: raise IndexError("Pop from empty stack")
                 popped = state.pop()
                 method_name = "pop"
-                explanation = f"{method_name}(). Popped {repr(popped)} from top."
+                explanation = f"{style_code(f'{method_name}()')}. Popped {repr(popped)} from top."
                 complexity = "O(1)"
             elif op == 'peek':
                 if not state: raise IndexError("Peek from empty stack")
                 method_name = "[-1]"
-                explanation = f"Accessed top element {repr(state[-1])}."
+                explanation = f"Accessed top element {style_code(f'{method_name}')}={repr(state[-1])}."
             elif op == 'is_empty':
-                explanation = f"Checked if empty: {len(state) == 0}"
+                explanation = f"Checked if empty: {style_code(str(len(state) == 0))}"
                 
         elif stype == 'queue':
             is_list_impl = isinstance(state, list) and impl == 'list'
@@ -98,7 +103,7 @@ def _apply_operation(stype, impl, state, op, args, step_idx) -> (SimulationStepR
                     complexity = "O(1)"
                     method = "append" if impl == 'collections.deque' else "put"
                 
-                explanation = f"Used {method}({repr(val)}). Enqueued {repr(val)} at rear."
+                explanation = f"Used {style_code(f'{method}({repr(val)})')}. Enqueued {repr(val)} at rear."
                 
             elif op == 'dequeue':
                 if not state: raise IndexError("Dequeue from empty queue")
@@ -107,89 +112,83 @@ def _apply_operation(stype, impl, state, op, args, step_idx) -> (SimulationStepR
                     popped = state.pop(0) 
                     complexity = "O(n) - CRITICAL: Shifting Elements!"
                     method = "pop(0)"
-                    explanation = f"Executed {method}. Removed {repr(popped)}. **Inefficient**: All elements shifted left."
+                    explanation = f"Executed {style_code(method)}. Removed {repr(popped)}. **Inefficient**: All elements shifted left."
                 else:
                     popped = state.popleft()
                     complexity = "O(1)"
                     method = "popleft" if impl == 'collections.deque' else "get"
-                    explanation = f"Executed {method}(). Removed {repr(popped)}. Efficient pointer update."
+                    explanation = f"Executed {style_code(f'{method}()')}. Removed {repr(popped)}. Efficient pointer update."
                     
             elif op == 'front':
                 if not state: raise IndexError("Queue is empty")
-                explanation = f"Front element is {repr(state[0])}."
+                explanation = f"Front element is {style_code(repr(state[0]))}."
 
             elif op == 'rear':
                 if not state: raise IndexError("Queue is empty")
-                explanation = f"Rear element is {repr(state[-1])}."
+                explanation = f"Rear element is {style_code(repr(state[-1]))}."
             
         elif stype == 'list':
             if op == 'append':
                 state.append(val)
-                explanation = f"append({repr(val)}). Appended to end."
+                explanation = f"{style_code(f'append({repr(val)})')}. Appended to end."
             elif op == 'extend':
-                # Parse if val is list-like string or just append single? 
-                # Simulator expects 'iterable' for extend, typically a list.
-                # If parsed as string, might extend chars.
-                # If parsed as list, extends items.
                 if isinstance(val, (list, tuple, str)):
-                    # Handle string "1,2" -> [1,2]? No, frontend sends typed.
-                    # If frontend sends "123", extend adds '1','2','3'.
                     state.extend(val)
-                    explanation = f"extend({repr(val)}). Added elements from iterable."
+                    explanation = f"{style_code(f'extend({repr(val)})')}. Added elements from iterable."
                     complexity = "O(k)"
                 else:
                      explanation = "Error: extend requires iterable."
                      status = "error"
             elif op == 'insert':
                 state.insert(idx, val)
-                explanation = f"insert({idx}, {repr(val)}). Shifted elements to right."
+                explanation = f"{style_code(f'insert({idx}, {repr(val)})')}. Shifted elements to right."
                 complexity = "O(n)"
             elif op == 'remove':
                 state.remove(val)
-                explanation = f"remove({repr(val)}). Removed first occurrence. Shifted elements left."
+                explanation = f"{style_code(f'remove({repr(val)})')}. Removed first occurrence. Shifted elements left."
                 complexity = "O(n)"
             elif op == 'pop':
                 if idx is not None:
                     state.pop(idx)
-                    explanation = f"pop({idx}). Removed item at index. Shifted elements left."
+                    explanation = f"{style_code(f'pop({idx})')}. Removed item at index. Shifted elements left."
                     complexity = "O(n)"
                 else:
                     state.pop()
-                    explanation = "pop(). Removed last item."
+                    explanation = f"{style_code('pop()')}. Removed last item."
             elif op == 'clear':
                 state.clear()
-                explanation = "clear(). Removed all items."
+                explanation = f"{style_code('clear()')}. Removed all items."
                 complexity = "O(1)"
             elif op == 'index':
                 if val in state:
                     i = state.index(val)
-                    explanation = f"index({repr(val)}) -> {i}. Found at index."
+                    explanation = f"{style_code(f'index({repr(val)})')} -> {i}. Found at index."
                 else:
-                    explanation = f"index({repr(val)}). Value not found."
+                    explanation = f"{style_code(f'index({repr(val)})')}. Value not found."
                     status = "error"
                 complexity = "O(n)"
             elif op == 'count':
                 c = state.count(val)
-                explanation = f"count({repr(val)}) -> {c}. Found {c} occurrences."
+                explanation = f"{style_code(f'count({repr(val)})')} -> {c}. Found {c} occurrences."
                 complexity = "O(n)"
             elif op == 'sort':
                 state.sort() 
-                explanation = "sort(). Sorted list in-place."
+                explanation = f"{style_code('sort()')}. Sorted list in-place."
                 complexity = "O(n log n)"
             elif op == 'reverse':
                 state.reverse() 
-                explanation = "reverse(). Reversed list in-place."
+                explanation = f"{style_code('reverse()')}. Reversed list in-place."
                 complexity = "O(n)"
                 
         elif stype == 'tuple':
             # Tuple operations are read-only
             if op == 'index':
                 i = state.index(val)
-                explanation = f"index({repr(val)}) -> {i}."
+                explanation = f"{style_code(f'index({repr(val)})')} -> {i}."
                 complexity = "O(n)"
             elif op == 'count':
                 c = state.count(val)
-                explanation = f"count({repr(val)}) -> {c}."
+                explanation = f"{style_code(f'count({repr(val)})')} -> {c}."
                 complexity = "O(n)"
     
     except Exception as e:

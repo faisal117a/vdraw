@@ -121,7 +121,7 @@ const OP_NAME_MAPPING = {
 
     // Queue
     'queue_list_enqueue': 'append(x)',
-    'queue_list_dequeue': 'pop(0) [Slow!]',
+    'queue_list_dequeue': 'pop(0)',
     'queue_list_front': '[0]',
     'queue_list_rear': '[-1]',
 
@@ -132,8 +132,8 @@ const OP_NAME_MAPPING = {
 
     'queue_queue.Queue_enqueue': 'put(x)',
     'queue_queue.Queue_dequeue': 'get()',
-    'queue_queue.Queue_front': 'N/A (Hidden)', // wrapper hides this usually
-    'queue_queue.Queue_rear': 'N/A (Hidden)',
+    'queue_queue.Queue_front': 'N/A',
+    'queue_queue.Queue_rear': 'N/A',
 
     // List
     'list_list_append': 'append(x)',

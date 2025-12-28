@@ -173,16 +173,24 @@ def explain_linear_regression(slope: float, intercept: float, r2: float) -> Dict
         "steps": steps
     }
 
-def explain_logistic_regression(accuracy: float, coef: List[float], intercept: float) -> Dict:
-    # Coef is a list for potentially multiple features, here we likely have 1D input (simple logistic)
-    c_val = coef[0] if len(coef) > 0 else 0
-    
+def explain_logistic_regression(accuracy: float, coef: List[float], intercept: Union[float, List[float]]) -> Dict:
     steps = [
-        {"text": "1. Logistic regression models the probability of a binary outcome.", "latex": r"P(y=1) = \frac{1}{1 + e^{-(mx + b)}}"},
-        {"text": f"2. Model Coefficients: m = {c_val:.4f}, b = {intercept:.4f}", "latex": ""},
-        {"text": "3. This model predicts classes based on a 0.5 probability threshold.", "latex": ""},
-        {"text": f"4. Model Accuracy on training data: {accuracy*100:.2f}%", "latex": ""}
+        {"text": "1. Logistic regression models the probability of class membership.", "latex": r"P(y=k) = \text{softmax}(z_k)"},
+        {"text": f"2. Model Accuracy on training data: {accuracy*100:.2f}%", "latex": ""}
     ]
+    
+    is_multiclass = isinstance(intercept, list)
+    
+    if is_multiclass:
+        steps.append({"text": "3. Multiclass Model (One-vs-Rest or Multinomial).", "latex": ""})
+        steps.append({"text": f"   Number of classes: {len(intercept)}", "latex": ""})
+        steps.append({"text": "   Coefficients are calculated for each class relative to others.", "latex": ""})
+    else:
+        # Binary
+        c_val = coef[0] if len(coef) > 0 else 0
+        steps.append({"text": "3. Binary Model (Sigmoid Function).", "latex": r"P(y=1) = \frac{1}{1 + e^{-(mx + b)}}"})
+        steps.append({"text": f"   Model Parameters: m = {c_val:.4f}, b = {intercept:.4f}", "latex": ""})
+        
     return {
         "title": "Logistic Regression",
         "result": f"Acc: {accuracy*100:.1f}%",

@@ -6,8 +6,9 @@ class ManualDataInput(BaseModel):
     label: str = "Dataset"
 
 class StatsRequest(BaseModel):
-    data: List[float] = Field(..., min_items=1, max_items=1000)
-    x_data: Optional[List[float]] = Field(None, min_items=1, max_items=1000)
+    data: List[Union[float, int, str]] = Field(..., min_items=1, max_items=10000) # For Descriptive Stats
+    x_data: Optional[List[Union[float, int, str]]] = Field(None, min_items=1, max_items=10000) # Regression X
+    y_data: Optional[List[Union[float, int, str]]] = Field(None, min_items=1, max_items=10000) # Regression Y (Explicit)
     is_sample: bool = True
     quartile_method: Literal['exclusive', 'inclusive', 'tukey'] = 'exclusive'
     regression_type: Optional[Literal['linear', 'logistic']] = None
@@ -24,7 +25,7 @@ class Explanation(BaseModel):
 class StatsResponse(BaseModel):
     mean: float
     median: float
-    mode: List[float]
+    mode: List[Union[float, str]]
     variance: float
     std_dev: float
     range: float
@@ -32,7 +33,7 @@ class StatsResponse(BaseModel):
     iqr: float
     outliers: List[float]
     explanations: List[Dict[str, Union[str, float, List[Dict[str, str]]]]]
-    regression: Optional[Dict[str, Union[float, str, List[float]]]] = None
+    regression: Optional[Dict[str, Union[float, str, List[float], List[str]]]] = None
 
 class ParseDataResponse(BaseModel):
     columns: List[str] # All columns

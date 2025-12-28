@@ -19,8 +19,28 @@ const manualInput = document.getElementById('manual-data');
 const selAnalysis = document.getElementById('col-analysis');
 const selX = document.getElementById('col-x');
 const selY = document.getElementById('col-y');
+const selRegX = document.getElementById('reg-x-col');
+const selRegY = document.getElementById('reg-y-col');
+const selRegType = document.getElementById('regression-select');
+const divRegCols = document.getElementById('regression-cols');
 const selQMethod = document.getElementById('quartile-method');
 const selVarType = document.getElementById('variance-type');
+
+// Regression Selector Logic
+if (selRegType) {
+    selRegType.addEventListener('change', () => {
+        const val = selRegType.value;
+        if (divRegCols) {
+            if (val) {
+                divRegCols.classList.remove('hidden');
+                divRegCols.classList.add('grid'); // Ensure grid layout
+            } else {
+                divRegCols.classList.add('hidden');
+                divRegCols.classList.remove('grid');
+            }
+        }
+    });
+}
 
 // Auto-trigger calculation on parameter change
 [selQMethod, selVarType].forEach(el => {
@@ -104,14 +124,24 @@ fileInput.addEventListener('change', async (e) => {
 
         // Populate Dropdowns
         populateSelect(selAnalysis, numericColumns);
-        populateSelect(selX, allColumns, true); // X can be strings
-        populateSelect(selY, numericColumns, true); // Y usually numeric
+        populateSelect(selX, allColumns, true);
+        populateSelect(selY, allColumns, true);
+        populateSelect(selRegX, allColumns); // Regression X
+        populateSelect(selRegY, allColumns); // Regression Y
+
+        // Auto-defaults
+        if (numericColumns.length > 0) {
+            selAnalysis.value = numericColumns[0];
+            // Default Regression X/Y
+            if (selRegX) selRegX.value = numericColumns[0];
+            if (selRegY) selRegY.value = numericColumns.length > 1 ? numericColumns[1] : numericColumns[0];
+        }
 
         // Auto-select first numeric column for analysis
         if (numericColumns.length > 0) selAnalysis.value = numericColumns[0];
 
         colSelectorSection.classList.remove('hidden');
-        alert(`Loaded ${data.summary.rows} rows.`);
+        alert(`Loaded ${data.summary.rows} rows. (Max: 10000)`);
 
     } catch (err) {
         alert(err.message);
@@ -122,6 +152,7 @@ fileInput.addEventListener('change', async (e) => {
 });
 
 function populateSelect(selectEl, options, addAuto = false) {
+    if (!selectEl) return;
     selectEl.innerHTML = '';
 
     if (addAuto) {
@@ -137,6 +168,86 @@ function populateSelect(selectEl, options, addAuto = false) {
         el.textContent = opt;
         selectEl.appendChild(el);
     });
+}
+
+// Modal Logic
+const modal = document.getElementById('data-modal');
+const btnViewData = document.getElementById('btn-view-data');
+const btnCloseModal = document.getElementById('btn-close-modal');
+const modalBackdrop = document.getElementById('data-modal-backdrop');
+
+// Store original list of loaded data ROWS for table view (reconstructed from globalData or stored separately?)
+// Creating "rows" from column-based globalData
+function recreateRows() {
+    const cols = Object.keys(globalData);
+    if (cols.length === 0) return [];
+    const rowCount = globalData[cols[0]].length;
+    const rows = [];
+    for (let i = 0; i < rowCount; i++) {
+        let r = {};
+        cols.forEach(c => r[c] = globalData[c][i]);
+        rows.push(r);
+    }
+    return rows;
+}
+
+if (btnViewData) {
+    btnViewData.addEventListener('click', () => {
+        const rows = recreateRows();
+        if (rows.length === 0) {
+            alert("No data imported.");
+            return;
+        }
+        renderDataTable(rows);
+        modal.classList.remove('hidden');
+    });
+}
+
+function closeModal() { modal.classList.add('hidden'); }
+if (btnCloseModal) btnCloseModal.addEventListener('click', closeModal);
+if (modalBackdrop) modalBackdrop.addEventListener('click', closeModal);
+
+function renderDataTable(rows) {
+    const thead = document.getElementById('data-table-head');
+    const tbody = document.getElementById('data-table-body');
+    thead.innerHTML = '';
+    tbody.innerHTML = '';
+
+    if (rows.length === 0) return;
+
+    // Headers
+    const headers = Object.keys(rows[0]);
+    headers.forEach(h => {
+        const th = document.createElement('th');
+        th.className = "px-4 py-3 font-medium text-slate-300 bg-slate-800 whitespace-nowrap";
+        th.textContent = h;
+        thead.appendChild(th);
+    });
+
+    // Rows (Limit render to 100 for DOM perf if huge? 1000 is okay)
+    // Let's render all since limit is 10000 now. might be slow for 10000. 
+    // Let's render first 500 for now and add "..."? Or just simple render.
+    // User asked for "all data".
+    const renderLimit = 2000;
+    const subset = rows.slice(0, renderLimit);
+
+    subset.forEach((row, idx) => {
+        const tr = document.createElement('tr');
+        tr.className = idx % 2 === 0 ? "bg-slate-900/50" : "bg-slate-800/30";
+        headers.forEach(h => {
+            const td = document.createElement('td');
+            td.className = "px-4 py-2 border-b border-slate-800 whitespace-nowrap text-slate-400";
+            td.textContent = row[h] ?? "";
+            tr.appendChild(td);
+        });
+        tbody.appendChild(tr);
+    });
+
+    if (rows.length > renderLimit) {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td colspan="${headers.length}" class="px-4 py-3 text-center text-slate-500 italic">... ${rows.length - renderLimit} more rows hidden for performance ...</td>`;
+        tbody.appendChild(tr);
+    }
 }
 
 // Data Resolvers
@@ -174,17 +285,18 @@ function getChartData() {
         return { x: y.map((_, i) => i + 1), y: y };
     } else {
         // Multi-column logic
+        // Visuals use col-x and col-y
         const xCol = selX.value;
         const yCol = selY.value;
-        const anaCol = selAnalysis.value;
+        const anaCol = selAnalysis.value; // Default Y if Auto?
 
-        let yData = globalData[anaCol] || [];
-        // If Y-Axis is explicitly selected, use that for chart values instead of analysis column?
-        // Usually "Calculate" works on Analysis Column. Chart visualizes that or X/Y.
-        // Let's assume Chart defaults to Analysis Column if Y is Auto.
+        let yData = [];
         if (yCol !== 'auto') {
             yData = globalData[yCol] || [];
+        } else {
+            yData = globalData[anaCol] || [];
         }
+        // Filter? No, visualizer handles types mostly.
 
         let xData;
         if (xCol === 'auto') {
@@ -192,16 +304,41 @@ function getChartData() {
         } else {
             xData = globalData[xCol] || [];
         }
-
         return { x: xData, y: yData };
     }
 }
 
 // Calculate Handler
 btnCalculate.addEventListener('click', async () => {
-    const dataToAnalyze = getAnalysisData();
+    // 1. Stats Data (Main Target)
+    const statsData = getAnalysisData();
 
-    if (!dataToAnalyze || dataToAnalyze.length === 0) {
+    // 2. Regression Data
+    const regType = selRegType.value || null;
+    let regXData = null;
+    let regYData = null;
+    let xLabel = "Index";
+    let yLabel = "Target";
+
+    if (regType) {
+        if (isManualMode) {
+            // Manual mode regression: simple index vs values
+            regYData = statsData;
+            regXData = statsData.map((_, i) => i + 1);
+            xLabel = "Index";
+            yLabel = "Manual Data";
+        } else {
+            // File mode: Use specific regression selectors
+            const xCol = selRegX.value;
+            const yCol = selRegY.value;
+            regXData = globalData[xCol] || [];
+            regYData = globalData[yCol] || [];
+            xLabel = xCol;
+            yLabel = yCol;
+        }
+    }
+
+    if (!statsData || statsData.length === 0) {
         alert("No valid data found to analyze.");
         return;
     }
@@ -209,44 +346,14 @@ btnCalculate.addEventListener('click', async () => {
     try {
         btnCalculate.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Processing...';
 
-        // Parameters
-        const isSample = document.getElementById('variance-type').value === 'sample';
-        const qMethod = document.getElementById('quartile-method').value;
-        const regType = document.getElementById('regression-select').value || null;
-
-        // Data Mapping for Regression
-        let finalYData = dataToAnalyze; // Default to Analysis Column
-        let finalXData = null;
-        let yLabel = selAnalysis.value;
-        let xLabel = "Index";
-
-        if (regType) {
-            const xCol = selX.value;
-            const yCol = selY.value; // check Y selector
-
-            // 1. Resolve X Data
-            if (xCol !== 'auto') {
-                finalXData = globalData[xCol] || [];
-                xLabel = xCol;
-            } else if (isManualMode) {
-                finalXData = finalYData.map((_, i) => i + 1);
-                xLabel = "Index";
-            }
-
-            // 2. Resolve Y Data (Prioritize Y-Axis selector if set)
-            if (!isManualMode && yCol !== 'auto' && globalData[yCol]) {
-                finalYData = globalData[yCol].filter(x => typeof x === 'number');
-                yLabel = yCol;
-            }
-        }
-
-        // Prepare Request
+        // Prepare Payload
         let payload = {
-            data: finalYData, // This is Y
-            is_sample: isSample,
-            quartile_method: qMethod,
-            regression_type: regType,
-            x_data: finalXData // This is X
+            data: statsData, // For Mean/Median
+            x_data: regXData, // For Regression
+            y_data: regYData, // For Regression
+            is_sample: selVarType.value === 'sample',
+            quartile_method: selQMethod.value,
+            regression_type: regType
         };
 
         // Calculate Stats
@@ -256,14 +363,18 @@ btnCalculate.addEventListener('click', async () => {
             body: JSON.stringify(payload)
         });
 
-        if (!statsRes.ok) throw new Error("Calculation failed");
+        if (!statsRes.ok) {
+            const err = await statsRes.json();
+            throw new Error(err.detail || "Calculation failed");
+        }
+
         const stats = await statsRes.json();
 
-        // Pass labels to updateDashboard for clearer UI
+        // Metadata for UI
         stats.meta = { xLabel, yLabel };
 
-        // Chart Data (Sync with what we just used)
-        const chartData = { x: finalXData || finalYData.map((_, i) => i + 1), y: finalYData };
+        // Visual Data (Separate from Calcs)
+        const chartData = getChartData();
 
         // Update UI
         updateDashboard(stats, chartData);
@@ -297,9 +408,6 @@ function updateDashboard(stats, chartData) {
     const regressionArea = document.getElementById('regression-area');
     const regressionContent = document.getElementById('regression-content');
     const predictionUI = document.getElementById('prediction-ui');
-    const predictResult = document.getElementById('predict-result');
-    const btnPredict = document.getElementById('btn-predict');
-    const valPredicted = document.getElementById('val-predicted');
 
     if (stats.regression) {
         regressionArea.classList.remove('hidden');
@@ -308,44 +416,26 @@ function updateDashboard(stats, chartData) {
         let html = `<div class="font-bold text-brand-300 mb-2">Equation: ${stats.regression.formula}</div>`;
 
         if (stats.regression.r2_score !== undefined) {
+            // Linear Regression
             html += `<div>R² Score: ${stats.regression.r2_score.toFixed(4)}</div>`;
             html += `<div>Slope: ${stats.regression.slope.toFixed(4)}</div>`;
             html += `<div>Intercept: ${stats.regression.intercept.toFixed(4)}</div>`;
-
-            // Enable Linear Prediction
-            predictionUI.classList.remove('hidden');
-
-            // Update Labels
-            const xLbl = stats.meta ? stats.meta.xLabel : "X";
-            const yLbl = stats.meta ? stats.meta.yLabel : "Y";
-            document.querySelector('#prediction-ui h5').textContent = `Predict ${yLbl} from ${xLbl}`;
-            document.getElementById('predict-x').placeholder = `Enter ${xLbl} value`;
-
-            // Remove old listeners to prevent duplicates (simple clone replacement)
-            const newBtn = btnPredict.cloneNode(true);
-            btnPredict.parentNode.replaceChild(newBtn, btnPredict);
-
-            newBtn.addEventListener('click', () => {
-                const xVal = parseFloat(document.getElementById('predict-x').value);
-                if (isNaN(xVal)) {
-                    alert("Please enter a valid numeric X value.");
-                    return;
-                }
-                const yVal = stats.regression.slope * xVal + stats.regression.intercept;
-                valPredicted.textContent = yVal.toFixed(4);
-                predictResult.classList.remove('hidden');
-            });
+            enablePredictionUI(stats, 'linear');
 
         } else if (stats.regression.accuracy !== undefined) {
+            // Logistic Regression
             html += `<div>Accuracy: ${(stats.regression.accuracy * 100).toFixed(2)}%</div>`;
-            predictionUI.classList.add('hidden'); // No simple prediction for logistic yet
+            if (stats.regression.classes) {
+                html += `<div class="text-xs mt-1 text-slate-400">Classes: ${stats.regression.classes.join(', ')}</div>`;
+            }
+            enablePredictionUI(stats, 'logistic');
         }
 
         regressionContent.innerHTML = html;
 
     } else {
         regressionArea.classList.add('hidden');
-        predictionUI.classList.add('hidden'); // Hide prediction UI if no regression
+        predictionUI.classList.add('hidden');
     }
 
     // Outliers
@@ -370,6 +460,101 @@ function updateDashboard(stats, chartData) {
     if (typeof animateElements === 'function') {
         animateElements();
     }
+}
+
+function enablePredictionUI(stats, type) {
+    const predictionUI = document.getElementById('prediction-ui');
+    const predictResult = document.getElementById('predict-result');
+    const btnPredict = document.getElementById('btn-predict');
+    const valPredicted = document.getElementById('val-predicted');
+
+    predictionUI.classList.remove('hidden');
+    predictResult.classList.add('hidden'); // Hide previous result on new calc
+
+    const xLbl = stats.meta ? stats.meta.xLabel : "X";
+    const yLbl = stats.meta ? stats.meta.yLabel : "Y";
+    document.querySelector('#prediction-ui h5').textContent = `Predict ${yLbl} from ${xLbl}`;
+    document.getElementById('predict-x').placeholder = `Enter ${xLbl} value`;
+
+    // Clone to remove old listeners
+    const newBtn = btnPredict.cloneNode(true);
+    btnPredict.parentNode.replaceChild(newBtn, btnPredict);
+
+    newBtn.addEventListener('click', () => {
+        const xInput = document.getElementById('predict-x').value;
+        const xVal = parseFloat(xInput);
+
+        if (isNaN(xVal)) {
+            alert("Please enter a valid numeric X value.");
+            return;
+        }
+
+        let predictedText = "";
+
+        if (type === 'linear') {
+            const yVal = stats.regression.slope * xVal + stats.regression.intercept;
+            predictedText = yVal.toFixed(4);
+        }
+        else if (type === 'logistic') {
+            const coefs = stats.regression.coefficients;
+            const intercepts = stats.regression.intercept;
+            const classes = stats.regression.classes || ["0", "1"];
+
+            // Check for Multiclass (intercepts is array) vs Binary (intercept is float)
+            if (Array.isArray(intercepts)) {
+                // Multiclass (Softmax)
+                // We have m_i and b_i for each class i
+                // Score_i = m_i * x + b_i
+                // Prob_i = exp(Score_i) / sum(exp(Score_k))
+
+                let scores = [];
+                let maxScore = -Infinity; // For numerical stability if needed, but JS handles exp pretty well up to 700
+
+                intercepts.forEach((b, i) => {
+                    const m = coefs[i]; // Since 1 feature, coefs is flat list corresponding to classes
+                    const z = m * xVal + b;
+                    scores.push(z);
+                });
+
+                // Softmax
+                const exps = scores.map(s => Math.exp(s));
+                const sumExps = exps.reduce((a, b) => a + b, 0);
+                const probs = exps.map(e => e / sumExps);
+
+                // Argmax
+                let maxProb = -1;
+                let idx = -1;
+                probs.forEach((p, i) => {
+                    if (p > maxProb) {
+                        maxProb = p;
+                        idx = i;
+                    }
+                });
+
+                const cls = classes[idx];
+                predictedText = `${cls} (${(maxProb * 100).toFixed(1)}%)`;
+
+            } else if (typeof intercepts === 'number') {
+                // Binary (Sigmoid)
+                // z = mx + b (Positive Class, index 1)
+                const m = coefs[0] || 0;
+                const b = intercepts;
+                const z = m * xVal + b;
+                const prob = 1 / (1 + Math.exp(-z));
+
+                // If classes are [A, B], index 0 is A, index 1 is B.
+                // P(y=1) is prob.
+                const cls = prob >= 0.5 ? classes[1] : classes[0];
+                const displayProb = prob >= 0.5 ? prob : (1 - prob);
+                predictedText = `${cls} (${(displayProb * 100).toFixed(1)}%)`;
+            } else {
+                predictedText = "Error: Invalid Model Parameters";
+            }
+        }
+
+        valPredicted.textContent = predictedText;
+        predictResult.classList.remove('hidden');
+    });
 }
 
 function renderExplanations(explanations) {

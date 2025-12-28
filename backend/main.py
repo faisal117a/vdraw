@@ -35,80 +35,141 @@ import numpy as np
 def calculate_stats(request: StatsRequest):
     data = request.data
     
-    # Calculate Central Tendency
-    mean = calculate_mean(data)
-    median = calculate_median(data)
-    mode = calculate_mode(data)
+    # Validation for Descriptive Stats
+    # If data contains strings, we can't do math. Modes might work, but mean/std won't.
+    # We will try to convert to float, if fail, we assume it's categorical.
+    # User Request: "Show friendly errors". 
+    # Strategy: Filter numeric for stats. If empty, raise error or return empty stats.
     
-    # Calculate Dispersion
-    var = calculate_variance(data, request.is_sample)
-    std = calculate_std_dev(data, request.is_sample)
-    rng = calculate_range(data)
-    
-    # Calculate Quartiles & Outliers
-    qs = calculate_quartiles(data, request.quartile_method)
-    iqr = calculate_iqr(qs)
-    outliers = detect_outliers(data, iqr, qs['q1'], qs['q3'])
-    
-    # Generate Explanations
-    explanations = []
-    explanations.append(explain_mean(data))
-    explanations.append(explain_median(data))
-    
-    if request.is_sample:
-        explanations.append(explain_variance_sample(data, mean))
-    else:
-        explanations.append(explain_variance_population(data, mean))
+    numeric_data = []
+    try:
+        numeric_data = [float(x) for x in data if x is not None and str(x).strip() != '']
+    except ValueError:
+        pass # Contains strings
         
-    explanations.append(explain_std_dev(var, request.is_sample))
-    explanations.append(explain_quartiles(data, request.quartile_method, qs))
-    explanations.append(explain_iqr(qs['q1'], qs['q3']))
+    stats_valid = len(numeric_data) > 0
     
+    if stats_valid:
+        mean = calculate_mean(numeric_data)
+        median = calculate_median(numeric_data)
+        mode = calculate_mode(numeric_data)
+        var = calculate_variance(numeric_data, request.is_sample)
+        std = calculate_std_dev(numeric_data, request.is_sample)
+        rng = calculate_range(numeric_data)
+        qs = calculate_quartiles(numeric_data, request.quartile_method)
+        iqr = calculate_iqr(qs)
+        outliers = detect_outliers(numeric_data, iqr, qs['q1'], qs['q3'])
+        
+        explanations = []
+        explanations.append(explain_mean(numeric_data))
+        explanations.append(explain_median(numeric_data))
+        if request.is_sample: explanations.append(explain_variance_sample(numeric_data, mean))
+        else: explanations.append(explain_variance_population(numeric_data, mean))
+        explanations.append(explain_std_dev(var, request.is_sample))
+        explanations.append(explain_quartiles(numeric_data, request.quartile_method, qs))
+        explanations.append(explain_iqr(qs['q1'], qs['q3']))
+    else:
+        # Return empty/null stats if data is not numeric (e.g. only categorical)
+        # But we might still want to do regression!
+        mean = median = var = std = rng = iqr = 0.0
+        mode = []
+        outliers = []
+        qs = {'q1': 0.0, 'median': 0.0, 'q3': 0.0}
+        explanations = [{"title": "Notice", "steps": [{"text": "Descriptive statistics (Mean, Median, etc.) skipped because the selected 'Stats Column' contains non-numeric data."}], "result": "N/A"}]
+
     # Optional Regression
     regression_result = None
     if request.regression_type:
-        y = np.array(data)
+        # Use explicit Y if provided, else fallback to data (which might be the categorical one)
+        raw_y = request.y_data if request.y_data else data
+        y = np.array(raw_y)
         
         # Use provided X or fallback to index
         if request.x_data and len(request.x_data) == len(y):
             X = np.array(request.x_data).reshape(-1, 1)
         else:
-            X = np.array(range(len(data))).reshape(-1, 1)
-        
+            X = np.array(range(len(y))).reshape(-1, 1)
+
         if request.regression_type == "linear":
-            model = LinearRegression()
-            model.fit(X, y)
-            r2 = model.score(X, y)
-            regression_result = {
-                "slope": float(model.coef_[0]),
-                "intercept": float(model.intercept_),
-                "r2_score": float(r2),
-                "formula": f"y = {model.coef_[0]:.2f}x + {model.intercept_:.2f}",
-                "x_mean": float(np.mean(X)), # Useful for centering
-                "y_mean": float(np.mean(y))
-            }
-            # Enhanced Explanation
-            explanations.append(explain_linear_regression(model.coef_[0], model.intercept_, r2))
+            # Linear requires Numeric Y
+            try:
+                y_float = y.astype(float)
+                model = LinearRegression()
+                model.fit(X, y_float)
+                r2 = model.score(X, y_float)
+                regression_result = {
+                    "slope": float(model.coef_[0]),
+                    "intercept": float(model.intercept_),
+                    "r2_score": float(r2),
+                    "formula": f"y = {model.coef_[0]:.2f}x + {model.intercept_:.2f}",
+                    "x_mean": float(np.mean(X)),
+                    "y_mean": float(np.mean(y_float))
+                }
+                explanations.append(explain_linear_regression(model.coef_[0], model.intercept_, r2))
+            except ValueError:
+                 # Y is string
+                 raise HTTPException(status_code=400, detail="Linear Regression requires a numeric Target/Y column.")
             
         elif request.regression_type == "logistic":
-            # ... (Logic remains similar, just ensuring X is used) ...
-            unique_vals = np.unique(y)
-            if len(unique_vals) > 2:
-                # Binarize based on Median
-                y_bin = (y > median).astype(int)
+            # For Logistic, support binary or multiclass with Text Labels
+            from sklearn.preprocessing import LabelEncoder
+            le = LabelEncoder()
+            
+            # Encode Y
+            try:
+                # Force string conversion for labels to handle mixed types/None safely
+                y_str = [str(val) for val in y.flatten()]
+                y_encoded = le.fit_transform(y_str)
+            except Exception as e:
+                # Last resort
+                print(f"Encoding failed: {e}")
+                raise HTTPException(status_code=400, detail=f"Could not encode Target/Y labels: {str(e)}")
+
+            # Validation for X (Must be numeric)
+            try:
+                X = X.astype(float)
+            except ValueError:
+                 raise HTTPException(status_code=400, detail="Independent Variable (X) must be numeric.")
+
+            model = LogisticRegression(max_iter=5000) # Increased max_iter
+            model.fit(X, y_encoded)
+            acc = model.score(X, y_encoded)
+            
+            classes_str = ", ".join([str(c) for c in le.classes_])
+
+            # Extract coefficients
+            if len(le.classes_) == 2:
+                # Binary: 1 coeff per feature (for the Positive class)
+                # Sklearn returns shape (1, n_features)
+                intercept_val = float(model.intercept_[0])
+                coefs = [float(c) for c in model.coef_[0]]
             else:
-                y_bin = y
-                
-            model = LogisticRegression()
-            model.fit(X, y_bin)
-            acc = model.score(X, y_bin)
+                # Multiclass: One-vs-Rest or Multinomial
+                # Shape (n_classes, n_features)
+                # We have 1 feature (X), so coefs is list of slopes for each class
+                # Intercepts is list of intercepts for each class
+                intercept_val = model.intercept_.tolist() # List of floats
+                coefs = model.coef_.flatten().tolist()    # List of floats (m1, m2, m3...)
+
             regression_result = {
                 "accuracy": float(acc),
-                "intercept": float(model.intercept_[0]),
-                "coefficients": [float(c) for c in model.coef_[0]],
-                "formula": "P(y=1) = 1 / (1 + exp(-(mx+b)))"
+                "intercept": intercept_val, # Float (Binary) or List[float] (Multicls)
+                "coefficients": coefs,      # List[float]
+                "formula": f"Classes: [{classes_str}]",
+                "classes": [str(c) for c in le.classes_]
             }
-            explanations.append(explain_logistic_regression(acc, model.coef_[0], model.intercept_[0]))
+            # Update explanation function
+            explanations.append(explain_logistic_regression(acc, coefs, intercept_val))
+
+            regression_result = {
+                "accuracy": float(acc),
+                "intercept": intercept_val,
+                "coefficients": coefs,
+                "formula": f"Classes: [{classes_str}]",
+                "classes": [str(c) for c in le.classes_] if hasattr(le, 'classes_') else []
+            }
+            # Update explanation function to accept class names if needed
+            explanations.append(explain_logistic_regression(acc, coefs, intercept_val))
 
     return StatsResponse(
         mean=mean,
@@ -139,8 +200,8 @@ async def parse_data_file(file: UploadFile = File(...)):
             df = pd.read_excel(io.BytesIO(contents))
             
         # Hard Limit for Performance
-        if len(df) > 1000:
-            raise HTTPException(status_code=400, detail="File too large. Maximum 1000 rows allowed for this version.")
+        if len(df) > 10000:
+            raise HTTPException(status_code=400, detail="File too large. Maximum 10000 rows allowed for this version.")
             
         # ... (Rest of existing parsing logic) ...
 

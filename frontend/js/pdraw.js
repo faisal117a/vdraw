@@ -36,6 +36,10 @@ function init() {
     window.switchPhase = switchPhase;
     window.pdrawDom = pdrawDom;
 
+    // Add sidebar and page title to DOM references
+    pdrawDom.sidebar = document.getElementById('sidebar');
+    pdrawDom.pageTitle = document.getElementById('page-title');
+
     initToggle();
     initPDraw();
 }
@@ -67,7 +71,11 @@ function switchPhase(phase) {
         pdrawDom.dashboardV.classList.remove('hidden');
         pdrawDom.dashboardP.classList.add('hidden');
 
-        // Branding
+        // Show Sidebar
+        if (pdrawDom.sidebar) pdrawDom.sidebar.classList.remove('hidden');
+        if (pdrawDom.pageTitle) pdrawDom.pageTitle.innerText = "Dashboard";
+
+        // Branding (in Sidebar - visible now)
         pdrawDom.logoText.innerHTML = '<i class="fa-solid fa-chart-simple mr-2 text-brand-500"></i>VDraw';
         document.documentElement.style.setProperty('--brand-color', '#4f46e5'); // Indigo
     } else {
@@ -85,7 +93,11 @@ function switchPhase(phase) {
         pdrawDom.dashboardV.classList.add('hidden');
         pdrawDom.dashboardP.classList.remove('hidden');
 
-        // Branding
+        // Hide Sidebar
+        if (pdrawDom.sidebar) pdrawDom.sidebar.classList.add('hidden');
+        if (pdrawDom.pageTitle) pdrawDom.pageTitle.innerHTML = '<i class="fa-solid fa-layer-group text-green-500 mr-2"></i>PDraw Studio';
+
+        // Branding (Sidebar hidden, but keep logic consistent)
         pdrawDom.logoText.innerHTML = '<i class="fa-solid fa-layer-group mr-2 text-green-500"></i>PDraw';
         document.documentElement.style.setProperty('--brand-color', '#16a34a'); // Green
 

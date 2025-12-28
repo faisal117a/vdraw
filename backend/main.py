@@ -24,7 +24,12 @@ app.add_middleware(
 def read_root():
     return {"message": "VDraw API is running"}
 
-from .stats.steps import explain_mean, explain_median, explain_variance_sample, explain_variance_population, explain_std_dev, explain_quartiles, explain_iqr
+from .stats.steps import explain_mean, explain_median, explain_variance_sample, explain_variance_population, explain_std_dev, explain_quartiles, explain_iqr, explain_linear_regression, explain_logistic_regression
+from sklearn.linear_model import LinearRegression, LogisticRegression
+from sklearn.metrics import r2_score, accuracy_score
+import numpy as np
+
+# ... (Previous imports) ...
 
 @app.post("/api/stats/calculate", response_model=StatsResponse)
 def calculate_stats(request: StatsRequest):
@@ -59,6 +64,52 @@ def calculate_stats(request: StatsRequest):
     explanations.append(explain_quartiles(data, request.quartile_method, qs))
     explanations.append(explain_iqr(qs['q1'], qs['q3']))
     
+    # Optional Regression
+    regression_result = None
+    if request.regression_type:
+        y = np.array(data)
+        
+        # Use provided X or fallback to index
+        if request.x_data and len(request.x_data) == len(y):
+            X = np.array(request.x_data).reshape(-1, 1)
+        else:
+            X = np.array(range(len(data))).reshape(-1, 1)
+        
+        if request.regression_type == "linear":
+            model = LinearRegression()
+            model.fit(X, y)
+            r2 = model.score(X, y)
+            regression_result = {
+                "slope": float(model.coef_[0]),
+                "intercept": float(model.intercept_),
+                "r2_score": float(r2),
+                "formula": f"y = {model.coef_[0]:.2f}x + {model.intercept_:.2f}",
+                "x_mean": float(np.mean(X)), # Useful for centering
+                "y_mean": float(np.mean(y))
+            }
+            # Enhanced Explanation
+            explanations.append(explain_linear_regression(model.coef_[0], model.intercept_, r2))
+            
+        elif request.regression_type == "logistic":
+            # ... (Logic remains similar, just ensuring X is used) ...
+            unique_vals = np.unique(y)
+            if len(unique_vals) > 2:
+                # Binarize based on Median
+                y_bin = (y > median).astype(int)
+            else:
+                y_bin = y
+                
+            model = LogisticRegression()
+            model.fit(X, y_bin)
+            acc = model.score(X, y_bin)
+            regression_result = {
+                "accuracy": float(acc),
+                "intercept": float(model.intercept_[0]),
+                "coefficients": [float(c) for c in model.coef_[0]],
+                "formula": "P(y=1) = 1 / (1 + exp(-(mx+b)))"
+            }
+            explanations.append(explain_logistic_regression(acc, model.coef_[0], model.intercept_[0]))
+
     return StatsResponse(
         mean=mean,
         median=median,
@@ -69,25 +120,30 @@ def calculate_stats(request: StatsRequest):
         quartiles=qs,
         iqr=iqr,
         outliers=outliers,
-        explanations=explanations
+        explanations=explanations,
+        regression=regression_result
     )
 
 @app.post("/api/data/parse", response_model=ParseDataResponse)
 async def parse_data_file(file: UploadFile = File(...)):
-    # Validate file extension
+    # ... (Validation code) ...
     filename = file.filename.lower()
     if not (filename.endswith('.csv') or filename.endswith('.xlsx')):
-        raise HTTPException(status_code=400, detail="Invalid file format. Please upload a CSV or Excel file.")
-    
+         raise HTTPException(status_code=400, detail="Invalid file format. Please upload a CSV or Excel file.")
+         
     try:
         contents = await file.read()
         if filename.endswith('.csv'):
-            # Try parsing with standard settings, then handle variants if needed
-            # For MVP, assuming comma or standard delimiters.
-            # We filter only numeric columns.
             df = pd.read_csv(io.BytesIO(contents))
         else:
             df = pd.read_excel(io.BytesIO(contents))
+            
+        # Hard Limit for Performance
+        if len(df) > 1000:
+            raise HTTPException(status_code=400, detail="File too large. Maximum 1000 rows allowed for this version.")
+            
+        # ... (Rest of existing parsing logic) ...
+
             
         # 1. Identify Numeric Columns for Analysis
         numeric_df = df.select_dtypes(include=['number'])

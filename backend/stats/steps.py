@@ -158,3 +158,33 @@ def explain_iqr(q1: float, q3: float) -> Dict:
         "result": f"{q3 - q1:.2f}",
         "steps": steps
     }
+
+def explain_linear_regression(slope: float, intercept: float, r2: float) -> Dict:
+    steps = [
+        {"text": "1. The linear regression model fits a line to minimize squared errors.", "latex": "y = mx + b"},
+        {"text": f"2. Calculated Slope (m) = {slope:.4f}", "latex": ""},
+        {"text": f"3. Calculated Intercept (b) = {intercept:.4f}", "latex": ""},
+        {"text": f"4. Equation of the line:", "latex": f"y = {slope:.4f}x + {intercept:.4f}"},
+        {"text": f"5. R-squared value (Goodness of fit): {r2:.4f}", "latex": f"R^2 = {r2:.4f}"}
+    ]
+    return {
+        "title": "Linear Regression",
+        "result": f"y = {slope:.2f}x + {intercept:.2f}",
+        "steps": steps
+    }
+
+def explain_logistic_regression(accuracy: float, coef: List[float], intercept: float) -> Dict:
+    # Coef is a list for potentially multiple features, here we likely have 1D input (simple logistic)
+    c_val = coef[0] if len(coef) > 0 else 0
+    
+    steps = [
+        {"text": "1. Logistic regression models the probability of a binary outcome.", "latex": r"P(y=1) = \frac{1}{1 + e^{-(mx + b)}}"},
+        {"text": f"2. Model Coefficients: m = {c_val:.4f}, b = {intercept:.4f}", "latex": ""},
+        {"text": "3. This model predicts classes based on a 0.5 probability threshold.", "latex": ""},
+        {"text": f"4. Model Accuracy on training data: {accuracy*100:.2f}%", "latex": ""}
+    ]
+    return {
+        "title": "Logistic Regression",
+        "result": f"Acc: {accuracy*100:.1f}%",
+        "steps": steps
+    }

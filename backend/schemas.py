@@ -7,8 +7,10 @@ class ManualDataInput(BaseModel):
 
 class StatsRequest(BaseModel):
     data: List[float] = Field(..., min_items=1, max_items=1000)
+    x_data: Optional[List[float]] = Field(None, min_items=1, max_items=1000)
     is_sample: bool = True
-    quartile_method: Literal['inclusive', 'exclusive', 'tukey'] = 'exclusive'
+    quartile_method: Literal['exclusive', 'inclusive', 'tukey'] = 'exclusive'
+    regression_type: Optional[Literal['linear', 'logistic']] = None
 
 class Step(BaseModel):
     text: str
@@ -23,13 +25,14 @@ class StatsResponse(BaseModel):
     mean: float
     median: float
     mode: List[float]
-    range: float
     variance: float
     std_dev: float
+    range: float
     quartiles: Dict[str, float]
     iqr: float
     outliers: List[float]
-    explanations: List[Explanation] = []
+    explanations: List[Dict[str, Union[str, float, List[Dict[str, str]]]]]
+    regression: Optional[Dict[str, Union[float, str, List[float]]]] = None
 
 class ParseDataResponse(BaseModel):
     columns: List[str] # All columns
@@ -37,3 +40,4 @@ class ParseDataResponse(BaseModel):
     preview: List[Dict[str, Union[float, str, None]]] # Preview
     full_data: Dict[str, List[Union[float, str, None]]] # Full data mixed
     summary: Dict[str, int] # e.g. {"rows": 100, "cols": 5}
+

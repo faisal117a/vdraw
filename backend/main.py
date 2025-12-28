@@ -259,3 +259,16 @@ def parse_manual_data(input_text: str = Body(..., embed=True)):
         return {"data": data}
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid data format. Please only input numbers.")
+
+# --- PDraw (Phase 2) Routes ---
+from backend.pdraw.schemas import SimulationRequest, SimulationResponse, CatalogResponse
+from backend.pdraw.catalog import get_pdraw_catalog
+from backend.pdraw.simulator import simulate_pdraw
+
+@app.get("/api/pdraw/catalog", response_model=CatalogResponse)
+def get_catalog():
+    return get_pdraw_catalog()
+
+@app.post("/api/pdraw/simulate", response_model=SimulationResponse)
+def simulate_ds(request: SimulationRequest):
+    return simulate_pdraw(request)

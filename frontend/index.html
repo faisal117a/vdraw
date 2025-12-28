@@ -478,6 +478,18 @@
             <div class="flex items-center space-x-2 md:space-x-4">
                 <!-- Optional: Hide buttons on very small screens or make them icon only -->
 
+                <!-- Phase Toggle -->
+                <div class="flex items-center bg-slate-800 rounded-lg p-1 mr-4 border border-slate-700">
+                    <button id="phase-vdraw"
+                        class="px-3 py-1 text-xs font-bold rounded text-white bg-brand-600 shadow transition-all">
+                        VDraw
+                    </button>
+                    <button id="phase-pdraw"
+                        class="px-3 py-1 text-xs font-bold rounded text-slate-400 hover:text-white transition-all">
+                        PDraw
+                    </button>
+                </div>
+
                 <!-- Animation Mode Toggle (Hidden on small mobile) -->
                 <div class="hidden sm:flex items-center bg-slate-800 rounded-lg p-1 mr-2">
                     <button id="mode-std"
@@ -504,143 +516,249 @@
         </header>
 
         <!-- Scrollable Dashboard -->
-        <div class="flex-1 overflow-y-auto p-8">
+        <div class="flex-1 overflow-y-auto p-8 relative">
 
-            <!-- Stats overview grid -->
-            <div id="stats-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8 hidden">
-                <!-- Mean -->
-                <div class="glass-panel p-5 rounded-xl border-l-4 border-brand-500">
-                    <p class="text-slate-400 text-xs uppercase font-bold tracking-wider mb-1">Mean</p>
-                    <h3 id="val-mean" class="text-3xl font-bold text-white">--</h3>
+            <!-- VDraw Dashboard Wrapper -->
+            <div id="vdraw-dashboard" class="transition-opacity duration-300">
+                <!-- Stats overview grid -->
+                <div id="stats-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8 hidden">
+                    <!-- Mean -->
+                    <div class="glass-panel p-5 rounded-xl border-l-4 border-brand-500">
+                        <p class="text-slate-400 text-xs uppercase font-bold tracking-wider mb-1">Mean</p>
+                        <h3 id="val-mean" class="text-3xl font-bold text-white">--</h3>
+                    </div>
+                    <!-- Median -->
+                    <div class="glass-panel p-5 rounded-xl border-l-4 border-purple-500">
+                        <p class="text-slate-400 text-xs uppercase font-bold tracking-wider mb-1">Median</p>
+                        <h3 id="val-median" class="text-3xl font-bold text-white">--</h3>
+                    </div>
+                    <!-- Mode -->
+                    <div class="glass-panel p-5 rounded-xl border-l-4 border-pink-500">
+                        <p class="text-slate-400 text-xs uppercase font-bold tracking-wider mb-1">Mode</p>
+                        <h3 id="val-mode" class="text-3xl font-bold text-white">--</h3>
+                    </div>
+                    <!-- Std Dev -->
+                    <div class="glass-panel p-5 rounded-xl border-l-4 border-cyan-500">
+                        <p class="text-slate-400 text-xs uppercase font-bold tracking-wider mb-1">Std Dev</p>
+                        <h3 id="val-std" class="text-3xl font-bold text-white">--</h3>
+                    </div>
                 </div>
-                <!-- Median -->
-                <div class="glass-panel p-5 rounded-xl border-l-4 border-purple-500">
-                    <p class="text-slate-400 text-xs uppercase font-bold tracking-wider mb-1">Median</p>
-                    <h3 id="val-median" class="text-3xl font-bold text-white">--</h3>
+
+                <!-- Main Charts Area -->
+                <div id="empty-state" class="flex flex-col items-center justify-center h-[60vh] text-center">
+                    <div class="bg-slate-800/50 p-6 rounded-full mb-4">
+                        <i class="fa-solid fa-chart-column text-4xl text-slate-600"></i>
+                    </div>
+                    <h3 class="text-xl font-semibold text-slate-300 mb-2">Ready to Analyze</h3>
+                    <p class="text-slate-500 max-w-md">Enter data manually or upload a file on the sidebar to generate
+                        descriptive statistics and visualizations.</p>
                 </div>
-                <!-- Mode -->
-                <div class="glass-panel p-5 rounded-xl border-l-4 border-pink-500">
-                    <p class="text-slate-400 text-xs uppercase font-bold tracking-wider mb-1">Mode</p>
-                    <h3 id="val-mode" class="text-3xl font-bold text-white">--</h3>
-                </div>
-                <!-- Std Dev -->
-                <div class="glass-panel p-5 rounded-xl border-l-4 border-cyan-500">
-                    <p class="text-slate-400 text-xs uppercase font-bold tracking-wider mb-1">Std Dev</p>
-                    <h3 id="val-std" class="text-3xl font-bold text-white">--</h3>
-                </div>
-            </div>
 
-            <!-- Main Charts Area -->
-            <div id="empty-state" class="flex flex-col items-center justify-center h-[60vh] text-center">
-                <div class="bg-slate-800/50 p-6 rounded-full mb-4">
-                    <i class="fa-solid fa-chart-column text-4xl text-slate-600"></i>
-                </div>
-                <h3 class="text-xl font-semibold text-slate-300 mb-2">Ready to Analyze</h3>
-                <p class="text-slate-500 max-w-md">Enter data manually or upload a file on the sidebar to generate
-                    descriptive statistics and visualizations.</p>
-            </div>
-
-            <div id="results-area" class="space-y-6 hidden">
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <!-- Charts & Key Stats -->
-                    <div class="lg:col-span-2 space-y-6">
-                        <!-- Chart -->
-                        <div class="glass-panel p-6 rounded-xl flex flex-col">
-                            <div class="flex justify-between items-center mb-4">
-                                <h3 class="text-sm font-semibold text-slate-300">Visualization</h3>
-                                <div class="flex space-x-2">
-                                    <button id="btn-export-png"
-                                        class="text-xs text-brand-400 hover:text-brand-300 border border-brand-500/30 px-2 py-1 rounded transition-colors">
-                                        <i class="fa-solid fa-download mr-1"></i> PNG
-                                    </button>
-                                    <button id="btn-export-svg"
-                                        class="text-xs text-brand-400 hover:text-brand-300 border border-brand-500/30 px-2 py-1 rounded transition-colors">
-                                        <i class="fa-solid fa-file-code mr-1"></i> SVG
-                                    </button>
-                                </div>
-                            </div>
-                            <div class="relative w-full h-80 flex-1 min-h-[320px]">
-                                <!-- Chart.js Canvas -->
-                                <canvas id="mainChart" class="w-full h-full"></canvas>
-                                <!-- Plotly Container -->
-                                <div id="plotlyChart" class="w-full h-full hidden"></div>
-                            </div>
-                        </div>
-
-                        <!-- Statistics Summary -->
-                        <div class="glass-panel p-6 rounded-xl">
-                            <h3 class="text-sm font-semibold text-slate-300 mb-2">Detailed Statistics</h3>
-                            <div class="grid grid-cols-2 gap-4">
-                                <div>
-                                    <div class="flex justify-between border-b border-slate-700/50 pb-2">
-                                        <span class="text-slate-400 text-sm">Range</span>
-                                        <span id="val-range" class="text-slate-200 font-mono">--</span>
-                                    </div>
-                                    <div class="flex justify-between border-b border-slate-700/50 pb-2 mt-2">
-                                        <span class="text-slate-400 text-sm">Variance</span>
-                                        <span id="val-variance" class="text-slate-200 font-mono">--</span>
-                                    </div>
-                                </div>
-                                <div>
-                                    <div class="flex justify-between border-b border-slate-700/50 pb-2">
-                                        <span class="text-slate-400 text-sm">Q1 (25%)</span>
-                                        <span id="val-q1" class="text-slate-200 font-mono">--</span>
-                                    </div>
-                                    <div class="flex justify-between border-b border-slate-700/50 pb-2 mt-2">
-                                        <span class="text-slate-400 text-sm">Q3 (75%)</span>
-                                        <span id="val-q3" class="text-slate-200 font-mono">--</span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="flex justify-between border-b border-slate-700/50 pb-2 mt-2">
-                                <span class="text-slate-400 text-sm">IQR</span>
-                                <span id="val-iqr" class="text-slate-200 font-mono">--</span>
-                            </div>
-
-                            <div class="mt-4 pt-2">
-                                <h4 class="text-xs font-bold text-red-400 uppercase tracking-wider mb-2">Outliers</h4>
-                                <p id="val-outliers"
-                                    class="text-sm text-slate-300 bg-slate-900/50 p-3 rounded border border-red-500/20">
-                                    None detected</p>
-                            </div>
-
-                            <!-- Regression Output -->
-                            <div id="regression-area" class="mt-4 pt-2 hidden">
-                                <h4 class="text-xs font-bold text-brand-400 uppercase tracking-wider mb-2">Regression
-                                    Model</h4>
-                                <div id="regression-content"
-                                    class="text-sm text-slate-300 bg-slate-900/50 p-3 rounded border border-brand-500/20 font-mono overflow-auto max-h-40 scrollbar-thin mb-3">
-                                    --
-                                </div>
-
-                                <!-- Prediction UI -->
-                                <div id="prediction-ui" class="hidden border-t border-slate-700/50 pt-2">
-                                    <h5 class="text-xs font-semibold text-slate-400 mb-2">Predict Y from X</h5>
-                                    <div class="flex items-center space-x-2">
-                                        <input type="number" id="predict-x" placeholder="Enter X value"
-                                            class="w-full bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white focus:border-brand-500 focus:outline-none">
-                                        <button id="btn-predict"
-                                            class="bg-brand-600 hover:bg-brand-500 text-white px-3 py-2 rounded text-sm transition-colors">
-                                            Predict
+                <div id="results-area" class="space-y-6 hidden">
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <!-- Charts & Key Stats -->
+                        <div class="lg:col-span-2 space-y-6">
+                            <!-- Chart -->
+                            <div class="glass-panel p-6 rounded-xl flex flex-col">
+                                <div class="flex justify-between items-center mb-4">
+                                    <h3 class="text-sm font-semibold text-slate-300">Visualization</h3>
+                                    <div class="flex space-x-2">
+                                        <button id="btn-export-png"
+                                            class="text-xs text-brand-400 hover:text-brand-300 border border-brand-500/30 px-2 py-1 rounded transition-colors">
+                                            <i class="fa-solid fa-download mr-1"></i> PNG
+                                        </button>
+                                        <button id="btn-export-svg"
+                                            class="text-xs text-brand-400 hover:text-brand-300 border border-brand-500/30 px-2 py-1 rounded transition-colors">
+                                            <i class="fa-solid fa-file-code mr-1"></i> SVG
                                         </button>
                                     </div>
-                                    <div id="predict-result" class="mt-2 text-sm font-bold text-brand-300 hidden">
-                                        Predicted Y: <span id="val-predicted" class="text-white">--</span>
+                                </div>
+                                <div class="relative w-full h-80 flex-1 min-h-[320px]">
+                                    <!-- Chart.js Canvas -->
+                                    <canvas id="mainChart" class="w-full h-full"></canvas>
+                                    <!-- Plotly Container -->
+                                    <div id="plotlyChart" class="w-full h-full hidden"></div>
+                                </div>
+                            </div>
+
+                            <!-- Statistics Summary -->
+                            <div class="glass-panel p-6 rounded-xl">
+                                <h3 class="text-sm font-semibold text-slate-300 mb-2">Detailed Statistics</h3>
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <div class="flex justify-between border-b border-slate-700/50 pb-2">
+                                            <span class="text-slate-400 text-sm">Range</span>
+                                            <span id="val-range" class="text-slate-200 font-mono">--</span>
+                                        </div>
+                                        <div class="flex justify-between border-b border-slate-700/50 pb-2 mt-2">
+                                            <span class="text-slate-400 text-sm">Variance</span>
+                                            <span id="val-variance" class="text-slate-200 font-mono">--</span>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <div class="flex justify-between border-b border-slate-700/50 pb-2">
+                                            <span class="text-slate-400 text-sm">Q1 (25%)</span>
+                                            <span id="val-q1" class="text-slate-200 font-mono">--</span>
+                                        </div>
+                                        <div class="flex justify-between border-b border-slate-700/50 pb-2 mt-2">
+                                            <span class="text-slate-400 text-sm">Q3 (75%)</span>
+                                            <span id="val-q3" class="text-slate-200 font-mono">--</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="flex justify-between border-b border-slate-700/50 pb-2 mt-2">
+                                    <span class="text-slate-400 text-sm">IQR</span>
+                                    <span id="val-iqr" class="text-slate-200 font-mono">--</span>
+                                </div>
+
+                                <div class="mt-4 pt-2">
+                                    <h4 class="text-xs font-bold text-red-400 uppercase tracking-wider mb-2">Outliers
+                                    </h4>
+                                    <p id="val-outliers"
+                                        class="text-sm text-slate-300 bg-slate-900/50 p-3 rounded border border-red-500/20">
+                                        None detected</p>
+                                </div>
+
+                                <!-- Regression Output -->
+                                <div id="regression-area" class="mt-4 pt-2 hidden">
+                                    <h4 class="text-xs font-bold text-brand-400 uppercase tracking-wider mb-2">
+                                        Regression
+                                        Model</h4>
+                                    <div id="regression-content"
+                                        class="text-sm text-slate-300 bg-slate-900/50 p-3 rounded border border-brand-500/20 font-mono overflow-auto max-h-40 scrollbar-thin mb-3">
+                                        --
+                                    </div>
+
+                                    <!-- Prediction UI -->
+                                    <div id="prediction-ui" class="hidden border-t border-slate-700/50 pt-2">
+                                        <h5 class="text-xs font-semibold text-slate-400 mb-2">Predict Y from X</h5>
+                                        <div class="flex items-center space-x-2">
+                                            <input type="number" id="predict-x" placeholder="Enter X value"
+                                                class="w-full bg-slate-800 border border-slate-700 rounded p-2 text-sm text-white focus:border-brand-500 focus:outline-none">
+                                            <button id="btn-predict"
+                                                class="bg-brand-600 hover:bg-brand-500 text-white px-3 py-2 rounded text-sm transition-colors">
+                                                Predict
+                                            </button>
+                                        </div>
+                                        <div id="predict-result" class="mt-2 text-sm font-bold text-brand-300 hidden">
+                                            Predicted Y: <span id="val-predicted" class="text-white">--</span>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
 
-                    <!-- Explanations Panel -->
-                    <div class="glass-panel p-6 rounded-xl overflow-hidden flex flex-col max-h-[800px]">
-                        <h3 class="text-sm font-semibold text-slate-300 mb-4 border-b border-slate-700 pb-2">
-                            <i class="fa-solid fa-graduation-cap text-brand-400 mr-2"></i>Step-by-Step
-                        </h3>
-                        <div id="explanation-container" class="overflow-y-auto pr-2 space-y-6">
-                            <p class="text-slate-500 text-sm italic">Run a calculation to see steps here.</p>
+                        <!-- Explanations Panel -->
+                        <div class="glass-panel p-6 rounded-xl overflow-hidden flex flex-col max-h-[800px]">
+                            <h3 class="text-sm font-semibold text-slate-300 mb-4 border-b border-slate-700 pb-2">
+                                <i class="fa-solid fa-graduation-cap text-brand-400 mr-2"></i>Step-by-Step
+                            </h3>
+                            <div id="explanation-container" class="overflow-y-auto pr-2 space-y-6">
+                                <p class="text-slate-500 text-sm italic">Run a calculation to see steps here.</p>
+                            </div>
                         </div>
                     </div>
+                </div>
+            </div>
+
+            <!-- PDraw Dashboard Wrapper (Hidden) -->
+            <div id="pdraw-dashboard" class="hidden transition-opacity duration-300 h-full flex flex-col">
+                <!-- PDraw Content Placeholder -->
+                <div class="flex-1 grid grid-cols-12 gap-6 h-full">
+
+                    <!-- PDraw Sidebar Controls (Left) -->
+                    <div class="col-span-3 glass-panel rounded-xl p-4 flex flex-col space-y-4">
+                        <div class="border-b border-slate-700 pb-2">
+                            <h3 class="text-sm font-bold text-green-400 uppercase tracking-wider">Data Structure</h3>
+                        </div>
+
+                        <div class="space-y-2">
+                            <label class="text-xs text-slate-500">Structure</label>
+                            <select id="pdraw-structure"
+                                class="w-full bg-slate-800 border border-slate-700 text-white text-sm rounded p-2 focus:border-green-500 focus:outline-none">
+                                <option value="stack">Stack (LIFO)</option>
+                                <option value="queue">Queue (FIFO)</option>
+                                <option value="list">List</option>
+                            </select>
+                        </div>
+
+                        <div class="space-y-2">
+                            <label class="text-xs text-slate-500">Implementation</label>
+                            <select id="pdraw-impl"
+                                class="w-full bg-slate-800 border border-slate-700 text-white text-sm rounded p-2 focus:border-green-500 focus:outline-none">
+                                <option value="list">Python List</option>
+                                <option value="collections.deque">Collections.Deque</option>
+                            </select>
+                        </div>
+
+                        <div class="space-y-2">
+                            <label class="text-xs text-slate-500">Initial Values (CSV)</label>
+                            <textarea id="pdraw-init-vals" rows="3"
+                                class="w-full bg-slate-900 border border-slate-700 text-white text-sm rounded p-2 focus:border-green-500 focus:outline-none placeholder-slate-600"
+                                placeholder="10, 20, 30"></textarea>
+                        </div>
+
+                        <div class="space-y-2 border-t border-slate-700 pt-4">
+                            <h4 class="text-xs font-bold text-slate-400 uppercase">Operations</h4>
+                            <div class="flex gap-2">
+                                <select id="pdraw-op-select"
+                                    class="flex-1 bg-slate-800 border border-slate-700 text-white text-sm rounded p-2 focus:border-green-500 focus:outline-none">
+                                    <!-- Populated dynamically -->
+                                </select>
+                                <button id="pdraw-add-op"
+                                    class="px-3 py-1 bg-green-600 hover:bg-green-500 text-white rounded text-xs font-bold">
+                                    <i class="fa-solid fa-plus"></i>
+                                </button>
+                            </div>
+
+                            <!-- Op Inputs Container (Dynamic) -->
+                            <div id="pdraw-op-params" class="space-y-2"></div>
+                        </div>
+
+                        <!-- Op List -->
+                        <div
+                            class="flex-1 overflow-y-auto bg-slate-900/50 rounded-lg p-2 border border-slate-800 min-h-[150px]">
+                            <ul id="pdraw-op-list" class="space-y-2 text-sm">
+                                <li class="text-center text-slate-600 text-xs italic mt-4">No operations added.</li>
+                            </ul>
+                        </div>
+
+                        <button id="pdraw-simulate"
+                            class="w-full py-3 bg-gradient-to-r from-green-600 to-teal-600 hover:from-green-500 hover:to-teal-500 text-white font-bold rounded-lg shadow-lg">
+                            <i class="fa-solid fa-play mr-2"></i> Run Simulation
+                        </button>
+                    </div>
+
+                    <!-- PDraw Playground (Center) -->
+                    <div class="col-span-6 glass-panel rounded-xl p-6 flex flex-col h-full overflow-hidden">
+                        <div class="flex justify-between items-center border-b border-slate-700 pb-4 mb-4">
+                            <h3 class="text-lg font-bold text-white flex items-center">
+                                <i class="fa-solid fa-microchip mr-2 text-green-400"></i> Execution Trace
+                            </h3>
+                        </div>
+
+                        <!-- Execution Steps Output -->
+                        <div id="pdraw-output" class="flex-1 overflow-y-auto space-y-4 pr-2 custom-scrollbar">
+                            <div
+                                class="flex flex-col items-center justify-center h-full text-center text-slate-500 opacity-50">
+                                <i class="fa-solid fa-code text-4xl mb-2"></i>
+                                <p>Build operations and click Run to see execution details.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- PDraw Visualizer (Right) -->
+                    <div class="col-span-3 glass-panel rounded-xl p-4 flex flex-col h-full">
+                        <div class="border-b border-slate-700 pb-2 mb-2 flex justify-between items-center">
+                            <h3 class="text-sm font-bold text-slate-300 uppercase tracking-wider">Diagram</h3>
+                            <div class="text-xs text-slate-500" id="pdraw-diag-label">Initial</div>
+                        </div>
+                        <div id="pdraw-diagram"
+                            class="flex-1 bg-slate-900/50 rounded border border-slate-700 flex items-center justify-center relative overflow-hidden">
+                            <p class="text-xs text-slate-600 italic">Visual representation area</p>
+                        </div>
+                    </div>
+
                 </div>
             </div>
 
@@ -751,6 +869,7 @@
     <!-- Scripts -->
     <script src="js/charts.js"></script>
     <script src="js/app.js"></script>
+    <script src="js/pdraw.js"></script>
 </body>
 
 </html>

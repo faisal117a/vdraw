@@ -108,6 +108,50 @@ function switchPhase(phase) {
 
 // --- PDraw Logic ---
 
+const OP_NAME_MAPPING = {
+    // Stack
+    'stack_list_push': 'append(x)',
+    'stack_list_pop': 'pop()',
+    'stack_list_peek': '[-1]',
+    'stack_list_is_empty': 'len() == 0',
+    'stack_collections.deque_push': 'append(x)',
+    'stack_collections.deque_pop': 'pop()',
+    'stack_collections.deque_peek': '[-1]',
+    'stack_collections.deque_is_empty': 'len() == 0',
+
+    // Queue
+    'queue_list_enqueue': 'append(x)',
+    'queue_list_dequeue': 'pop(0) [Slow!]',
+    'queue_list_front': '[0]',
+    'queue_list_rear': '[-1]',
+
+    'queue_collections.deque_enqueue': 'append(x)',
+    'queue_collections.deque_dequeue': 'popleft()',
+    'queue_collections.deque_front': '[0]',
+    'queue_collections.deque_rear': '[-1]',
+
+    'queue_queue.Queue_enqueue': 'put(x)',
+    'queue_queue.Queue_dequeue': 'get()',
+    'queue_queue.Queue_front': 'N/A (Hidden)', // wrapper hides this usually
+    'queue_queue.Queue_rear': 'N/A (Hidden)',
+
+    // List
+    'list_list_append': 'append(x)',
+    'list_list_extend': 'extend(iter)',
+    'list_list_insert': 'insert(i, x)',
+    'list_list_pop': 'pop([i])',
+    'list_list_remove': 'remove(x)',
+    'list_list_clear': 'clear()',
+    'list_list_index': 'index(x)',
+    'list_list_count': 'count(x)',
+    'list_list_sort': 'sort()',
+    'list_list_reverse': 'reverse()',
+
+    // Tuple
+    'tuple_tuple_index': 'index(x)',
+    'tuple_tuple_count': 'count(x)'
+};
+
 async function fetchCatalog() {
     try {
         const res = await fetch(`${PDRAW_API_URL}/api/pdraw/catalog`);
@@ -125,11 +169,13 @@ function initPDraw() {
     // Event Listeners
     pdrawDom.selStructure.addEventListener('change', (e) => {
         currentStructure = e.target.value;
-        updateUIForStructure();
+        updateUIForStructure(true); // reset
     });
 
     pdrawDom.selImpl.addEventListener('change', (e) => {
         currentImpl = e.target.value;
+        // Re-render ops because names might change based on impl
+        updateOpsList();
     });
 
     pdrawDom.selOp.addEventListener('change', renderOpParams);
@@ -139,7 +185,7 @@ function initPDraw() {
     pdrawDom.btnSimulate.addEventListener('click', runSimulation);
 }
 
-function updateUIForStructure() {
+function updateUIForStructure(resetImpl = false) {
     if (!pdrawCatalog) return;
 
     const structData = pdrawCatalog.find(s => s.id === currentStructure);
@@ -149,12 +195,13 @@ function updateUIForStructure() {
     pdrawDom.selImpl.innerHTML = structData.implementations.map(impl =>
         `<option value="${impl}">${impl}</option>`
     ).join('');
-    currentImpl = structData.implementations[0]; // Select first default
+
+    if (resetImpl) {
+        currentImpl = structData.implementations[0]; // Select first default
+    }
 
     // Update Operations
-    pdrawDom.selOp.innerHTML = structData.operations.map(op =>
-        `<option value="${op.id}">${op.label}</option>`
-    ).join('');
+    updateOpsList();
 
     // Render Params for first op
     renderOpParams();
@@ -170,6 +217,33 @@ function updateUIForStructure() {
                              </div>`;
     pdrawDom.divDiagram.innerHTML = '<p class="text-xs text-slate-600 italic">Visual representation area</p>';
     pdrawDom.lblDiag.innerText = 'Reset';
+}
+
+function updateOpsList() {
+    if (!pdrawCatalog) return;
+    const structData = pdrawCatalog.find(s => s.id === currentStructure);
+
+    pdrawDom.selOp.innerHTML = structData.operations.map(op => {
+        // Construct key: struct_impl_op
+        const key = `${currentStructure}_${currentImpl}_${op.id}`;
+        // Fallback to static label if no mapping
+        const pythonName = OP_NAME_MAPPING[key] ? `${op.label} - ${OP_NAME_MAPPING[key]}` : op.label;
+
+        return `<option value="${op.id}">${pythonName}</option>`;
+    }).join('');
+}
+
+// Reset Ops List
+pdrawOperations = [];
+renderOpList();
+
+// Clear output/diagram
+pdrawDom.divOutput.innerHTML = `<div class="flex flex-col items-center justify-center h-full text-center text-slate-500 opacity-50">
+                                <i class="fa-solid fa-code text-4xl mb-2"></i>
+                                <p>Structure updated. Build plan to simulate.</p>
+                             </div>`;
+pdrawDom.divDiagram.innerHTML = '<p class="text-xs text-slate-600 italic">Visual representation area</p>';
+pdrawDom.lblDiag.innerText = 'Reset';
 }
 
 function renderOpParams() {

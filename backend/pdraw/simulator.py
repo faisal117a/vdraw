@@ -69,46 +69,50 @@ def _apply_operation(stype, impl, state, op, args, step_idx) -> (SimulationStepR
         if stype == 'stack':
             if op == 'push':
                 state.append(val)
-                explanation = f"Pushed {repr(val)} onto the top of the stack."
+                method_name = "append" if impl == 'list' or impl == 'collections.deque' else "push"
+                explanation = f"{method_name}({repr(val)}). Pushed {repr(val)} onto top."
                 complexity = "O(1)"
             elif op == 'pop':
                 if not state: raise IndexError("Pop from empty stack")
                 popped = state.pop()
-                explanation = f"Popped {repr(popped)} from top."
+                method_name = "pop"
+                explanation = f"{method_name}(). Popped {repr(popped)} from top."
                 complexity = "O(1)"
             elif op == 'peek':
                 if not state: raise IndexError("Peek from empty stack")
-                explanation = f"Top element is {repr(state[-1])}."
+                method_name = "[-1]"
+                explanation = f"Accessed top element {repr(state[-1])}."
             elif op == 'is_empty':
-                explanation = f"Is Empty: {len(state) == 0}"
+                explanation = f"Checked if empty: {len(state) == 0}"
                 
         elif stype == 'queue':
             is_list_impl = isinstance(state, list) and impl == 'list'
-            # queue.Queue wrapper simulation (using deque underneath but claiming thread-safe overhead)
             
             if op == 'enqueue':
                 if is_list_impl:
                     state.append(val) 
-                    complexity = "O(n) amortized" 
+                    complexity = "O(n) amortized" # Actually O(1)
+                    method = "append"
                 else: 
                     state.append(val)
                     complexity = "O(1)"
-                    if impl == 'queue.Queue': complexity += " (Thread-safe lock)"
+                    method = "append" if impl == 'collections.deque' else "put"
                 
-                explanation = f"Enqueued {repr(val)} at rear."
+                explanation = f"Used {method}({repr(val)}). Enqueued {repr(val)} at rear."
                 
             elif op == 'dequeue':
                 if not state: raise IndexError("Dequeue from empty queue")
                 
                 if is_list_impl:
                     popped = state.pop(0) 
-                    complexity = "O(n) - Shift required"
-                    explanation = f"Dequeued {repr(popped)} from front (Costly shift!)."
+                    complexity = "O(n) - CRITICAL: Shifting Elements!"
+                    method = "pop(0)"
+                    explanation = f"Executed {method}. Removed {repr(popped)}. **Inefficient**: All elements shifted left."
                 else:
                     popped = state.popleft()
                     complexity = "O(1)"
-                    if impl == 'queue.Queue': complexity += " (Thread-safe lock)"
-                    explanation = f"Dequeued {repr(popped)} from front."
+                    method = "popleft" if impl == 'collections.deque' else "get"
+                    explanation = f"Executed {method}(). Removed {repr(popped)}. Efficient pointer update."
                     
             elif op == 'front':
                 if not state: raise IndexError("Queue is empty")
@@ -121,41 +125,71 @@ def _apply_operation(stype, impl, state, op, args, step_idx) -> (SimulationStepR
         elif stype == 'list':
             if op == 'append':
                 state.append(val)
-                explanation = f"Appended {repr(val)}."
+                explanation = f"append({repr(val)}). Appended to end."
+            elif op == 'extend':
+                # Parse if val is list-like string or just append single? 
+                # Simulator expects 'iterable' for extend, typically a list.
+                # If parsed as string, might extend chars.
+                # If parsed as list, extends items.
+                if isinstance(val, (list, tuple, str)):
+                    # Handle string "1,2" -> [1,2]? No, frontend sends typed.
+                    # If frontend sends "123", extend adds '1','2','3'.
+                    state.extend(val)
+                    explanation = f"extend({repr(val)}). Added elements from iterable."
+                    complexity = "O(k)"
+                else:
+                     explanation = "Error: extend requires iterable."
+                     status = "error"
             elif op == 'insert':
                 state.insert(idx, val)
-                explanation = f"Inserted {repr(val)} at index {idx}."
+                explanation = f"insert({idx}, {repr(val)}). Shifted elements to right."
                 complexity = "O(n)"
             elif op == 'remove':
                 state.remove(val)
-                explanation = f"Removed first occurrence of {repr(val)}."
+                explanation = f"remove({repr(val)}). Removed first occurrence. Shifted elements left."
                 complexity = "O(n)"
             elif op == 'pop':
                 if idx is not None:
                     state.pop(idx)
-                    explanation = f"Popped item at index {idx}."
+                    explanation = f"pop({idx}). Removed item at index. Shifted elements left."
                     complexity = "O(n)"
                 else:
                     state.pop()
-                    explanation = "Popped last item."
+                    explanation = "pop(). Removed last item."
+            elif op == 'clear':
+                state.clear()
+                explanation = "clear(). Removed all items."
+                complexity = "O(1)"
+            elif op == 'index':
+                if val in state:
+                    i = state.index(val)
+                    explanation = f"index({repr(val)}) -> {i}. Found at index."
+                else:
+                    explanation = f"index({repr(val)}). Value not found."
+                    status = "error"
+                complexity = "O(n)"
+            elif op == 'count':
+                c = state.count(val)
+                explanation = f"count({repr(val)}) -> {c}. Found {c} occurrences."
+                complexity = "O(n)"
             elif op == 'sort':
-                state.sort() # In-place
-                explanation = "Sorted the list."
+                state.sort() 
+                explanation = "sort(). Sorted list in-place."
                 complexity = "O(n log n)"
             elif op == 'reverse':
-                state.reverse() # In-place
-                explanation = "Reversed the list."
+                state.reverse() 
+                explanation = "reverse(). Reversed list in-place."
                 complexity = "O(n)"
                 
         elif stype == 'tuple':
             # Tuple operations are read-only
             if op == 'index':
                 i = state.index(val)
-                explanation = f"Value {repr(val)} found at index {i}."
+                explanation = f"index({repr(val)}) -> {i}."
                 complexity = "O(n)"
             elif op == 'count':
                 c = state.count(val)
-                explanation = f"Value {repr(val)} appears {c} times."
+                explanation = f"count({repr(val)}) -> {c}."
                 complexity = "O(n)"
     
     except Exception as e:

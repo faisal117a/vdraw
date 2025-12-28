@@ -65,7 +65,7 @@ def get_pdraw_catalog() -> CatalogResponse:
                     )
                 ]
             ),
-             CatalogItem(
+            CatalogItem(
                 id="list",
                 label="List (Array)",
                 implementations=["list"],
@@ -75,6 +75,12 @@ def get_pdraw_catalog() -> CatalogResponse:
                         label="Append", 
                         params=[{"name": "value", "type": "any", "required": True}], 
                         complexity="O(1)"
+                    ),
+                    CatalogOperation(
+                        id="extend",
+                        label="Extend",
+                        params=[{"name": "iterable", "type": "any", "required": True}],
+                        complexity="O(k)"
                     ),
                     CatalogOperation(
                         id="insert", 
@@ -92,6 +98,24 @@ def get_pdraw_catalog() -> CatalogResponse:
                         id="remove", 
                         label="Remove Value", 
                         params=[{"name": "value", "type": "any", "required": True}], 
+                        complexity="O(n)"
+                    ),
+                    CatalogOperation(
+                        id="clear",
+                        label="Clear",
+                        params=[],
+                        complexity="O(1)"
+                    ),
+                    CatalogOperation(
+                        id="index",
+                        label="Index",
+                        params=[{"name": "value", "type": "any", "required": True}],
+                        complexity="O(n)"
+                    ),
+                    CatalogOperation(
+                        id="count",
+                        label="Count",
+                        params=[{"name": "value", "type": "any", "required": True}],
                         complexity="O(n)"
                     ),
                     CatalogOperation(

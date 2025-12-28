@@ -480,11 +480,11 @@
 
                 <!-- Phase Toggle -->
                 <div class="flex items-center bg-slate-800 rounded-lg p-1 mr-4 border border-slate-700">
-                    <button id="phase-vdraw"
+                    <button id="phase-vdraw" onclick="if(window.switchPhase) window.switchPhase('vdraw')"
                         class="px-3 py-1 text-xs font-bold rounded text-white bg-brand-600 shadow transition-all">
                         VDraw
                     </button>
-                    <button id="phase-pdraw"
+                    <button id="phase-pdraw" onclick="if(window.switchPhase) window.switchPhase('pdraw')"
                         class="px-3 py-1 text-xs font-bold rounded text-slate-400 hover:text-white transition-all">
                         PDraw
                     </button>

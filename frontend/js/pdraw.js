@@ -32,6 +32,10 @@ function init() {
         lblDiag: document.getElementById('pdraw-diag-label')
     };
 
+    // Explicit global exposure for inline handlers
+    window.switchPhase = switchPhase;
+    window.pdrawDom = pdrawDom;
+
     initToggle();
     initPDraw();
 }
@@ -420,4 +424,3 @@ function renderVisual(state) {
 
     pdrawDom.divDiagram.appendChild(container);
 }
-```

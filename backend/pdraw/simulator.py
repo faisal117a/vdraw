@@ -68,7 +68,6 @@ def _apply_operation(stype, impl, state, op, args, step_idx) -> (SimulationStepR
         pass
 
     try:
-    try:
         def style_code(text):
             return f'<span class="font-bold text-yellow-300">{text}</span>'
 

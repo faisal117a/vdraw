@@ -478,15 +478,19 @@
             <div class="flex items-center space-x-2 md:space-x-4">
                 <!-- Optional: Hide buttons on very small screens or make them icon only -->
 
-                <!-- Phase Toggle -->
+                <!-- Module Switcher -->
                 <div class="flex items-center bg-slate-800 rounded-lg p-1 mr-4 border border-slate-700">
-                    <button id="phase-vdraw" onclick="if(window.switchPhase) window.switchPhase('vdraw')"
+                    <button id="nav-vdraw"
                         class="px-3 py-1 text-xs font-bold rounded text-white bg-brand-600 shadow transition-all">
-                        VDraw
+                        Stats
                     </button>
-                    <button id="phase-pdraw" onclick="if(window.switchPhase) window.switchPhase('pdraw')"
-                        class="px-3 py-1 text-xs font-bold rounded text-slate-400 hover:text-white transition-all">
-                        PDraw
+                    <button id="nav-pdraw"
+                        class="px-3 py-1 text-xs font-bold rounded text-slate-400 hover:text-white hover:bg-slate-700 transition-all">
+                        Linear
+                    </button>
+                    <button id="nav-tgdraw"
+                        class="px-3 py-1 text-xs font-bold rounded text-slate-400 hover:text-white hover:bg-slate-700 transition-all">
+                        Tree/Graph
                     </button>
                 </div>
 
@@ -763,6 +767,30 @@
                 </div>
             </div>
 
+            <!-- TGDraw Dashboard Wrapper (Hidden) -->
+            <div id="tgdraw-dashboard" class="hidden transition-opacity duration-300 h-full flex flex-col">
+                <div class="flex-1 grid grid-cols-12 gap-6 h-full">
+                    <!-- Sidebar -->
+                    <div class="col-span-3 glass-panel rounded-xl p-4 flex flex-col space-y-4">
+                        <h3 class="text-sm font-bold text-amber-500 uppercase tracking-wider">TGDraw Lab</h3>
+                        <p class="text-xs text-slate-500">Tree & Graph Visualizer</p>
+                        <div class="p-4 bg-slate-800 rounded text-center text-slate-500 text-xs text-amber-500/50">
+                            Phase 3 Configuration
+                        </div>
+                    </div>
+                    <!-- Canvas -->
+                    <div class="col-span-9 glass-panel rounded-xl p-4 flex flex-col relative overflow-hidden">
+                        <div class="flex justify-between items-center border-b border-slate-700 pb-2 mb-2">
+                            <h3 class="text-sm font-semibold text-slate-300">Canvas</h3>
+                        </div>
+                        <div id="tgdraw-canvas"
+                            class="flex-1 bg-slate-900/50 rounded flex items-center justify-center border border-slate-800">
+                            <p class="text-slate-500 italic">Select a structure to begin.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
         </div>
     </main>
 
@@ -867,10 +895,12 @@
         </div>
     </div>
 
-    <!-- Scripts -->
+    <!-- App Scripts -->
     <script src="js/charts.js"></script>
     <script src="js/app.js"></script>
     <script src="js/pdraw.js"></script>
+    <script src="js/nav.js"></script>
+    <script src="js/tgdraw/tgdraw.js"></script>
 </body>
 
 </html>

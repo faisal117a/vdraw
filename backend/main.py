@@ -272,3 +272,7 @@ def get_catalog():
 @app.post("/api/pdraw/simulate", response_model=SimulationResponse)
 def simulate_ds(request: SimulationRequest):
     return simulate_pdraw(request)
+
+# --- TGDraw (Phase 3) Routes ---
+from backend.tgdraw.router import router as tgdraw_router
+app.include_router(tgdraw_router)

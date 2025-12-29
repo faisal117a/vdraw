@@ -168,6 +168,9 @@ async function fetchCatalog() {
     }
 }
 
+// Expose for nav.js
+window.fetchCatalog = fetchCatalog;
+
 function initPDraw() {
     // Event Listeners
     pdrawDom.selStructure.addEventListener('change', (e) => {

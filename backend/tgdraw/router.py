@@ -2,13 +2,11 @@ from fastapi import APIRouter
 from .engine import TreeEngine, GraphEngine
 from .schemas import (
     CreateTreeRootRequest, AddTreeNodeRequest, TraversalRequest, TreeConfig, TreeState, TGResponse,
-    CreateGraphLogicRequest, AddGraphNodeRequest, AddGraphEdgeRequest, GraphConfig, GraphState, GraphAlgoRequest
+    CreateGraphLogicRequest, AddGraphNodeRequest, AddGraphEdgeRequest, RemoveGraphEdgeRequest, GraphConfig, GraphState, GraphAlgoRequest
 )
 from .traversals import TreeTraversals, GraphTraversals
 
 router = APIRouter(prefix="/api/tg", tags=["tgdraw"])
-
-# ... (Previous endpoints) ...
 
 @router.post("/graph/run-algorithm", response_model=TGResponse)
 def run_graph_algo(req: GraphAlgoRequest):
@@ -29,8 +27,6 @@ def run_graph_algo(req: GraphAlgoRequest):
         steps = traverser.dijkstra(req.start_node)
         
     return TGResponse(success=True, data=steps)
-
-# ... (Tree Endpoints) ...
 
 @router.post("/graph/create", response_model=TGResponse)
 def create_graph(req: CreateGraphLogicRequest):
@@ -59,7 +55,14 @@ def add_graph_edge(req: AddGraphEdgeRequest):
     except Exception as e:
          return TGResponse(success=False, error=str(e))
 
-# ... (Previous endpoints) ...
+@router.post("/graph/remove-edge", response_model=TGResponse)
+def remove_graph_edge(req: RemoveGraphEdgeRequest):
+    engine = GraphEngine()
+    try:
+        state = engine.remove_edge(req.source, req.target)
+        return TGResponse(success=True, data=state)
+    except Exception as e:
+        return TGResponse(success=False, error=str(e))
 
 @router.post("/tree/traverse", response_model=TGResponse)
 def traverse_tree(req: TraversalRequest):

@@ -87,6 +87,12 @@ class TreeTraversals:
              self.log(node.right, 'explore', f"Go Right from {node.value}")
              self._preorder_recursive(node.right)
 
+        # Generic Children Fallback
+        if not node.left and not node.right and node.children:
+             for child_id in node.children:
+                 self.log(child_id, 'explore', f"Go to child {self.nodes[child_id].value}")
+                 self._preorder_recursive(child_id)
+
     def dfs_postorder(self):
         # Left -> Right -> Root
         self._postorder_recursive(self.root_id)
@@ -103,6 +109,12 @@ class TreeTraversals:
         if node.right:
              self.log(node.right, 'explore', f"Go Right from {node.value}")
              self._postorder_recursive(node.right)
+
+        # Generic Children Fallback
+        if not node.left and not node.right and node.children:
+             for child_id in node.children:
+                 self.log(child_id, 'explore', f"Go to child {self.nodes[child_id].value}")
+                 self._postorder_recursive(child_id)
              
         self.log(node_id, 'visit', f"Visit {node.value}")
 

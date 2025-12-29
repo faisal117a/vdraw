@@ -467,46 +467,47 @@
 
         <!-- Header -->
         <header
-            class="h-16 border-b border-slate-800/50 flex items-center justify-between px-4 md:px-8 glass-panel z-10 transition-colors duration-300">
+            class="h-16 border-b border-slate-800/50 flex items-center justify-between px-3 md:px-8 glass-panel z-10 transition-colors duration-300">
 
-            <div class="flex items-center">
-                <button id="mobile-menu-btn" class="mr-4 md:hidden text-slate-300 hover:text-white">
+            <div class="flex items-center shrink-0">
+                <button id="mobile-menu-btn" class="mr-3 md:hidden text-slate-300 hover:text-white">
                     <i class="fa-solid fa-bars text-xl"></i>
                 </button>
-                <h2 id="page-title" class="text-lg font-semibold text-slate-200">Dashboard</h2>
+                <h2 id="page-title" class="text-lg font-semibold text-slate-200 truncate max-w-[100px] md:max-w-none">
+                    Dashboard
+                </h2>
             </div>
 
-            <div class="flex items-center space-x-2 md:space-x-4">
-                <!-- Optional: Hide buttons on very small screens or make them icon only -->
-
+            <div class="flex items-center space-x-2 md:space-x-4 overflow-hidden justify-end flex-1 pl-2">
                 <!-- Module Switcher -->
-                <div class="flex items-center bg-slate-800 rounded-lg p-1 mr-4 border border-slate-700">
+                <div
+                    class="flex items-center bg-slate-800 rounded-lg p-1 border border-slate-700 overflow-x-auto scrollbar-hide shrink-0 max-w-[160px] sm:max-w-none">
                     <button id="nav-vdraw"
-                        class="px-3 py-1 text-xs font-bold rounded text-white bg-brand-600 shadow transition-all">
+                        class="px-2 md:px-3 py-1 text-[10px] md:text-xs font-bold rounded text-white bg-brand-600 shadow transition-all whitespace-nowrap">
                         Stats
                     </button>
                     <button id="nav-pdraw"
-                        class="px-3 py-1 text-xs font-bold rounded text-slate-400 hover:text-white hover:bg-slate-700 transition-all">
+                        class="px-2 md:px-3 py-1 text-[10px] md:text-xs font-bold rounded text-slate-400 hover:text-white hover:bg-slate-700 transition-all whitespace-nowrap">
                         Linear
                     </button>
                     <button id="nav-tgdraw"
-                        class="px-3 py-1 text-xs font-bold rounded text-slate-400 hover:text-white hover:bg-slate-700 transition-all">
-                        Tree/Graph
+                        class="px-2 md:px-3 py-1 text-[10px] md:text-xs font-bold rounded text-slate-400 hover:text-white hover:bg-slate-700 transition-all whitespace-nowrap">
+                        Graph
                     </button>
                 </div>
 
-                <!-- Animation Mode Toggle (Hidden on small mobile) -->
-                <div class="hidden sm:flex items-center bg-slate-800 rounded-lg p-1 mr-2">
+                <!-- Animation Mode Toggle (Hidden on mobile) -->
+                <div class="hidden md:flex items-center bg-slate-800 rounded-lg p-1">
                     <button id="mode-std"
-                        class="px-3 py-1 text-xs font-medium rounded text-white bg-slate-600 transition-all">Standard</button>
+                        class="px-3 py-1 text-xs font-medium rounded text-white bg-slate-600 transition-all">Std</button>
                     <button id="mode-adv"
-                        class="px-3 py-1 text-xs font-medium rounded text-slate-400 hover:text-white transition-all">Advanced</button>
+                        class="px-3 py-1 text-xs font-medium rounded text-slate-400 hover:text-white transition-all">Adv</button>
                 </div>
 
                 <!-- Theme Toggle -->
                 <button id="theme-toggle"
-                    class="h-8 w-8 rounded-full bg-slate-700 hover:bg-slate-600 flex items-center justify-center text-slate-300 transition-colors">
-                    <i class="fa-solid fa-sun"></i>
+                    class="h-7 w-7 md:h-8 md:w-8 rounded-full bg-slate-700 hover:bg-slate-600 flex items-center justify-center text-slate-300 transition-colors shrink-0">
+                    <i class="fa-solid fa-sun text-xs md:text-sm"></i>
                 </button>
 
                 <!-- PDF Btn (Icon only on mobile) -->
@@ -669,10 +670,10 @@
             <!-- PDraw Dashboard Wrapper (Hidden) -->
             <div id="pdraw-dashboard" class="hidden transition-opacity duration-300 h-full flex flex-col">
                 <!-- PDraw Content Placeholder -->
-                <div class="flex-1 grid grid-cols-12 gap-6 h-full">
+                <div class="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6 h-full overflow-y-auto lg:overflow-hidden">
 
                     <!-- PDraw Sidebar Controls (Left) -->
-                    <div class="col-span-3 glass-panel rounded-xl p-4 flex flex-col space-y-4">
+                    <div class="lg:col-span-3 glass-panel rounded-xl p-4 flex flex-col space-y-4">
                         <div class="border-b border-slate-700 pb-2">
                             <h3 class="text-sm font-bold text-green-400 uppercase tracking-wider">Data Structure</h3>
                         </div>
@@ -736,7 +737,8 @@
                     </div>
 
                     <!-- PDraw Playground (Center) -->
-                    <div class="col-span-6 glass-panel rounded-xl p-6 flex flex-col h-full overflow-hidden">
+                    <div
+                        class="lg:col-span-6 glass-panel rounded-xl p-6 flex flex-col h-[500px] lg:h-full overflow-hidden order-last lg:order-none">
                         <div class="flex justify-between items-center border-b border-slate-700 pb-4 mb-4">
                             <h3 class="text-lg font-bold text-white flex items-center">
                                 <i class="fa-solid fa-microchip mr-2 text-green-400"></i> Execution Trace
@@ -754,7 +756,7 @@
                     </div>
 
                     <!-- PDraw Visualizer (Right) -->
-                    <div class="col-span-3 glass-panel rounded-xl p-4 flex flex-col h-full">
+                    <div class="lg:col-span-3 glass-panel rounded-xl p-4 flex flex-col h-[300px] lg:h-full">
                         <div class="border-b border-slate-700 pb-2 mb-2 flex justify-between items-center">
                             <h3 class="text-sm font-bold text-slate-300 uppercase tracking-wider">Diagram</h3>
                             <div class="text-xs text-slate-500" id="pdraw-diag-label">Initial</div>
@@ -770,9 +772,9 @@
 
             <!-- TGDraw Dashboard Wrapper (Hidden) -->
             <div id="tgdraw-dashboard" class="hidden transition-opacity duration-300 h-full flex flex-col">
-                <div class="flex-1 grid grid-cols-12 gap-6 h-full">
+                <div class="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6 h-full overflow-y-auto lg:overflow-hidden">
                     <!-- Sidebar -->
-                    <div class="col-span-3 glass-panel rounded-xl p-4 flex flex-col space-y-4">
+                    <div class="lg:col-span-3 glass-panel rounded-xl p-4 flex flex-col space-y-4 h-auto lg:h-full">
                         <h3 class="text-sm font-bold text-amber-500 uppercase tracking-wider">TGDraw Lab</h3>
                         <p class="text-xs text-slate-500">Tree & Graph Visualizer</p>
                         <div class="p-4 bg-slate-800 rounded text-center text-slate-500 text-xs text-amber-500/50">
@@ -780,7 +782,8 @@
                         </div>
                     </div>
                     <!-- Canvas -->
-                    <div class="col-span-9 glass-panel rounded-xl p-4 flex flex-col relative overflow-hidden">
+                    <div
+                        class="lg:col-span-9 glass-panel rounded-xl p-4 flex flex-col relative overflow-hidden h-[500px] lg:h-full order-first lg:order-none">
                         <div class="flex justify-between items-center border-b border-slate-700 pb-2 mb-2">
                             <h3 class="text-sm font-semibold text-slate-300">Canvas</h3>
                         </div>

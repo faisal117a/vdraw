@@ -26,6 +26,10 @@ function initNav() {
     navDom.dashT = document.getElementById('tgdraw-dashboard');
 
     navDom.sidebar = document.getElementById('sidebar');
+    navDom.sidebarOverlay = document.getElementById('sidebar-overlay');
+    navDom.btnMobileMenu = document.getElementById('mobile-menu-btn');
+    navDom.btnCloseSidebar = document.getElementById('btn-close-sidebar');
+
     navDom.pageTitle = document.getElementById('page-title');
     navDom.logoText = document.querySelector('#sidebar h1'); // VDraw uses this
 
@@ -33,6 +37,28 @@ function initNav() {
     if (navDom.btnV) navDom.btnV.onclick = () => switchPhase('vdraw');
     if (navDom.btnP) navDom.btnP.onclick = () => switchPhase('pdraw');
     if (navDom.btnT) navDom.btnT.onclick = () => switchPhase('tgdraw');
+
+    // Sidebar Toggle Logic
+    if (navDom.btnMobileMenu) {
+        navDom.btnMobileMenu.onclick = () => {
+            if (navDom.sidebar) {
+                navDom.sidebar.classList.remove('-translate-x-full');
+                navDom.sidebar.classList.add('translate-x-0');
+            }
+            if (navDom.sidebarOverlay) navDom.sidebarOverlay.classList.remove('hidden');
+        };
+    }
+
+    const closeSidebar = () => {
+        if (navDom.sidebar) {
+            navDom.sidebar.classList.add('-translate-x-full');
+            navDom.sidebar.classList.remove('translate-x-0');
+        }
+        if (navDom.sidebarOverlay) navDom.sidebarOverlay.classList.add('hidden');
+    };
+
+    if (navDom.btnCloseSidebar) navDom.btnCloseSidebar.onclick = closeSidebar;
+    if (navDom.sidebarOverlay) navDom.sidebarOverlay.onclick = closeSidebar;
 
     console.log("Navigation Initialized");
 }

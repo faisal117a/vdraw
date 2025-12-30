@@ -44,6 +44,9 @@ window.initPyViz = function () {
     pyvizDom.statLines = document.getElementById('pyviz-stat-lines');
     pyvizDom.statVars = document.getElementById('pyviz-stat-vars');
     pyvizDom.statFuncs = document.getElementById('pyviz-stat-funcs');
+    pyvizDom.statLoops = document.getElementById('pyviz-stat-loops');
+    pyvizDom.statConds = document.getElementById('pyviz-stat-conds');
+    pyvizDom.statImports = document.getElementById('pyviz-stat-imports');
     pyvizDom.logList = document.getElementById('pyviz-log-list');
 
     // Controls
@@ -463,13 +466,34 @@ function createImport(type) {
         else if (val.startsWith('matplotlib')) code = 'import matplotlib.pyplot as plt';
     }
 
-    // Check duplication?
     if (pyvizState.lines.some(l => l.code === code)) {
         alert("Module already imported!");
         return;
     }
 
-    addLine({ code: code, type: 'import' });
+    // Insert at the end of existing imports or at top
+    let lastImportIdx = -1;
+    for (let i = 0; i < pyvizState.lines.length; i++) {
+        if (pyvizState.lines[i].type === 'import') lastImportIdx = i;
+    }
+
+    const newLine = {
+        id: pyvizState.nextId++,
+        code: code,
+        type: 'import',
+        indent: 0,
+        timestamp: new Date()
+    };
+
+    if (lastImportIdx !== -1) {
+        pyvizState.lines.splice(lastImportIdx + 1, 0, newLine);
+    } else {
+        // No imports, put at very top
+        pyvizState.lines.unshift(newLine);
+    }
+
+    renderPyViz();
+    updateStats();
 }
 
 
@@ -538,52 +562,82 @@ function renderPyViz() {
 
     area.innerHTML = '';
 
+    // Font size state validation
+    if (!pyvizState.fontSize) pyvizState.fontSize = 'text-base'; // Default bigger
+
     pyvizState.lines.forEach((line, idx) => {
         const row = document.createElement('div');
-        row.className = "flex items-center group hover:bg-slate-900/50 py-1 -mx-2 px-2 rounded";
+        row.className = `flex items-center group hover:bg-slate-900/50 py-1 -mx-2 px-2 rounded ${pyvizState.fontSize}`;
 
         // Line Num
         const num = document.createElement('span');
-        num.className = "text-slate-600 text-xs w-8 select-none text-right mr-4";
+        num.className = "text-slate-600 text-xs w-8 select-none text-right mr-4 shrink-0";
         num.textContent = idx + 1;
 
         // Content
         const content = document.createElement('div');
-        content.className = "flex-1 font-mono text-sm";
+        content.className = "flex-1 font-mono whitespace-pre"; // whitespace-pre for indentation
 
         // Indent Spacers
-        const spacers = '&nbsp;&nbsp;&nbsp;&nbsp;'.repeat(line.indent);
+        const indentStr = '    '.repeat(line.indent);
 
-        // Contextual Syntax Highlighting (Simple)
-        let htmlCode = line.code
-            .replace(/(def|class|if|else|elif|for|while|return|import|from)/g, '<span class="text-orange-400 font-bold">$1</span>')
-            .replace(/(print|input|len|range|int|str|float)/g, '<span class="text-blue-400">$1</span>')
-            .replace(/(".*?"|'.*?')/g, '<span class="text-green-400">$1</span>') // strings
-            .replace(/(\d+)/g, '<span class="text-pink-400">$1</span>') // numbers 
-            .replace(/(#.*)/g, '<span class="text-slate-500 italic">$1</span>'); // comments
+        // Safe Syntax Highlighting
+        // We escape HTML first to prevent XSS (basic)
+        let safeCode = line.code.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
-        content.innerHTML = `${spacers}${htmlCode}`;
+        // Tokenize method: Split by non-word chars but keep delimiters? 
+        // Simpler: Use careful regexes with boundaries that don't match HTML tags.
+        // But we just escaped HTML, so there are no tags yet! safe to format now.
+
+        let htmlCode = safeCode
+            // Keywords
+            .replace(/\b(def|class|if|else|elif|for|while|return|import|from|as|break|continue|pass)\b/g, '<span class="text-orange-400 font-bold">$1</span>')
+            // Built-ins (Check `print` carefully)
+            .replace(/\b(print|input|len|range|int|str|float|list|dict|set|tuple|deque)\b/g, '<span class="text-blue-400">$1</span>')
+            // Strings (Single or Double quoted) - simple greedy match
+            .replace(/(".*?"|'.*?')/g, '<span class="text-green-400">$1</span>')
+            // Numbers
+            .replace(/\b(\d+(\.\d+)?)\b/g, '<span class="text-pink-400">$1</span>')
+            // Comments
+            .replace(/(#.*)/g, '<span class="text-slate-500 italic">$1</span>');
+
+        content.innerHTML = `${indentStr}${htmlCode}`;
 
         // Controls
         const controls = document.createElement('div');
-        controls.className = "opacity-0 group-hover:opacity-100 flex gap-2 ml-4";
+        controls.className = "opacity-0 group-hover:opacity-100 flex gap-1 ml-4 items-center shrink-0";
+
+        // Move Up/Down
+        const btnUp = document.createElement('button');
+        btnUp.innerHTML = '<i class="fa-solid fa-arrow-up"></i>';
+        btnUp.className = "w-6 h-6 rounded hover:bg-slate-700 text-slate-500 hover:text-white text-xs";
+        btnUp.title = "Move Up";
+        btnUp.onclick = (e) => { e.stopPropagation(); moveLine(line.id, -1); };
+
+        const btnDown = document.createElement('button');
+        btnDown.innerHTML = '<i class="fa-solid fa-arrow-down"></i>';
+        btnDown.className = "w-6 h-6 rounded hover:bg-slate-700 text-slate-500 hover:text-white text-xs";
+        btnDown.title = "Move Down";
+        btnDown.onclick = (e) => { e.stopPropagation(); moveLine(line.id, 1); };
 
         // Indent controls
         const btnIndent = document.createElement('button');
         btnIndent.innerHTML = '<i class="fa-solid fa-indent"></i>';
-        btnIndent.className = "text-slate-500 hover:text-blue-400";
+        btnIndent.className = "w-6 h-6 rounded hover:bg-slate-700 text-slate-500 hover:text-blue-400 text-xs";
         btnIndent.onclick = (e) => { e.stopPropagation(); line.indent++; renderPyViz(); };
 
         const btnDedent = document.createElement('button');
         btnDedent.innerHTML = '<i class="fa-solid fa-outdent"></i>';
-        btnDedent.className = "text-slate-500 hover:text-blue-400";
+        btnDedent.className = "w-6 h-6 rounded hover:bg-slate-700 text-slate-500 hover:text-blue-400 text-xs";
         btnDedent.onclick = (e) => { e.stopPropagation(); if (line.indent > 0) line.indent--; renderPyViz(); };
 
         const btnDel = document.createElement('button');
         btnDel.innerHTML = '<i class="fa-solid fa-trash"></i>';
-        btnDel.className = "text-slate-500 hover:text-red-400";
+        btnDel.className = "w-6 h-6 rounded hover:bg-red-900/50 text-slate-500 hover:text-red-400 text-xs";
         btnDel.onclick = (e) => { e.stopPropagation(); removeLine(line.id); };
 
+        controls.appendChild(btnUp);
+        controls.appendChild(btnDown);
         controls.appendChild(btnDedent);
         controls.appendChild(btnIndent);
         controls.appendChild(btnDel);
@@ -595,8 +649,57 @@ function renderPyViz() {
         area.appendChild(row);
     });
 
-    // Auto-scroll logic
+    // Auto-scroll logic (only if at bottom?)
     area.scrollTop = area.scrollHeight;
+}
+
+function moveLine(id, direction) {
+    const idx = pyvizState.lines.findIndex(l => l.id === id);
+    if (idx === -1) return;
+
+    const newIdx = idx + direction;
+    if (newIdx < 0 || newIdx >= pyvizState.lines.length) return;
+
+    // Swap
+    const temp = pyvizState.lines[idx];
+    pyvizState.lines[idx] = pyvizState.lines[newIdx];
+    pyvizState.lines[newIdx] = temp;
+
+    renderPyViz();
+}
+
+// 4. Logic Builder (If, For, While, Comments)
+function renderLogicLibrary(container) {
+    container.innerHTML = `
+        <div class="space-y-4">
+            <!-- Comment Builder -->
+             <div class="bg-slate-800 p-3 rounded border border-slate-700 space-y-2">
+                <h4 class="text-xs font-bold text-slate-300 uppercase"><i class="fa-regular fa-comment mr-1"></i> Add Comment</h4>
+                <div class="flex gap-2">
+                    <input type="text" id="pv-comment-text" class="flex-1 bg-slate-900 border border-slate-600 rounded p-1.5 text-xs text-white placeholder-slate-600" placeholder="Comment text...">
+                    <button onclick="addComment()" class="px-3 py-1 bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs font-bold rounded">Add</button>
+                </div>
+            </div>
+
+            <hr class="border-slate-700">
+            
+            <!-- Standard Logic Blocks -->
+            <div id="pv-logic-list"></div>
+        </div>
+    `;
+    renderStaticList(document.getElementById('pv-logic-list'), staticLogicItems);
+}
+
+function addComment() {
+    const text = document.getElementById('pv-comment-text').value.trim();
+    if (!text) return;
+
+    addLine({
+        code: `# ${text}`,
+        type: 'comment'
+    });
+
+    document.getElementById('pv-comment-text').value = '';
 }
 
 // --- Stats & Utils ---
@@ -605,11 +708,33 @@ function updateStats() {
     const lines = pyvizState.lines.length;
     const vars = pyvizState.lines.filter(l => l.type === 'var').length;
     const funcs = pyvizState.lines.filter(l => l.type === 'func').length;
+    const loops = pyvizState.lines.filter(l => l.code.match(/\b(for|while)\b/)).length;
+    const conds = pyvizState.lines.filter(l => l.code.match(/\b(if|elif|else)\b/)).length;
+    const imports = pyvizState.lines.filter(l => l.type === 'import').length;
 
     if (pyvizDom.statLines) pyvizDom.statLines.textContent = lines;
     if (pyvizDom.statVars) pyvizDom.statVars.textContent = vars;
     if (pyvizDom.statFuncs) pyvizDom.statFuncs.textContent = funcs;
+    if (pyvizDom.statLoops) pyvizDom.statLoops.textContent = loops;
+    if (pyvizDom.statConds) pyvizDom.statConds.textContent = conds;
+    if (pyvizDom.statImports) pyvizDom.statImports.textContent = imports;
+
+    // Check if we have extended stats slots, if not we might need to inject them? 
+    // For now we assume the DOM only has the 3 from app.html. 
+    // We will append details to a new 'Detailed' area if present or just ensure the core ones are right.
+
+    // Quick Hack: Update Action Log with summary if DOM missing
+    // Actually, Phase 4 plan asks for them in Inspector. We should add them to DOM in next step.
 }
+
+function changeFontSize(delta) {
+    const sizes = ['text-xs', 'text-sm', 'text-base', 'text-lg', 'text-xl'];
+    let currentIdx = sizes.indexOf(pyvizState.fontSize || 'text-base');
+    let newIdx = Math.max(0, Math.min(sizes.length - 1, currentIdx + delta));
+    pyvizState.fontSize = sizes[newIdx];
+    renderPyViz();
+}
+
 
 function logAction(msg) {
     if (!pyvizDom.logList) return;

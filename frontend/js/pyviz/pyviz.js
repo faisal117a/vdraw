@@ -823,11 +823,12 @@ function renderDSOpsSelector() {
                     else if (rhs.includes('queue.Queue(')) type = 'queue';
                 }
             }
-            varMap.set(l.meta.name, type);
+
+            // Only add actual data structures
+            if (['list', 'tuple', 'stack', 'queue'].includes(type)) {
+                varMap.set(l.meta.name, type);
+            }
         }
-        // Also scan for assignments not marked as vars (e.g. manual edits)? 
-        // For now, rely on line meta which addLine should preserve or generate. 
-        // Manual edits might lose meta if not careful, but our builder keeps it.
     });
 
     if (varMap.size === 0) {

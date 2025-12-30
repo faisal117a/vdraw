@@ -849,21 +849,24 @@ function renderDSOpsSelector() {
 }
 
 // Map of methods per type
-const dsMethods = {
-    'list': [
-        { name: 'append', arg: true }, { name: 'pop', arg: true }, { name: 'remove', arg: true },
-        { name: 'insert', arg: true }, { name: 'sort', arg: false }, { name: 'reverse', arg: false }, { name: 'clear', arg: false }
-    ],
+'list': [
+    { name: 'append', arg: true }, { name: 'pop', arg: true }, { name: 'remove', arg: true },
+    { name: 'insert', arg: true }, { name: 'sort', arg: false }, { name: 'reverse', arg: false }, { name: 'clear', arg: false },
+    { name: 'print', arg: false }
+],
     'tuple': [
-        { name: 'count', arg: true }, { name: 'index', arg: true }
+        { name: 'count', arg: true }, { name: 'index', arg: true },
+        { name: 'print', arg: false }
     ],
-    'stack': [
-        { name: 'append', arg: true }, { name: 'pop', arg: false }
-    ],
-    'queue': [
-        { name: 'put', arg: true }, { name: 'get', arg: false }
-    ],
-    'unknown': [{ name: 'print', arg: false }] // Fallback
+        'stack': [
+            { name: 'append', arg: true }, { name: 'pop', arg: false },
+            { name: 'print', arg: false }
+        ],
+            'queue': [
+                { name: 'put', arg: true }, { name: 'get', arg: false },
+                { name: 'print_queue', arg: false }
+            ],
+                'unknown': [{ name: 'print', arg: false }] // Fallback
 };
 
 window.loadMethodsForVar = function () {
@@ -900,7 +903,12 @@ window.applyDSMethod = function () {
     const arg = argInput.value.trim();
 
     let code = `${varName}.${method}()`;
-    if (needsArg) {
+
+    if (method === 'print') {
+        code = `print(${varName})`;
+    } else if (method === 'print_queue') {
+        code = `print(list(${varName}.queue)) # View Queue`;
+    } else if (needsArg) {
         if (!arg) return;
         code = `${varName}.${method}(${arg})`;
     }

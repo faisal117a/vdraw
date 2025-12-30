@@ -161,10 +161,16 @@ function createVariable() {
 
     const code = `${name} = ${processedVal}`;
 
+    // Type Inference for Meta
+    let dsType = 'unknown';
+    if (processedVal.startsWith('[')) dsType = 'list';
+    else if (processedVal.startsWith('(')) dsType = 'tuple';
+    else if (processedVal.startsWith('{')) dsType = 'dict'; // or set
+
     addLine({
         code: code,
         type: 'var',
-        meta: { name: name } // Store metadata
+        meta: { name: name, dsType: dsType } // Store metadata
     });
 
     // Reset inputs
@@ -372,11 +378,27 @@ function createImport(type) {
         return;
     }
 
-    // Insert at the end of existing imports or at top
-    let lastImportIdx = -1;
+    addImport(code);
+}
+
+function addImport(code) {
+    if (pyvizState.lines.some(l => l.code === code)) return; // double check
+
+    // Find last import index to append after, or 0
+    let insertIdx = 0;
     for (let i = 0; i < pyvizState.lines.length; i++) {
-        if (pyvizState.lines[i].type === 'import') lastImportIdx = i;
+        if (pyvizState.lines[i].type === 'import') {
+            insertIdx = i + 1;
+        } else {
+            // Stop at first non-import? Logic: keep imports clustered at top.
+            // If we found some imports, we append after them.
+            // If we hit non-import and haven't found imports? Insert at 0.
+            // But if we have mixed code? We want to group imports.
+        }
     }
+
+    // Actually, just find the last import. If none, 0.
+    // If lines exist before imports (bad practice), we still probably want to be near top.
 
     const newLine = {
         id: pyvizState.nextId++,
@@ -386,13 +408,7 @@ function createImport(type) {
         timestamp: new Date()
     };
 
-    if (lastImportIdx !== -1) {
-        pyvizState.lines.splice(lastImportIdx + 1, 0, newLine);
-    } else {
-        // No imports, put at very top
-        pyvizState.lines.unshift(newLine);
-    }
-
+    pyvizState.lines.splice(insertIdx, 0, newLine);
     renderPyViz();
     updateStats();
 }

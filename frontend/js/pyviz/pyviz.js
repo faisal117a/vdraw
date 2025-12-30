@@ -384,21 +384,22 @@ function createImport(type) {
 function addImport(code) {
     if (pyvizState.lines.some(l => l.code === code)) return; // double check
 
-    // Find last import index to append after, or 0
+    // Find the LAST import index to append after.
+    // If no imports, insert at 0.
     let insertIdx = 0;
+
+    // Scan lines to find group of imports
     for (let i = 0; i < pyvizState.lines.length; i++) {
         if (pyvizState.lines[i].type === 'import') {
             insertIdx = i + 1;
-        } else {
-            // Stop at first non-import? Logic: keep imports clustered at top.
-            // If we found some imports, we append after them.
-            // If we hit non-import and haven't found imports? Insert at 0.
-            // But if we have mixed code? We want to group imports.
+        } else if (insertIdx > 0) {
+            // We found some imports, now we hit non-import.
+            // Insert after the last found import.
+            break;
         }
     }
 
-    // Actually, just find the last import. If none, 0.
-    // If lines exist before imports (bad practice), we still probably want to be near top.
+    // If no imports found, insertIdx is 0, which is correct (top of file).
 
     const newLine = {
         id: pyvizState.nextId++,
@@ -853,7 +854,9 @@ const dsMethods = {
         { name: 'append', arg: true }, { name: 'pop', arg: true }, { name: 'remove', arg: true },
         { name: 'insert', arg: true }, { name: 'sort', arg: false }, { name: 'reverse', arg: false }, { name: 'clear', arg: false }
     ],
-    'tuple': [], // Immutable mostly, maybe count/index?
+    'tuple': [
+        { name: 'count', arg: true }, { name: 'index', arg: true }
+    ],
     'stack': [
         { name: 'append', arg: true }, { name: 'pop', arg: false }
     ],
@@ -1040,7 +1043,36 @@ function runAICheck() {
             }
         });
 
-        // 3. Import check
+        // 3. Indentation Check
+        for (let i = 0; i < pyvizState.lines.length; i++) {
+            const line = pyvizState.lines[i];
+            const clean = line.code.split('#')[0].trim();
+
+            if (clean.endsWith(':')) {
+                // Next non-empty/non-comment line MUST have deeper indent
+                let j = i + 1;
+                let foundNext = false;
+
+                while (j < pyvizState.lines.length) {
+                    const nextL = pyvizState.lines[j];
+                    const nextClean = nextL.code.split('#')[0].trim();
+                    if (nextClean) { // Found code line
+                        if (nextL.indent <= line.indent) {
+                            issues.push(`Line ${j + 1}: Expected an indented block after statement on Line ${i + 1}.`);
+                        }
+                        foundNext = true;
+                        break;
+                    }
+                    j++;
+                }
+
+                if (!foundNext && i < pyvizState.lines.length - 1) {
+                    // issues.push(`Line ${i + 1}: Block ends without content.`); // Optional warning
+                }
+            }
+        }
+
+        // 4. Import check
         const hasQueues = pyvizState.lines.some(l => l.code.includes('queue.Queue'));
         const hasQImport = pyvizState.lines.some(l => l.code.includes('import queue'));
         if (hasQueues && !hasQImport) {

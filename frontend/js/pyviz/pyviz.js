@@ -802,23 +802,46 @@ function renderDSLibrary(container) {
 
 function renderDSOpsSelector() {
     const container = document.getElementById('pv-ds-ops-selector');
-    // Filter variables created via DS or just any var? Let's check meta.type or just known vars.
-    // Ideally we store type in meta.
-    const candidates = pyvizState.lines
-        .filter(l => (l.type === 'ds' || l.type === 'var') && l.meta?.name)
-        .map(l => ({ name: l.meta.name, type: l.meta.dsType || 'unknown' })); // We need to store dsType in createDS
 
-    if (candidates.length === 0) {
+    // Scan all lines to find variables and infer types if missing
+    // We rebuild candidates fresh each time to capture manual edits or legacy vars
+    const varMap = new Map();
+
+    pyvizState.lines.forEach(l => {
+        // Direct var creation
+        if (l.meta?.name) {
+            let type = l.meta.dsType || 'unknown';
+
+            // Try to infer if unknown
+            if (type === 'unknown') {
+                const code = l.code.trim();
+                const rhs = code.split('=').slice(1).join('=').trim(); // Get right side
+                if (rhs) {
+                    if (rhs.startsWith('[')) type = 'list';
+                    else if (rhs.startsWith('(')) type = 'tuple';
+                    else if (rhs.includes('deque(')) type = 'stack';
+                    else if (rhs.includes('queue.Queue(')) type = 'queue';
+                }
+            }
+            varMap.set(l.meta.name, type);
+        }
+        // Also scan for assignments not marked as vars (e.g. manual edits)? 
+        // For now, rely on line meta which addLine should preserve or generate. 
+        // Manual edits might lose meta if not careful, but our builder keeps it.
+    });
+
+    if (varMap.size === 0) {
         container.innerHTML = '<p class="text-[10px] text-slate-600 italic">No variables available.</p>';
         return;
     }
 
     let html = `<select id="pv-ops-var" class="w-full bg-slate-900 border border-slate-600 rounded p-1.5 text-xs text-white" onchange="loadMethodsForVar()">`;
     html += `<option value="">-- Select --</option>`;
-    candidates.forEach(c => {
-        // Only unique names
-        html += `<option value="${c.name}" data-type="${c.type}">${c.name} (${c.type})</option>`;
+
+    varMap.forEach((type, name) => {
+        html += `<option value="${name}" data-type="${type}">${name} (${type})</option>`;
     });
+
     html += `</select>`;
     container.innerHTML = html;
 }

@@ -563,6 +563,7 @@ function moveLine(id, direction) {
 }
 
 // 4. Logic Builder
+// Fix Logic Builder UI (Vertical stacking for small widths)
 function renderLogicLibrary(container) {
     container.innerHTML = `
         <div class="space-y-4">
@@ -570,26 +571,28 @@ function renderLogicLibrary(container) {
              <div class="bg-slate-800 p-3 rounded border border-slate-700 space-y-3">
                 <h4 class="text-xs font-bold text-orange-400 uppercase"><i class="fa-solid fa-code-branch mr-1"></i> If / Loop Builder</h4>
                 
-                <div class="flex gap-2">
-                     <select id="pv-logic-kw" class="w-20 bg-slate-900 border border-slate-600 rounded p-1.5 text-xs text-white">
-                        <option value="if">if</option>
-                        <option value="elif">elif</option>
-                        <option value="while">while</option>
-                     </select>
+                <div class="grid grid-cols-1 gap-2">
+                     <div class="flex gap-2">
+                         <select id="pv-logic-kw" class="w-20 bg-slate-900 border border-slate-600 rounded p-1.5 text-xs text-white mobile-full">
+                            <option value="if">if</option>
+                            <option value="elif">elif</option>
+                            <option value="while">while</option>
+                         </select>
+                         <input type="text" id="pv-logic-exp1" class="flex-1 bg-slate-900 border border-slate-600 rounded p-1.5 text-xs text-white placeholder-slate-600" placeholder="Exp 1 (e.g. x)">
+                     </div>
                      
-                     <input type="text" id="pv-logic-exp1" class="flex-1 bg-slate-900 border border-slate-600 rounded p-1.5 text-xs text-white placeholder-slate-600" placeholder="Exp 1 (e.g. x)">
-                     
-                     <select id="pv-logic-op" class="w-16 bg-slate-900 border border-slate-600 rounded p-1.5 text-xs text-white font-mono">
-                        <option value="==">==</option>
-                        <option value="!=">!=</option>
-                        <option value=">">></option>
-                        <option value="<"><</option>
-                        <option value=">=">>=</option>
-                        <option value="<="><=</option>
-                        <option value="in">in</option>
-                     </select>
-                     
-                     <input type="text" id="pv-logic-exp2" class="flex-1 bg-slate-900 border border-slate-600 rounded p-1.5 text-xs text-white placeholder-slate-600" placeholder="Exp 2 (e.g. 10)">
+                     <div class="flex gap-2">
+                         <select id="pv-logic-op" class="w-16 bg-slate-900 border border-slate-600 rounded p-1.5 text-xs text-white font-mono mobile-full">
+                            <option value="==">==</option>
+                            <option value="!=">!=</option>
+                            <option value=">">></option>
+                            <option value="<"><</option>
+                            <option value=">=">>=</option>
+                            <option value="<="><=</option>
+                            <option value="in">in</option>
+                         </select>
+                         <input type="text" id="pv-logic-exp2" class="flex-1 bg-slate-900 border border-slate-600 rounded p-1.5 text-xs text-white placeholder-slate-600" placeholder="Exp 2 (e.g. 10)">
+                     </div>
                 </div>
                 
                 <div class="flex items-center gap-2">
@@ -599,7 +602,6 @@ function renderLogicLibrary(container) {
                         <option value="and">and</option>
                         <option value="or">or</option>
                      </select>
-                     <p class="text-[10px] text-slate-600 italic ml-auto">Complex conditions?</p>
                 </div>
 
                 <div class="grid grid-cols-2 gap-2">
@@ -651,6 +653,8 @@ function renderLogicLibrary(container) {
     `;
 }
 
+// ... existing createCondition ...
+
 function createCondition() {
     const kw = document.getElementById('pv-logic-kw').value;
     const exp1 = document.getElementById('pv-logic-exp1').value.trim();
@@ -662,7 +666,7 @@ function createCondition() {
 
     let cond = `${exp1} ${op} ${exp2}`;
     if (join) {
-        cond += ` ${join} ...`; // Placeholder hint
+        cond += ` ${join} ...`; // Simplified placeholder
     }
 
     addLine({
@@ -671,63 +675,34 @@ function createCondition() {
     });
 }
 
-function createForLoop() {
-    const count = document.getElementById('pv-loop-count').value;
-    addLine({
-        code: `for i in range(${count}):`,
-        type: 'logic'
-    });
-}
+// Fix createPrint: correctly handle args + end
+function createPrint() {
+    const args = Array.from(document.querySelectorAll('.print-arg')).map(i => i.value.trim()).filter(x => x);
 
-function addComment(type) {
-    if (type === 'single') {
-        const text = document.getElementById('pv-comment-single').value.trim();
-        if (!text) return;
-        addLine({ code: `# ${text}`, type: 'comment' });
-        document.getElementById('pv-comment-single').value = '';
-    } else {
-        const text = document.getElementById('pv-comment-multi').value.trim();
-        if (!text) return;
-        // Multi-line in Python often is triple quotes string literal used as comment
-        addLine({ code: `""" ${text} """`, type: 'comment' });
-        document.getElementById('pv-comment-multi').value = '';
+    // Check end param
+    const endChk = document.getElementById('pv-print-end');
+    const endVal = document.getElementById('pv-print-end-val');
+    let useEnd = (endChk && endChk.checked && endVal.value);
+
+    // If no args and no end, do nothing? Or print empty line? - Just allow empty
+
+    let compiledArgs = args.join(', ');
+
+    // Construct
+    let code = `print(${compiledArgs}`;
+    if (useEnd) {
+        if (args.length > 0) code += `, end=${endVal.value}`;
+        else code += `end=${endVal.value}`;
     }
+    code += `)`;
+
+    addLine({ code: code, type: 'func' });
+
+    // Reset?
+    document.querySelectorAll('.print-arg').forEach(i => i.value = '');
 }
 
-// 5. Data Structure Builder
-function renderDSLibrary(container) {
-    container.innerHTML = `
-        <div class="bg-slate-800 p-3 rounded border border-slate-700 space-y-3">
-            <h4 class="text-xs font-bold text-slate-300 uppercase"><i class="fa-solid fa-layer-group mr-1"></i> New Data Structure</h4>
-            
-            <div>
-                 <label class="text-[10px] text-slate-500 uppercase font-bold block mb-1">Variable Name</label>
-                <input type="text" id="pv-ds-name" class="w-full bg-slate-900 border border-slate-600 rounded p-1.5 text-xs text-white placeholder-slate-600" placeholder="e.g. numbers">
-            </div>
-
-             <div>
-                 <label class="text-[10px] text-slate-500 uppercase font-bold block mb-1">Type</label>
-                 <select id="pv-ds-type" class="w-full bg-slate-900 border border-slate-600 rounded p-1.5 text-xs text-white">
-                    <option value="list">List [ ]</option>
-                    <option value="tuple">Tuple ( )</option>
-                    <option value="set">Set { }</option>
-                    <option value="dict">Dictionary {k:v}</option>
-                    <option value="stack">Stack (deque)</option>
-                 </select>
-            </div>
-
-            <div>
-                 <label class="text-[10px] text-slate-500 uppercase font-bold block mb-1">Initial Values (CSV)</label>
-                <input type="text" id="pv-ds-val" class="w-full bg-slate-900 border border-slate-600 rounded p-1.5 text-xs text-white placeholder-slate-600" placeholder="e.g. 1, 2, 3">
-            </div>
-
-            <button onclick="createDS()" class="w-full py-2 bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold rounded transition-colors">
-                Create Structure
-            </button>
-        </div>
-    `;
-}
-
+// Check Duplicate DS Names
 function createDS() {
     const name = document.getElementById('pv-ds-name').value.trim();
     const type = document.getElementById('pv-ds-type').value;
@@ -735,8 +710,14 @@ function createDS() {
 
     if (!name) { alert("Variable name required"); return; }
 
+    // Check duplication
+    const existing = pyvizState.lines.filter(l => (l.type === 'ds' || l.type === 'var') && l.meta?.name === name);
+    if (existing.length > 0) {
+        alert("A variable/structure with this name already exists!");
+        return;
+    }
+
     // Auto-detect numeric vs string values?
-    // For simplicity, splitting by comma and determining type
     let vals = rawVal ? rawVal.split(',').map(v => {
         v = v.trim();
         return (isNaN(parseFloat(v)) && !v.startsWith('"') && !v.startsWith("'")) ? `"${v}"` : v;
@@ -747,11 +728,9 @@ function createDS() {
     if (type === 'list') code = `${name} = [${vals}]`;
     else if (type === 'tuple') code = `${name} = (${vals})`;
     else if (type === 'set') code = `${name} = {${vals}}`;
-    else if (type === 'dict') code = `${name} = {${vals}}`; // User must provide "k":v format for dicts in rawVal, effectively
+    else if (type === 'dict') code = `${name} = {${vals}}`;
     else if (type === 'stack') {
-        // Check Import
         if (!pyvizState.lines.some(l => l.code.includes('collections'))) {
-            // Prepend import if missing?
             addLine({ code: "from collections import deque", type: 'import' });
         }
         code = `${name} = deque([${vals}])`;
@@ -764,26 +743,40 @@ function createDS() {
     });
 }
 
-// Stats Helpers
-
-function updateStats() {
+// Updated Stats Logic
+function updateStats() { // Recalc
     const lines = pyvizState.lines.length;
-    const vars = pyvizState.lines.filter(l => l.type === 'var').length;
-    const funcs = pyvizState.lines.filter(l => l.type === 'func').length;
+
+    // Unique Variables (from 'var' and 'ds' types)
+    const uniqueVars = new Set(
+        pyvizState.lines
+            .filter(l => (l.type === 'var' || l.type === 'ds'))
+            .map(l => l.meta?.name)
+            .filter(n => n)
+    ).size;
+
+    // Functions: Split user-defined vs built-ins is hard without 'def'. 
+    // Current 'func' type is just print/input.
+    // Let's count 'def' keywords as user functions, and 'func' items as Built-in Calls + 'def' lines.
+
+    const defs = pyvizState.lines.filter(l => l.code.startsWith('def ')).length;
+    const calls = pyvizState.lines.filter(l => l.type === 'func').length; // print/input mainly
+
     const loops = pyvizState.lines.filter(l => l.code.match(/\b(for|while)\b/)).length;
     const conds = pyvizState.lines.filter(l => l.code.match(/\b(if|elif|else)\b/)).length;
     const imports = pyvizState.lines.filter(l => l.type === 'import').length;
 
     if (pyvizDom.statLines) pyvizDom.statLines.textContent = lines;
-    if (pyvizDom.statVars) pyvizDom.statVars.textContent = vars;
-    if (pyvizDom.statFuncs) pyvizDom.statFuncs.textContent = funcs;
+    if (pyvizDom.statVars) pyvizDom.statVars.textContent = uniqueVars; // Fixed
+    if (pyvizDom.statFuncs) pyvizDom.statFuncs.textContent = `${defs} Def / ${calls} Calls`; // Split
+
     if (pyvizDom.statLoops) pyvizDom.statLoops.textContent = loops;
     if (pyvizDom.statConds) pyvizDom.statConds.textContent = conds;
     if (pyvizDom.statImports) pyvizDom.statImports.textContent = imports;
 }
 
 function changeFontSize(delta) {
-    const sizes = ['text-xs', 'text-sm', 'text-base', 'text-lg', 'text-xl'];
+    const sizes = ['text-xs', 'text-sm', 'text-base', 'text-lg', 'text-xl', 'text-2xl', 'text-3xl', 'text-4xl'];
     let currentIdx = sizes.indexOf(pyvizState.fontSize || 'text-base');
     let newIdx = Math.max(0, Math.min(sizes.length - 1, currentIdx + delta));
     pyvizState.fontSize = sizes[newIdx];
@@ -794,13 +787,13 @@ function logAction(msg) {
     if (!pyvizDom.logList) return;
     const li = document.createElement('li');
     li.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
-    // Prepend
     if (pyvizDom.logList.firstChild) {
         pyvizDom.logList.insertBefore(li, pyvizDom.logList.firstChild);
     } else {
         pyvizDom.logList.appendChild(li);
     }
 }
+
 
 function runAICheck() {
     if (pyvizDom.aiMsg) {

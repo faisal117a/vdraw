@@ -483,8 +483,8 @@ function renderPyViz() {
         const indentStr = '    '.repeat(line.indent);
 
         // Robust Highlighting: Split by delimiters but keep them
-        // Matches: strings, comments, words, numbers, non-word chars
-        const tokens = line.code.split(/("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|#.*$|\b\d+(?:\.\d+)?\b|[a-zA-Z_]\w*|[^\s\w]+)/g);
+        // Matches: strings, comments, words, numbers, non-word chars (single char to avoid eating quotes)
+        const tokens = line.code.split(/("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|#.*$|\b\d+(?:\.\d+)?\b|[a-zA-Z_]\w*|[^\s\w])/g);
 
         const htmlParts = tokens.map(token => {
             if (!token) return '';

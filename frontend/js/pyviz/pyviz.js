@@ -935,21 +935,35 @@ function createDS() {
     else if (type === 'tuple') code = `${name} = (${vals})`;
     else if (type === 'stack') {
         if (!pyvizState.lines.some(l => l.code.includes('collections'))) {
-            addLine({ code: "from collections import deque", type: 'import' });
+            addImport("from collections import deque");
         }
         code = `${name} = deque([${vals}])`;
     }
     else if (type === 'queue') {
         if (!pyvizState.lines.some(l => l.code.includes('import queue'))) {
-            addLine({ code: "import queue", type: 'import' });
+            addImport("import queue");
         }
-        // A simple wrapper Queue or just queue.Queue()
-        // queue.Queue() doesn't accept initial list directly usually.
+
         code = `${name} = queue.Queue()`;
-        if (vals) {
-            // If values provided, warning or auto-put?
-            // Let's just create raw queue, values ignored for simplicity or warn.
-            // Or maybe add them below?
+
+        // Handle init values for queue
+        if (vals && vals.length > 0) {
+            addLine({
+                code: code,
+                type: 'ds',
+                meta: { name: name, dsType: type }
+            });
+
+            const items = vals.split(',').map(v => v.trim());
+            items.forEach(item => {
+                if (item) {
+                    let val = (isNaN(parseFloat(item)) && !item.startsWith('"') && !item.startsWith("'")) ? `"${item}"` : item;
+                    addLine({ code: `${name}.put(${val})`, type: 'func' });
+                }
+            });
+
+            if (document.getElementById('pv-ds-ops-selector')) renderDSOpsSelector();
+            return;
         }
     }
 
@@ -960,7 +974,7 @@ function createDS() {
     });
 
     // Refresh ops if visible
-    if (document.getElementById('pv-ops-var')) renderDSOpsSelector();
+    if (document.getElementById('pv-ds-ops-selector')) renderDSOpsSelector();
 }
 
 // Updated Stats Logic

@@ -20,15 +20,10 @@ function initTGDraw() {
     if (tgInitialized && tgDom.dashboard.children.length > 0) return;
 
     // Change Grid Layout to 12 cols: 3 (Left) - 6 (Canvas) - 3 (Right)
-    // Responsive: Stack on mobile (grid-cols-1), 12 cols on LG.
     tgDom.dashboard.innerHTML = `
-    <div class="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6 h-full pb-4 overflow-y-auto lg:overflow-hidden">
-        
-        <!-- Left Panel (Controls) -->
-        <div class="lg:col-span-3 glass-panel rounded-xl flex flex-col h-auto lg:h-full bg-slate-900/80 border border-slate-700 order-2 lg:order-none min-h-[400px]"></div>
-        
-        <!-- Center Panel (Canvas) -->
-        <div class="lg:col-span-6 glass-panel rounded-xl p-4 flex flex-col relative overflow-hidden h-[500px] lg:h-full bg-slate-900/50 border border-slate-700 order-first lg:order-none">
+    <div class="flex-1 grid grid-cols-12 gap-6 h-full pb-4">
+        <div class="col-span-3 glass-panel rounded-xl flex flex-col h-full bg-slate-900/80 border border-slate-700"></div>
+        <div class="col-span-6 glass-panel rounded-xl p-4 flex flex-col relative overflow-hidden h-full bg-slate-900/50 border border-slate-700">
             <div class="flex justify-between items-center border-b border-slate-700 pb-2 mb-2">
                 <h3 class="text-sm font-semibold text-slate-300">Canvas</h3>
             </div>
@@ -36,9 +31,7 @@ function initTGDraw() {
                 <p class="text-slate-500 italic">Select a structure to begin.</p>
             </div>
         </div>
-
-        <!-- Right Panel (Stats) -->
-        <div class="lg:col-span-3 glass-panel rounded-xl flex flex-col h-auto lg:h-full bg-slate-900/80 border border-slate-700 p-4 overflow-y-auto custom-scrollbar order-3 lg:order-none min-h-[200px]" id="tg-right-panel">
+        <div class="col-span-3 glass-panel rounded-xl flex flex-col h-full bg-slate-900/80 border border-slate-700 p-4 overflow-y-auto custom-scrollbar" id="tg-right-panel">
             <p class="text-slate-500 italic text-xs text-center mt-10">Statistics will appear here.</p>
         </div>
     </div>
@@ -46,7 +39,7 @@ function initTGDraw() {
 
     // Update references relative to the new grid structure
     const gridContainer = tgDom.dashboard.children[0];
-    tgDom.sidebarContent = gridContainer.children[0]; // Left Panel is 0 because childNodes order is preserved regardless of CSS 'order'
+    tgDom.sidebarContent = gridContainer.children[0];
     tgDom.sidebarContent.classList.add('p-4', 'overflow-y-auto', 'custom-scrollbar');
 
     tgDom.canvas = document.getElementById('tgdraw-canvas');

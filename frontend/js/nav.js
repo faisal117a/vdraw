@@ -8,10 +8,15 @@ const navDom = {
     btnV: null,
     btnP: null,
     btnT: null,
+    btnPy: null,
     dashV: null,
     dashP: null,
     dashT: null,
+    dashPy: null,
     sidebar: null,
+    sidebarOverlay: null,
+    btnMobileMenu: null,
+    btnCloseSidebar: null,
     pageTitle: null,
     logoText: null
 };
@@ -20,10 +25,12 @@ function initNav() {
     navDom.btnV = document.getElementById('nav-vdraw');
     navDom.btnP = document.getElementById('nav-pdraw');
     navDom.btnT = document.getElementById('nav-tgdraw');
+    navDom.btnPy = document.getElementById('nav-pyviz');
 
     navDom.dashV = document.getElementById('vdraw-dashboard');
     navDom.dashP = document.getElementById('pdraw-dashboard');
     navDom.dashT = document.getElementById('tgdraw-dashboard');
+    navDom.dashPy = document.getElementById('pyviz-dashboard');
 
     navDom.sidebar = document.getElementById('sidebar');
     navDom.sidebarOverlay = document.getElementById('sidebar-overlay');
@@ -37,6 +44,7 @@ function initNav() {
     if (navDom.btnV) navDom.btnV.onclick = () => switchPhase('vdraw');
     if (navDom.btnP) navDom.btnP.onclick = () => switchPhase('pdraw');
     if (navDom.btnT) navDom.btnT.onclick = () => switchPhase('tgdraw');
+    if (navDom.btnPy) navDom.btnPy.onclick = () => switchPhase('pyviz');
 
     // Sidebar Toggle Logic
     if (navDom.btnMobileMenu) {
@@ -71,11 +79,13 @@ window.switchPhase = function (phase) {
     resetButton(navDom.btnV);
     resetButton(navDom.btnP);
     resetButton(navDom.btnT);
+    resetButton(navDom.btnPy);
 
     // 2. Hide All Dashboards
     if (navDom.dashV) navDom.dashV.classList.add('hidden');
     if (navDom.dashP) navDom.dashP.classList.add('hidden');
     if (navDom.dashT) navDom.dashT.classList.add('hidden');
+    if (navDom.dashPy) navDom.dashPy.classList.add('hidden');
 
     // 3. Activate Selected Phase
     if (phase === 'vdraw') {
@@ -119,6 +129,18 @@ window.switchPhase = function (phase) {
 
         // Trigger TGDraw Init
         if (window.initTGDraw) window.initTGDraw();
+    } else if (phase === 'pyviz') {
+        activateButton(navDom.btnPy, 'bg-blue-600'); // Blue for PyViz
+        if (navDom.dashPy) navDom.dashPy.classList.remove('hidden');
+
+        // Sidebar Hidden
+        if (navDom.sidebar) navDom.sidebar.classList.add('hidden');
+        if (navDom.pageTitle) navDom.pageTitle.innerHTML = '<i class="fa-brands fa-python text-blue-500 mr-2"></i>PyViz Explainer';
+
+        document.documentElement.style.setProperty('--brand-color', '#2563eb'); // Blue 600
+
+        // Trigger PyViz Init
+        if (window.initPyViz) window.initPyViz();
     }
 };
 
@@ -130,7 +152,7 @@ function activateButton(btn, bgClass) {
 
 function resetButton(btn) {
     if (!btn) return;
-    btn.classList.remove('text-white', 'shadow', 'bg-brand-600', 'bg-green-600', 'bg-amber-600');
+    btn.classList.remove('text-white', 'shadow', 'bg-brand-600', 'bg-green-600', 'bg-amber-600', 'bg-blue-600');
     btn.classList.add('text-slate-400', 'hover:text-white', 'hover:bg-slate-700');
 }
 

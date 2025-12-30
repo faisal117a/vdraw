@@ -675,6 +675,28 @@ function createCondition() {
     });
 }
 
+function createForLoop() {
+    const count = document.getElementById('pv-loop-count').value;
+    addLine({
+        code: `for i in range(${count}):`,
+        type: 'logic'
+    });
+}
+
+function addComment(type) {
+    if (type === 'single') {
+        const text = document.getElementById('pv-comment-single').value.trim();
+        if (!text) return;
+        addLine({ code: `# ${text}`, type: 'comment' });
+        document.getElementById('pv-comment-single').value = '';
+    } else {
+        const text = document.getElementById('pv-comment-multi').value.trim();
+        if (!text) return;
+        addLine({ code: `""" ${text} """`, type: 'comment' });
+        document.getElementById('pv-comment-multi').value = '';
+    }
+}
+
 // Fix createPrint: correctly handle args + end
 function createPrint() {
     const args = Array.from(document.querySelectorAll('.print-arg')).map(i => i.value.trim()).filter(x => x);
@@ -700,6 +722,40 @@ function createPrint() {
 
     // Reset?
     document.querySelectorAll('.print-arg').forEach(i => i.value = '');
+}
+
+// 5. Data Structure Builder
+function renderDSLibrary(container) {
+    container.innerHTML = `
+        <div class="bg-slate-800 p-3 rounded border border-slate-700 space-y-3">
+            <h4 class="text-xs font-bold text-slate-300 uppercase"><i class="fa-solid fa-layer-group mr-1"></i> New Data Structure</h4>
+            
+            <div>
+                 <label class="text-[10px] text-slate-500 uppercase font-bold block mb-1">Variable Name</label>
+                <input type="text" id="pv-ds-name" class="w-full bg-slate-900 border border-slate-600 rounded p-1.5 text-xs text-white placeholder-slate-600" placeholder="e.g. numbers">
+            </div>
+
+             <div>
+                 <label class="text-[10px] text-slate-500 uppercase font-bold block mb-1">Type</label>
+                 <select id="pv-ds-type" class="w-full bg-slate-900 border border-slate-600 rounded p-1.5 text-xs text-white">
+                    <option value="list">List [ ]</option>
+                    <option value="tuple">Tuple ( )</option>
+                    <option value="set">Set { }</option>
+                    <option value="dict">Dictionary {k:v}</option>
+                    <option value="stack">Stack (deque)</option>
+                 </select>
+            </div>
+
+            <div>
+                 <label class="text-[10px] text-slate-500 uppercase font-bold block mb-1">Initial Values (CSV)</label>
+                <input type="text" id="pv-ds-val" class="w-full bg-slate-900 border border-slate-600 rounded p-1.5 text-xs text-white placeholder-slate-600" placeholder="e.g. 1, 2, 3">
+            </div>
+
+            <button onclick="createDS()" class="w-full py-2 bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold rounded transition-colors">
+                Create Structure
+            </button>
+        </div>
+    `;
 }
 
 // Check Duplicate DS Names

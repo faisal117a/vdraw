@@ -12,7 +12,8 @@ const pyvizState = {
         "Don't forget to close your parenthesis!",
         "Double check your logic conditions. Is a > b ?",
         "Great start. Try adding a loop to iterate through data."
-    ]
+    ],
+    fontSize: 'text-base'
 };
 
 const pyvizDom = {
@@ -24,6 +25,9 @@ const pyvizDom = {
     statLines: null,
     statVars: null,
     statFuncs: null,
+    statLoops: null,
+    statConds: null,
+    statImports: null,
     logList: null,
     headers: null
 };
@@ -196,112 +200,8 @@ function insertTextToInput(txt) {
 
 
 // 2. Logic & Functions
-const staticLogicItems = [
-    { label: '# Comment', code: '# ', type: 'comment', indentChange: 0, icon: 'fa-comment', color: 'text-slate-500' },
-    { label: 'If Condition', code: 'if CONDITION:', type: 'logic', indentChange: 1, icon: 'fa-code-branch', color: 'text-orange-400' },
-    { label: 'Elif', code: 'elif CONDITION:', type: 'logic', indentChange: 0, icon: 'fa-code-branch', color: 'text-orange-400' },
-    { label: 'Else', code: 'else:', type: 'logic', indentChange: 1, icon: 'fa-code-branch', color: 'text-orange-400' },
-    { label: 'For Loop', code: 'for i in range(5):', type: 'logic', indentChange: 1, icon: 'fa-rotate', color: 'text-pink-400' },
-    { label: 'While Loop', code: 'while True:', type: 'logic', indentChange: 1, icon: 'fa-rotate', color: 'text-pink-400' },
-    { label: 'Break', code: 'break', type: 'logic', indentChange: 0, icon: 'fa-ban', color: 'text-red-400' },
-];
+// Replaced with Dynamic builder below
 
-function renderLogicLibrary(container) {
-    renderStaticList(container, staticLogicItems);
-}
-
-// 5. Data Structure Builder
-function renderDSLibrary(container) {
-    container.innerHTML = `
-        <div class="bg-slate-800 p-3 rounded border border-slate-700 space-y-3">
-            <h4 class="text-xs font-bold text-slate-300 uppercase"><i class="fa-solid fa-layer-group mr-1"></i> New Data Structure</h4>
-            
-            <div>
-                 <label class="text-[10px] text-slate-500 uppercase font-bold block mb-1">Variable Name</label>
-                <input type="text" id="pv-ds-name" class="w-full bg-slate-900 border border-slate-600 rounded p-1.5 text-xs text-white placeholder-slate-600" placeholder="e.g. numbers">
-            </div>
-
-             <div>
-                 <label class="text-[10px] text-slate-500 uppercase font-bold block mb-1">Type</label>
-                 <select id="pv-ds-type" class="w-full bg-slate-900 border border-slate-600 rounded p-1.5 text-xs text-white">
-                    <option value="list">List [ ]</option>
-                    <option value="tuple">Tuple ( )</option>
-                    <option value="set">Set { }</option>
-                    <option value="dict">Dictionary {k:v}</option>
-                    <option value="stack">Stack (deque)</option>
-                 </select>
-            </div>
-
-            <div>
-                 <label class="text-[10px] text-slate-500 uppercase font-bold block mb-1">Initial Values (CSV)</label>
-                <input type="text" id="pv-ds-val" class="w-full bg-slate-900 border border-slate-600 rounded p-1.5 text-xs text-white placeholder-slate-600" placeholder="e.g. 1, 2, 3">
-            </div>
-
-            <button onclick="createDS()" class="w-full py-2 bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold rounded transition-colors">
-                Create Structure
-            </button>
-        </div>
-    `;
-}
-
-function createDS() {
-    const name = document.getElementById('pv-ds-name').value.trim();
-    const type = document.getElementById('pv-ds-type').value;
-    const rawVal = document.getElementById('pv-ds-val').value.trim();
-
-    if (!name) { alert("Variable name required"); return; }
-
-    // Auto-detect numeric vs string values?
-    // For simplicity, splitting by comma and determining type
-    let vals = rawVal ? rawVal.split(',').map(v => {
-        v = v.trim();
-        return (isNaN(parseFloat(v)) && !v.startsWith('"') && !v.startsWith("'")) ? `"${v}"` : v;
-    }).join(', ') : "";
-
-    let code = "";
-
-    if (type === 'list') code = `${name} = [${vals}]`;
-    else if (type === 'tuple') code = `${name} = (${vals})`;
-    else if (type === 'set') code = `${name} = {${vals}}`;
-    else if (type === 'dict') code = `${name} = {${vals}}`; // User must provide "k":v format for dicts in rawVal, effectively
-    else if (type === 'stack') {
-        // Check Import
-        if (!pyvizState.lines.some(l => l.code.includes('collections'))) {
-            // Prepend import if missing?
-            addLine({ code: "from collections import deque", type: 'import' });
-        }
-        code = `${name} = deque([${vals}])`;
-    }
-
-    addLine({
-        code: code,
-        type: 'ds',
-        meta: { name: name }
-    });
-}
-
-function renderStaticList(container, items) {
-    container.innerHTML = '';
-    items.forEach(item => {
-        const div = document.createElement('div');
-        div.className = "bg-slate-800 p-2 rounded cursor-pointer hover:bg-slate-700 border border-slate-700 transition-all group flex items-center mb-2";
-        div.onclick = () => addLine(item);
-
-        div.innerHTML = `
-            <div class="w-8 h-8 rounded bg-slate-900 flex items-center justify-center mr-3 border border-slate-600 group-hover:border-blue-500">
-                <i class="fa-solid ${item.icon} ${item.color}"></i>
-            </div>
-            <div>
-                <p class="text-xs font-bold text-slate-300 group-hover:text-white">${item.label}</p>
-                <p class="text-[10px] text-slate-500 font-mono truncate max-w-[120px]">${item.code}</p>
-            </div>
-            <div class="ml-auto opacity-0 group-hover:opacity-100">
-                <i class="fa-solid fa-plus text-blue-500"></i>
-            </div>
-        `;
-        container.appendChild(div);
-    });
-}
 
 // 3. Function Builder (Print, Input)
 function renderFuncBuilder(container) {
@@ -466,6 +366,7 @@ function createImport(type) {
         else if (val.startsWith('matplotlib')) code = 'import matplotlib.pyplot as plt';
     }
 
+    // Check duplication?
     if (pyvizState.lines.some(l => l.code === code)) {
         alert("Module already imported!");
         return;
@@ -563,146 +464,307 @@ function renderPyViz() {
     area.innerHTML = '';
 
     // Font size state validation
-    if (!pyvizState.fontSize) pyvizState.fontSize = 'text-base'; // Default bigger
+    if (!pyvizState.fontSize) pyvizState.fontSize = 'text-base';
+
+    const keywords = new Set(['def', 'class', 'if', 'else', 'elif', 'for', 'while', 'return', 'import', 'from', 'as', 'break', 'continue', 'pass', 'and', 'or', 'not', 'in', 'is']);
+    const builtins = new Set(['print', 'input', 'len', 'range', 'int', 'str', 'float', 'list', 'dict', 'set', 'tuple', 'deque']);
 
     pyvizState.lines.forEach((line, idx) => {
         const row = document.createElement('div');
         row.className = `flex items-center group hover:bg-slate-900/50 py-1 -mx-2 px-2 rounded ${pyvizState.fontSize}`;
 
-        // Line Num
         const num = document.createElement('span');
         num.className = "text-slate-600 text-xs w-8 select-none text-right mr-4 shrink-0";
         num.textContent = idx + 1;
 
-        // Content
         const content = document.createElement('div');
-        content.className = "flex-1 font-mono whitespace-pre"; // whitespace-pre for indentation
+        content.className = "flex-1 font-mono whitespace-pre";
 
-        // Indent Spacers
         const indentStr = '    '.repeat(line.indent);
 
-        // Safe Syntax Highlighting
-        // We escape HTML first to prevent XSS (basic)
-        let safeCode = line.code.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        // Robust Highlighting: Split by delimiters but keep them
+        // Matches: strings, comments, words, numbers, non-word chars
+        const tokens = line.code.split(/("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|#.*$|\b\d+(?:\.\d+)?\b|[a-zA-Z_]\w*|[^\s\w]+)/g);
 
-        // Tokenize method: Split by non-word chars but keep delimiters? 
-        // Simpler: Use careful regexes with boundaries that don't match HTML tags.
-        // But we just escaped HTML, so there are no tags yet! safe to format now.
+        const htmlParts = tokens.map(token => {
+            if (!token) return '';
 
-        let htmlCode = safeCode
-            // Keywords
-            .replace(/\b(def|class|if|else|elif|for|while|return|import|from|as|break|continue|pass)\b/g, '<span class="text-orange-400 font-bold">$1</span>')
-            // Built-ins (Check `print` carefully)
-            .replace(/\b(print|input|len|range|int|str|float|list|dict|set|tuple|deque)\b/g, '<span class="text-blue-400">$1</span>')
-            // Strings (Single or Double quoted) - simple greedy match
-            .replace(/(".*?"|'.*?')/g, '<span class="text-green-400">$1</span>')
-            // Numbers
-            .replace(/\b(\d+(\.\d+)?)\b/g, '<span class="text-pink-400">$1</span>')
-            // Comments
-            .replace(/(#.*)/g, '<span class="text-slate-500 italic">$1</span>');
+            // String literal
+            if (token.startsWith('"') || token.startsWith("'")) {
+                return `<span class="text-green-400">${escapeHtml(token)}</span>`;
+            }
+            // Comment
+            if (token.startsWith('#')) {
+                return `<span class="text-slate-500 italic">${escapeHtml(token)}</span>`;
+            }
+            // Number
+            if (/^\d/.test(token)) {
+                return `<span class="text-pink-400">${token}</span>`;
+            }
+            // Word check
+            if (/^[a-zA-Z_]/.test(token)) {
+                if (keywords.has(token)) return `<span class="text-orange-400 font-bold">${token}</span>`;
+                if (builtins.has(token)) return `<span class="text-blue-400">${token}</span>`;
+                return escapeHtml(token);
+            }
+            // Other (punctuation etc)
+            return escapeHtml(token);
+        });
 
-        content.innerHTML = `${indentStr}${htmlCode}`;
+        content.innerHTML = `${indentStr}${htmlParts.join('')}`;
 
-        // Controls
+        // Controls (Up/Down/Indent/Delete)
         const controls = document.createElement('div');
         controls.className = "opacity-0 group-hover:opacity-100 flex gap-1 ml-4 items-center shrink-0";
 
-        // Move Up/Down
-        const btnUp = document.createElement('button');
-        btnUp.innerHTML = '<i class="fa-solid fa-arrow-up"></i>';
-        btnUp.className = "w-6 h-6 rounded hover:bg-slate-700 text-slate-500 hover:text-white text-xs";
-        btnUp.title = "Move Up";
-        btnUp.onclick = (e) => { e.stopPropagation(); moveLine(line.id, -1); };
+        const createBtn = (icon, color, title, onClick) => {
+            const btn = document.createElement('button');
+            btn.innerHTML = `<i class="fa-solid ${icon}"></i>`;
+            btn.className = `w-6 h-6 rounded hover:bg-slate-700 text-slate-500 hover:${color} text-xs`;
+            btn.title = title;
+            btn.onclick = (e) => { e.stopPropagation(); onClick(); };
+            return btn;
+        };
 
-        const btnDown = document.createElement('button');
-        btnDown.innerHTML = '<i class="fa-solid fa-arrow-down"></i>';
-        btnDown.className = "w-6 h-6 rounded hover:bg-slate-700 text-slate-500 hover:text-white text-xs";
-        btnDown.title = "Move Down";
-        btnDown.onclick = (e) => { e.stopPropagation(); moveLine(line.id, 1); };
-
-        // Indent controls
-        const btnIndent = document.createElement('button');
-        btnIndent.innerHTML = '<i class="fa-solid fa-indent"></i>';
-        btnIndent.className = "w-6 h-6 rounded hover:bg-slate-700 text-slate-500 hover:text-blue-400 text-xs";
-        btnIndent.onclick = (e) => { e.stopPropagation(); line.indent++; renderPyViz(); };
-
-        const btnDedent = document.createElement('button');
-        btnDedent.innerHTML = '<i class="fa-solid fa-outdent"></i>';
-        btnDedent.className = "w-6 h-6 rounded hover:bg-slate-700 text-slate-500 hover:text-blue-400 text-xs";
-        btnDedent.onclick = (e) => { e.stopPropagation(); if (line.indent > 0) line.indent--; renderPyViz(); };
-
-        const btnDel = document.createElement('button');
-        btnDel.innerHTML = '<i class="fa-solid fa-trash"></i>';
-        btnDel.className = "w-6 h-6 rounded hover:bg-red-900/50 text-slate-500 hover:text-red-400 text-xs";
-        btnDel.onclick = (e) => { e.stopPropagation(); removeLine(line.id); };
-
-        controls.appendChild(btnUp);
-        controls.appendChild(btnDown);
-        controls.appendChild(btnDedent);
-        controls.appendChild(btnIndent);
-        controls.appendChild(btnDel);
+        controls.appendChild(createBtn('fa-arrow-up', 'text-white', 'Move Up', () => moveLine(line.id, -1)));
+        controls.appendChild(createBtn('fa-arrow-down', 'text-white', 'Move Down', () => moveLine(line.id, 1)));
+        controls.appendChild(createBtn('fa-outdent', 'text-blue-400', 'Dedent', () => { if (line.indent > 0) { line.indent--; renderPyViz(); } }));
+        controls.appendChild(createBtn('fa-indent', 'text-blue-400', 'Indent', () => { line.indent++; renderPyViz(); }));
+        controls.appendChild(createBtn('fa-trash', 'text-red-400', 'Delete', () => removeLine(line.id)));
 
         row.appendChild(num);
         row.appendChild(content);
         row.appendChild(controls);
-
         area.appendChild(row);
     });
 
-    // Auto-scroll logic (only if at bottom?)
     area.scrollTop = area.scrollHeight;
+}
+
+function escapeHtml(text) {
+    return text
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
 }
 
 function moveLine(id, direction) {
     const idx = pyvizState.lines.findIndex(l => l.id === id);
     if (idx === -1) return;
-
     const newIdx = idx + direction;
     if (newIdx < 0 || newIdx >= pyvizState.lines.length) return;
 
-    // Swap
     const temp = pyvizState.lines[idx];
     pyvizState.lines[idx] = pyvizState.lines[newIdx];
     pyvizState.lines[newIdx] = temp;
-
     renderPyViz();
 }
 
-// 4. Logic Builder (If, For, While, Comments)
+// 4. Logic Builder
 function renderLogicLibrary(container) {
     container.innerHTML = `
         <div class="space-y-4">
-            <!-- Comment Builder -->
-             <div class="bg-slate-800 p-3 rounded border border-slate-700 space-y-2">
-                <h4 class="text-xs font-bold text-slate-300 uppercase"><i class="fa-regular fa-comment mr-1"></i> Add Comment</h4>
+            <!-- New Condition Builder -->
+             <div class="bg-slate-800 p-3 rounded border border-slate-700 space-y-3">
+                <h4 class="text-xs font-bold text-orange-400 uppercase"><i class="fa-solid fa-code-branch mr-1"></i> If / Loop Builder</h4>
+                
                 <div class="flex gap-2">
-                    <input type="text" id="pv-comment-text" class="flex-1 bg-slate-900 border border-slate-600 rounded p-1.5 text-xs text-white placeholder-slate-600" placeholder="Comment text...">
-                    <button onclick="addComment()" class="px-3 py-1 bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs font-bold rounded">Add</button>
+                     <select id="pv-logic-kw" class="w-20 bg-slate-900 border border-slate-600 rounded p-1.5 text-xs text-white">
+                        <option value="if">if</option>
+                        <option value="elif">elif</option>
+                        <option value="while">while</option>
+                     </select>
+                     
+                     <input type="text" id="pv-logic-exp1" class="flex-1 bg-slate-900 border border-slate-600 rounded p-1.5 text-xs text-white placeholder-slate-600" placeholder="Exp 1 (e.g. x)">
+                     
+                     <select id="pv-logic-op" class="w-16 bg-slate-900 border border-slate-600 rounded p-1.5 text-xs text-white font-mono">
+                        <option value="==">==</option>
+                        <option value="!=">!=</option>
+                        <option value=">">></option>
+                        <option value="<"><</option>
+                        <option value=">=">>=</option>
+                        <option value="<="><=</option>
+                        <option value="in">in</option>
+                     </select>
+                     
+                     <input type="text" id="pv-logic-exp2" class="flex-1 bg-slate-900 border border-slate-600 rounded p-1.5 text-xs text-white placeholder-slate-600" placeholder="Exp 2 (e.g. 10)">
+                </div>
+                
+                <div class="flex items-center gap-2">
+                     <span class="text-[10px] text-slate-500 font-bold uppercase">Logical Op (Optional)</span>
+                     <select id="pv-logic-join" class="w-20 bg-slate-900 border border-slate-600 rounded p-1.5 text-xs text-white">
+                        <option value="">None</option>
+                        <option value="and">and</option>
+                        <option value="or">or</option>
+                     </select>
+                     <p class="text-[10px] text-slate-600 italic ml-auto">Complex conditions?</p>
+                </div>
+
+                <div class="grid grid-cols-2 gap-2">
+                     <button onclick="createCondition()" class="py-2 bg-orange-600 hover:bg-orange-500 text-white text-xs font-bold rounded transition-colors">
+                        Add Condition
+                    </button>
+                    <button onclick="addLine({code:'else:', type:'logic'})" class="py-2 bg-slate-700 hover:bg-slate-600 text-white text-xs font-bold rounded transition-colors">
+                        Add 'else'
+                    </button>
                 </div>
             </div>
 
             <hr class="border-slate-700">
-            
-            <!-- Standard Logic Blocks -->
-            <div id="pv-logic-list"></div>
+
+            <!-- For Loop Specific -->
+            <div class="bg-slate-800 p-3 rounded border border-slate-700 space-y-2">
+                 <h4 class="text-xs font-bold text-pink-400 uppercase"><i class="fa-solid fa-rotate mr-1"></i> For Range Loop</h4>
+                 <div class="flex gap-2 items-center">
+                    <span class="text-xs text-slate-400 font-mono">for i in range(</span>
+                    <input type="text" id="pv-loop-count" class="w-12 bg-slate-900 border border-slate-600 rounded p-1 text-xs text-white text-center" value="10">
+                    <span class="text-xs text-slate-400 font-mono">):</span>
+                 </div>
+                 <button onclick="createForLoop()" class="w-full py-1 bg-slate-700 hover:bg-slate-600 text-white text-xs rounded">Add Loop</button>
+            </div>
+
+            <hr class="border-slate-700">
+
+            <!-- Comment Builder -->
+             <div class="bg-slate-800 p-3 rounded border border-slate-700 space-y-3">
+                <h4 class="text-xs font-bold text-slate-300 uppercase"><i class="fa-regular fa-comment mr-1"></i> Comments</h4>
+                
+                <div>
+                    <label class="text-[10px] text-slate-500 uppercase font-bold block mb-1">Single Line (#)</label>
+                    <div class="flex gap-2">
+                        <input type="text" id="pv-comment-single" class="flex-1 bg-slate-900 border border-slate-600 rounded p-1.5 text-xs text-white placeholder-slate-600" placeholder="Comment...">
+                        <button onclick="addComment('single')" class="px-3 py-1 bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs font-bold rounded">Add</button>
+                    </div>
+                </div>
+
+                 <div>
+                    <label class="text-[10px] text-slate-500 uppercase font-bold block mb-1">Multi Line (""")</label>
+                    <div class="flex gap-2">
+                        <textarea id="pv-comment-multi" rows="2" class="flex-1 bg-slate-900 border border-slate-600 rounded p-1.5 text-xs text-white placeholder-slate-600 resize-none" placeholder="Multi-line text..."></textarea>
+                        <button onclick="addComment('multi')" class="px-3 py-1 bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs font-bold rounded h-full">Add</button>
+                    </div>
+                </div>
+            </div>
         </div>
     `;
-    renderStaticList(document.getElementById('pv-logic-list'), staticLogicItems);
 }
 
-function addComment() {
-    const text = document.getElementById('pv-comment-text').value.trim();
-    if (!text) return;
+function createCondition() {
+    const kw = document.getElementById('pv-logic-kw').value;
+    const exp1 = document.getElementById('pv-logic-exp1').value.trim();
+    const op = document.getElementById('pv-logic-op').value;
+    const exp2 = document.getElementById('pv-logic-exp2').value.trim();
+    const join = document.getElementById('pv-logic-join').value;
+
+    if (!exp1 || !exp2) { alert("Please complete the condition expressions"); return; }
+
+    let cond = `${exp1} ${op} ${exp2}`;
+    if (join) {
+        cond += ` ${join} ...`; // Placeholder hint
+    }
 
     addLine({
-        code: `# ${text}`,
-        type: 'comment'
+        code: `${kw} ${cond}:`,
+        type: 'logic'
     });
-
-    document.getElementById('pv-comment-text').value = '';
 }
 
-// --- Stats & Utils ---
+function createForLoop() {
+    const count = document.getElementById('pv-loop-count').value;
+    addLine({
+        code: `for i in range(${count}):`,
+        type: 'logic'
+    });
+}
+
+function addComment(type) {
+    if (type === 'single') {
+        const text = document.getElementById('pv-comment-single').value.trim();
+        if (!text) return;
+        addLine({ code: `# ${text}`, type: 'comment' });
+        document.getElementById('pv-comment-single').value = '';
+    } else {
+        const text = document.getElementById('pv-comment-multi').value.trim();
+        if (!text) return;
+        // Multi-line in Python often is triple quotes string literal used as comment
+        addLine({ code: `""" ${text} """`, type: 'comment' });
+        document.getElementById('pv-comment-multi').value = '';
+    }
+}
+
+// 5. Data Structure Builder
+function renderDSLibrary(container) {
+    container.innerHTML = `
+        <div class="bg-slate-800 p-3 rounded border border-slate-700 space-y-3">
+            <h4 class="text-xs font-bold text-slate-300 uppercase"><i class="fa-solid fa-layer-group mr-1"></i> New Data Structure</h4>
+            
+            <div>
+                 <label class="text-[10px] text-slate-500 uppercase font-bold block mb-1">Variable Name</label>
+                <input type="text" id="pv-ds-name" class="w-full bg-slate-900 border border-slate-600 rounded p-1.5 text-xs text-white placeholder-slate-600" placeholder="e.g. numbers">
+            </div>
+
+             <div>
+                 <label class="text-[10px] text-slate-500 uppercase font-bold block mb-1">Type</label>
+                 <select id="pv-ds-type" class="w-full bg-slate-900 border border-slate-600 rounded p-1.5 text-xs text-white">
+                    <option value="list">List [ ]</option>
+                    <option value="tuple">Tuple ( )</option>
+                    <option value="set">Set { }</option>
+                    <option value="dict">Dictionary {k:v}</option>
+                    <option value="stack">Stack (deque)</option>
+                 </select>
+            </div>
+
+            <div>
+                 <label class="text-[10px] text-slate-500 uppercase font-bold block mb-1">Initial Values (CSV)</label>
+                <input type="text" id="pv-ds-val" class="w-full bg-slate-900 border border-slate-600 rounded p-1.5 text-xs text-white placeholder-slate-600" placeholder="e.g. 1, 2, 3">
+            </div>
+
+            <button onclick="createDS()" class="w-full py-2 bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold rounded transition-colors">
+                Create Structure
+            </button>
+        </div>
+    `;
+}
+
+function createDS() {
+    const name = document.getElementById('pv-ds-name').value.trim();
+    const type = document.getElementById('pv-ds-type').value;
+    const rawVal = document.getElementById('pv-ds-val').value.trim();
+
+    if (!name) { alert("Variable name required"); return; }
+
+    // Auto-detect numeric vs string values?
+    // For simplicity, splitting by comma and determining type
+    let vals = rawVal ? rawVal.split(',').map(v => {
+        v = v.trim();
+        return (isNaN(parseFloat(v)) && !v.startsWith('"') && !v.startsWith("'")) ? `"${v}"` : v;
+    }).join(', ') : "";
+
+    let code = "";
+
+    if (type === 'list') code = `${name} = [${vals}]`;
+    else if (type === 'tuple') code = `${name} = (${vals})`;
+    else if (type === 'set') code = `${name} = {${vals}}`;
+    else if (type === 'dict') code = `${name} = {${vals}}`; // User must provide "k":v format for dicts in rawVal, effectively
+    else if (type === 'stack') {
+        // Check Import
+        if (!pyvizState.lines.some(l => l.code.includes('collections'))) {
+            // Prepend import if missing?
+            addLine({ code: "from collections import deque", type: 'import' });
+        }
+        code = `${name} = deque([${vals}])`;
+    }
+
+    addLine({
+        code: code,
+        type: 'ds',
+        meta: { name: name }
+    });
+}
+
+// Stats Helpers
 
 function updateStats() {
     const lines = pyvizState.lines.length;
@@ -718,13 +780,6 @@ function updateStats() {
     if (pyvizDom.statLoops) pyvizDom.statLoops.textContent = loops;
     if (pyvizDom.statConds) pyvizDom.statConds.textContent = conds;
     if (pyvizDom.statImports) pyvizDom.statImports.textContent = imports;
-
-    // Check if we have extended stats slots, if not we might need to inject them? 
-    // For now we assume the DOM only has the 3 from app.html. 
-    // We will append details to a new 'Detailed' area if present or just ensure the core ones are right.
-
-    // Quick Hack: Update Action Log with summary if DOM missing
-    // Actually, Phase 4 plan asks for them in Inspector. We should add them to DOM in next step.
 }
 
 function changeFontSize(delta) {
@@ -734,7 +789,6 @@ function changeFontSize(delta) {
     pyvizState.fontSize = sizes[newIdx];
     renderPyViz();
 }
-
 
 function logAction(msg) {
     if (!pyvizDom.logList) return;

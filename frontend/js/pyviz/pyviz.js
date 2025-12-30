@@ -724,38 +724,145 @@ function createPrint() {
     document.querySelectorAll('.print-arg').forEach(i => i.value = '');
 }
 
-// 5. Data Structure Builder
+// 5. Data Structure Builder (List, Tuple, Stack, Queue)
 function renderDSLibrary(container) {
     container.innerHTML = `
-        <div class="bg-slate-800 p-3 rounded border border-slate-700 space-y-3">
-            <h4 class="text-xs font-bold text-slate-300 uppercase"><i class="fa-solid fa-layer-group mr-1"></i> New Data Structure</h4>
-            
-            <div>
-                 <label class="text-[10px] text-slate-500 uppercase font-bold block mb-1">Variable Name</label>
-                <input type="text" id="pv-ds-name" class="w-full bg-slate-900 border border-slate-600 rounded p-1.5 text-xs text-white placeholder-slate-600" placeholder="e.g. numbers">
+        <div class="space-y-4">
+            <!-- Create New DS -->
+            <div class="bg-slate-800 p-3 rounded border border-slate-700 space-y-3">
+                <h4 class="text-xs font-bold text-slate-300 uppercase"><i class="fa-solid fa-layer-group mr-1"></i> New Data Structure</h4>
+                
+                <div>
+                     <label class="text-[10px] text-slate-500 uppercase font-bold block mb-1">Variable Name</label>
+                    <input type="text" id="pv-ds-name" class="w-full bg-slate-900 border border-slate-600 rounded p-1.5 text-xs text-white placeholder-slate-600" placeholder="e.g. data">
+                </div>
+
+                 <div>
+                     <label class="text-[10px] text-slate-500 uppercase font-bold block mb-1">Type</label>
+                     <select id="pv-ds-type" class="w-full bg-slate-900 border border-slate-600 rounded p-1.5 text-xs text-white">
+                        <option value="list">List [ ]</option>
+                        <option value="tuple">Tuple ( )</option>
+                        <option value="stack">Stack (deque)</option>
+                        <option value="queue">Queue (queue.Queue)</option>
+                     </select>
+                </div>
+
+                <div>
+                     <label class="text-[10px] text-slate-500 uppercase font-bold block mb-1">Initial Values (CSV) - List/Tuple/Stack Only</label>
+                    <input type="text" id="pv-ds-val" class="w-full bg-slate-900 border border-slate-600 rounded p-1.5 text-xs text-white placeholder-slate-600" placeholder="e.g. 1, 2, 3">
+                </div>
+
+                <button onclick="createDS()" class="w-full py-2 bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold rounded transition-colors">
+                    Create Structure
+                </button>
             </div>
 
-             <div>
-                 <label class="text-[10px] text-slate-500 uppercase font-bold block mb-1">Type</label>
-                 <select id="pv-ds-type" class="w-full bg-slate-900 border border-slate-600 rounded p-1.5 text-xs text-white">
-                    <option value="list">List [ ]</option>
-                    <option value="tuple">Tuple ( )</option>
-                    <option value="set">Set { }</option>
-                    <option value="dict">Dictionary {k:v}</option>
-                    <option value="stack">Stack (deque)</option>
-                 </select>
-            </div>
+            <!-- Operations Builder -->
+            <div class="bg-slate-800 p-3 rounded border border-slate-700 space-y-3">
+                <h4 class="text-xs font-bold text-slate-300 uppercase"><i class="fa-solid fa-gears mr-1"></i> Operations</h4>
+                
+                <div>
+                    <label class="text-[10px] text-slate-500 uppercase font-bold block mb-1">Select Variable</label>
+                    <div id="pv-ds-ops-selector">Loading...</div>
+                </div>
 
-            <div>
-                 <label class="text-[10px] text-slate-500 uppercase font-bold block mb-1">Initial Values (CSV)</label>
-                <input type="text" id="pv-ds-val" class="w-full bg-slate-900 border border-slate-600 rounded p-1.5 text-xs text-white placeholder-slate-600" placeholder="e.g. 1, 2, 3">
-            </div>
+                 <div id="pv-ds-method-area" class="hidden space-y-2">
+                     <label class="text-[10px] text-slate-500 uppercase font-bold block mb-1">Method</label>
+                     <select id="pv-ds-method" class="w-full bg-slate-900 border border-slate-600 rounded p-1.5 text-xs text-white" onchange="updateMethodArgs()">
+                        <!-- Dynamic Options -->
+                     </select>
+                     
+                     <input type="text" id="pv-ds-method-arg" class="w-full bg-slate-900 border border-slate-600 rounded p-1.5 text-xs text-white placeholder-slate-600 hidden" placeholder="Argument (e.g. 5)">
 
-            <button onclick="createDS()" class="w-full py-2 bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold rounded transition-colors">
-                Create Structure
-            </button>
+                     <button onclick="applyDSMethod()" class="w-full py-2 bg-slate-600 hover:bg-slate-500 text-white text-xs font-bold rounded transition-colors">
+                        Add Operation
+                    </button>
+                </div>
+            </div>
         </div>
     `;
+    renderDSOpsSelector();
+}
+
+function renderDSOpsSelector() {
+    const container = document.getElementById('pv-ds-ops-selector');
+    // Filter variables created via DS or just any var? Let's check meta.type or just known vars.
+    // Ideally we store type in meta.
+    const candidates = pyvizState.lines
+        .filter(l => (l.type === 'ds' || l.type === 'var') && l.meta?.name)
+        .map(l => ({ name: l.meta.name, type: l.meta.dsType || 'unknown' })); // We need to store dsType in createDS
+
+    if (candidates.length === 0) {
+        container.innerHTML = '<p class="text-[10px] text-slate-600 italic">No variables available.</p>';
+        return;
+    }
+
+    let html = `<select id="pv-ops-var" class="w-full bg-slate-900 border border-slate-600 rounded p-1.5 text-xs text-white" onchange="loadMethodsForVar()">`;
+    html += `<option value="">-- Select --</option>`;
+    candidates.forEach(c => {
+        // Only unique names
+        html += `<option value="${c.name}" data-type="${c.type}">${c.name} (${c.type})</option>`;
+    });
+    html += `</select>`;
+    container.innerHTML = html;
+}
+
+// Map of methods per type
+const dsMethods = {
+    'list': [
+        { name: 'append', arg: true }, { name: 'pop', arg: true }, { name: 'remove', arg: true },
+        { name: 'insert', arg: true }, { name: 'sort', arg: false }, { name: 'reverse', arg: false }, { name: 'clear', arg: false }
+    ],
+    'tuple': [], // Immutable mostly, maybe count/index?
+    'stack': [
+        { name: 'append', arg: true }, { name: 'pop', arg: false }
+    ],
+    'queue': [
+        { name: 'put', arg: true }, { name: 'get', arg: false }
+    ],
+    'unknown': [{ name: 'print', arg: false }] // Fallback
+};
+
+window.loadMethodsForVar = function () {
+    const sel = document.getElementById('pv-ops-var');
+    const area = document.getElementById('pv-ds-method-area');
+    if (!sel.value) { area.classList.add('hidden'); return; }
+
+    area.classList.remove('hidden');
+    const type = sel.options[sel.selectedIndex].dataset.type || 'list'; // Default list if unknown
+    const methods = dsMethods[type] || dsMethods['list'];
+
+    const methodSel = document.getElementById('pv-ds-method');
+    methodSel.innerHTML = methods.map(m => `<option value="${m.name}" data-arg="${m.arg}">${m.name}()</option>`).join('');
+    updateMethodArgs();
+};
+
+window.updateMethodArgs = function () {
+    const mSel = document.getElementById('pv-ds-method');
+    const argInput = document.getElementById('pv-ds-method-arg');
+    const needsArg = mSel.options[mSel.selectedIndex]?.dataset.arg === 'true';
+
+    if (needsArg) {
+        argInput.classList.remove('hidden');
+    } else {
+        argInput.classList.add('hidden');
+    }
+};
+
+window.applyDSMethod = function () {
+    const varName = document.getElementById('pv-ops-var').value;
+    const method = document.getElementById('pv-ds-method').value;
+    const argInput = document.getElementById('pv-ds-method-arg');
+    const needsArg = !argInput.classList.contains('hidden');
+    const arg = argInput.value.trim();
+
+    let code = `${varName}.${method}()`;
+    if (needsArg) {
+        if (!arg) return;
+        code = `${varName}.${method}(${arg})`;
+    }
+
+    addLine({ code: code, type: 'func' }); // Type func for generic output
 }
 
 // Check Duplicate DS Names
@@ -783,20 +890,34 @@ function createDS() {
 
     if (type === 'list') code = `${name} = [${vals}]`;
     else if (type === 'tuple') code = `${name} = (${vals})`;
-    else if (type === 'set') code = `${name} = {${vals}}`;
-    else if (type === 'dict') code = `${name} = {${vals}}`;
     else if (type === 'stack') {
         if (!pyvizState.lines.some(l => l.code.includes('collections'))) {
             addLine({ code: "from collections import deque", type: 'import' });
         }
         code = `${name} = deque([${vals}])`;
     }
+    else if (type === 'queue') {
+        if (!pyvizState.lines.some(l => l.code.includes('import queue'))) {
+            addLine({ code: "import queue", type: 'import' });
+        }
+        // A simple wrapper Queue or just queue.Queue()
+        // queue.Queue() doesn't accept initial list directly usually.
+        code = `${name} = queue.Queue()`;
+        if (vals) {
+            // If values provided, warning or auto-put?
+            // Let's just create raw queue, values ignored for simplicity or warn.
+            // Or maybe add them below?
+        }
+    }
 
     addLine({
         code: code,
         type: 'ds',
-        meta: { name: name }
+        meta: { name: name, dsType: type }
     });
+
+    // Refresh ops if visible
+    if (document.getElementById('pv-ops-var')) renderDSOpsSelector();
 }
 
 // Updated Stats Logic
@@ -851,22 +972,53 @@ function logAction(msg) {
 }
 
 
+// Logic Check (Replaces AI Mock)
 function runAICheck() {
     if (pyvizDom.aiMsg) {
-        pyvizDom.aiMsg.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin text-blue-500 mr-2"></i> Analyzing logic...';
+        pyvizDom.aiMsg.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin text-blue-500 mr-2"></i> Checking logic...';
     }
 
-    // Simulate API delay
     setTimeout(() => {
-        const randomMsg = pyvizState.aiMockResponses[Math.floor(Math.random() * pyvizState.aiMockResponses.length)];
+        const issues = [];
+
+        // 1. Check Colon endings
+        pyvizState.lines.forEach((l, i) => {
+            const stripped = l.code.trim();
+            if (/^(if|else|elif|for|while|def|class)\b/.test(stripped)) {
+                if (!stripped.endsWith(':')) {
+                    issues.push(`Line ${i + 1}: Missing colon ':' at the end of statement.`);
+                }
+            }
+        });
+
+        // 2. Parentheses match (Basic)
+        pyvizState.lines.forEach((l, i) => {
+            const open = (l.code.match(/\(/g) || []).length;
+            const close = (l.code.match(/\)/g) || []).length;
+            if (open !== close) {
+                issues.push(`Line ${i + 1}: Mismatched parentheses (${open} open, ${close} closed).`);
+            }
+        });
+
+        // 3. Import check
+        const hasQueues = pyvizState.lines.some(l => l.code.includes('queue.Queue'));
+        const hasQImport = pyvizState.lines.some(l => l.code.includes('import queue'));
+        if (hasQueues && !hasQImport) {
+            issues.push("Missing 'import queue' for Queue usage.");
+        }
+
         if (pyvizDom.aiMsg) {
-            pyvizDom.aiMsg.innerHTML = `<span class="text-green-400 font-bold">Try this:</span> ${randomMsg}`;
-            // GSAP Typewriter effect if available
+            if (issues.length === 0) {
+                pyvizDom.aiMsg.innerHTML = `<span class="text-green-400 font-bold"><i class="fa-solid fa-check mr-1"></i> No obvious syntax errors found.</span>`;
+            } else {
+                pyvizDom.aiMsg.innerHTML = `<span class="text-red-400 font-bold">Issues Found:</span><br>${issues.slice(0, 2).join('<br>')}${issues.length > 2 ? '<br>...' : ''}`;
+            }
+
             if (window.gsap) {
                 gsap.from(pyvizDom.aiMsg, { opacity: 0, y: 10, duration: 0.5 });
             }
         }
-    }, 1500);
+    }, 800);
 }
 
 function downloadPyFile() {

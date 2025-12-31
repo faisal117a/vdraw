@@ -681,7 +681,7 @@
                 <div class="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6 h-full overflow-y-auto lg:overflow-hidden">
 
                     <!-- PDraw Sidebar Controls (Left) -->
-                    <div class="lg:col-span-3 glass-panel rounded-xl p-4 flex flex-col h-full overflow-hidden">
+                    <div class="lg:col-span-3 glass-panel rounded-xl p-4 flex flex-col h-auto lg:h-full lg:overflow-hidden">
 
                         <!-- Scrollable Content -->
                         <div class="flex-1 overflow-y-auto custom-scrollbar space-y-4 pr-1">

@@ -309,36 +309,40 @@
                 </button>
 
                 <!-- Profile -->
-                <div class="relative flex flex-col items-center text-center">
-                    <div
-                        class="w-[250px] rounded-2xl overflow-hidden border-4 border-slate-800 shadow-2xl mb-6 relative group">
-                        <img src="frontend/images/me.png" alt="Faisal Hassan"
-                            class="w-full h-auto object-cover transform group-hover:scale-105 transition-transform duration-500">
+                <div class="relative flex flex-col gap-6">
+                    <div class="flex flex-row items-center gap-6 text-left">
                         <div
-                            class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
+                            class="w-[120px] h-[120px] shrink-0 rounded-2xl overflow-hidden border-2 border-slate-700 shadow-xl relative group">
+                            <img src="frontend/images/me.png" alt="Faisal Hassan"
+                                class="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-500">
+                            <div
+                                class="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
+                            </div>
+                        </div>
+
+                        <div>
+                            <h3 class="text-2xl font-bold text-white mb-1">Faisal Hassan</h3>
+                            <p class="text-brand-400 text-sm font-medium tracking-wide uppercase mb-3">Senior Developer
+                            </p>
+
+                            <div class="flex items-center gap-2 text-sm text-slate-400">
+                                <i class="fa-regular fa-envelope"></i>
+                                <a href="mailto:faisal@webworldcenter.com"
+                                    class="hover:text-white transition-colors">faisal@webworldcenter.com</a>
+                            </div>
                         </div>
                     </div>
 
-                    <h3 class="text-2xl font-bold text-white mb-1">Faisal Hassan</h3>
-                    <p class="text-brand-400 text-sm font-medium tracking-wide uppercase mb-4">Senior Developer</p>
-
-                    <div
-                        class="flex items-center gap-2 mb-6 px-4 py-2 bg-slate-800 rounded-full border border-slate-700/50">
-                        <i class="fa-regular fa-envelope text-slate-400"></i>
-                        <a href="mailto:faisal@webworldcenter.com"
-                            class="text-slate-300 hover:text-white text-sm transition-colors">faisal@webworldcenter.com</a>
-                    </div>
-
-                    <div class="bg-slate-800/50 rounded-xl p-5 border border-slate-700/50 backdrop-blur-sm">
+                    <div class="bg-slate-800/50 rounded-xl p-5 border border-slate-700/50 backdrop-blur-sm relative">
                         <i class="fa-solid fa-quote-left text-brand-500/30 text-2xl absolute top-4 left-4"></i>
-                        <p class="text-slate-400 text-sm leading-relaxed italic relative z-10">
+                        <p class="text-slate-400 text-sm leading-relaxed italic relative z-10 pl-2">
                             "I developed this suite to bridge the gap between abstract concepts and visual
                             understanding. As a teacher myself, I felt the need for tools that bring modern education to
                             life, contributing to a brighter future for students and educators alike."
                         </p>
                     </div>
 
-                    <div class="mt-6 flex gap-4">
+                    <div class="flex justify-center">
                         <a href="https://webworldcenter.com" target="_blank"
                             class="px-5 py-2 bg-brand-600 hover:bg-brand-500 text-white text-sm font-bold rounded-lg shadow-lg shadow-brand-500/20 transition-all transform hover:scale-105">
                             Visit Web World Center

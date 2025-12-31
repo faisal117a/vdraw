@@ -1,8 +1,8 @@
 const fs = require('fs');
 const path = require('path');
 
-const DATA_DIR = path.join(__dirname, '../frontend/data');
-const OUTPUT_FILE = path.join(DATA_DIR, 'index.json');
+const DATA_DIR = path.join(__dirname, '../frontend/DViz/data');
+const OUTPUT_FILE = path.join(__dirname, '../frontend/DViz/js/dviz_data.js');
 
 // Helper to clean display names
 function cleanDisplayName(filename) {
@@ -162,8 +162,9 @@ function scanDirectory() {
     });
 
     // Write Index
-    fs.writeFileSync(OUTPUT_FILE, JSON.stringify(index, null, 2));
-    console.log(`Select 'data/index.json' generated successfully with ${index.levels.length} levels.`);
+    // Write Index
+    fs.writeFileSync(OUTPUT_FILE, 'window.DVIZ_DATA = ' + JSON.stringify(index, null, 2) + ';');
+    console.log(`Generated 'js/dviz_data.js' successfully with ${index.levels.length} levels.`);
 }
 
 scanDirectory();

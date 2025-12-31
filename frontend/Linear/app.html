@@ -1127,11 +1127,27 @@
     <script src="js/backend-mock.js"></script>
     <script src="js/charts.js"></script>
     <script src="js/app.js"></script>
-    <script src="js/pdraw.js"></script>
+    <script src="js/pdraw.js?v=12"></script>
     <script src="js/nav.js?v=2"></script>
-    <script src="js/tgdraw/tgdraw.js?v=10"></script>
+    <script src="js/tgdraw/tgdraw.js?v=12"></script>
     <script src="js/pyviz/pyviz.js?v=6"></script>
     <script src="js/dviz/dviz.js?v=7"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            if (window.switchPhase) {
+                switchPhase('pdraw');
+                // Ensure Sidebar shows PDraw title even if switchPhase didn't fully trigger
+                 const logo = document.querySelector('#sidebar h1');
+                 if(logo) logo.innerHTML = '<i class="fa-solid fa-layer-group mr-2 text-green-500"></i>PDraw';
+            }
+            // Hide other nav buttons
+            ['nav-vdraw', 'nav-tgdraw', 'nav-pyviz', 'nav-dviz'].forEach(id => {
+                const btn = document.getElementById(id);
+                if(btn) btn.style.display = 'none';
+            });
+            document.title = "PDraw Studio";
+        });
+    </script>
 </body>
 
 </html>

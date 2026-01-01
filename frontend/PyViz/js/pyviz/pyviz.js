@@ -3,7 +3,8 @@
  * Focus: Visual formatting, flow, and concepts (Not execution).
  */
 
-const pyvizState = {
+// Define State Globally
+window.pyvizState = {
     lines: [], // { id, code, indent, type, meta }
     nextId: 1,
     aiMockResponses: [
@@ -15,6 +16,9 @@ const pyvizState = {
     ],
     fontSize: 'text-base'
 };
+
+const pyvizState = window.pyvizState; // Local alias for existing code compatibility
+
 
 const pyvizDom = {
     dashboard: null,

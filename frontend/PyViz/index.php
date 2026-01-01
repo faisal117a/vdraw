@@ -144,5 +144,6 @@
              if(typeof initPyViz === 'function') initPyViz();
         });
     </script>
+    <script type="module" src="js/pyviz-modules/output-animation/index.js"></script>
 </body>
 </html>

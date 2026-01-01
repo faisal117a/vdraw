@@ -767,6 +767,55 @@ window.DVIZ_DATA = {
           }
         }
       ]
+    },
+    {
+      "id": "4",
+      "dir": "part4",
+      "label": "Level 4",
+      "visuals": [
+        {
+          "id": "1",
+          "dir": "chapter1",
+          "title": "A Guided Tour Of Trees And Graphs",
+          "assets": {
+            "presentations": [
+              {
+                "type": "short",
+                "title": "A Guided Tour Of Trees And Graphs",
+                "path": "data/part4/chapter1/slides/s_A_Guided_Tour_of_Trees_and_Graphs.pdf"
+              },
+              {
+                "type": "short",
+                "title": "Coding Smarter Big O Explained",
+                "path": "data/part4/chapter1/slides/s_Coding_Smarter_Big_O_Explained.pdf"
+              },
+              {
+                "type": "short",
+                "title": "Data Structures The Invisible Architecture",
+                "path": "data/part4/chapter1/slides/s_Data_Structures_The_Invisible_Architecture.pdf"
+              },
+              {
+                "type": "short",
+                "title": "Data Tools Mean Median Mode",
+                "path": "data/part4/chapter1/slides/s_Data_Tools_Mean_Median_Mode.pdf"
+              },
+              {
+                "type": "short",
+                "title": "Python Organization Modules Packages Libraries",
+                "path": "data/part4/chapter1/slides/s_Python_Organization_Modules_Packages_Libraries.pdf"
+              },
+              {
+                "type": "short",
+                "title": "The Coder S Blueprint",
+                "path": "data/part4/chapter1/slides/s_The_Coder_s_Blueprint.pdf"
+              }
+            ],
+            "videos": [],
+            "ideas": [],
+            "summary": []
+          }
+        }
+      ]
     }
   ]
 };

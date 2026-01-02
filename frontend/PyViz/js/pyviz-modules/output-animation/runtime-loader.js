@@ -10,10 +10,18 @@ export class RuntimeLoader {
         if (this.worker) return Promise.resolve();
 
         // Calculate absolute URLs to support Blob Worker
-        const origin = window.location.origin;
-        // Strip leading slash if present in config to avoid double slash, though usually harmless
-        const runtimeUrl = origin + this.config.RUNTIME_URL;
-        const runtimeHome = origin + this.config.RUNTIME_HOME;
+        // Use config URLs directly if absolute, otherwise prepend origin
+        let runtimeUrl = this.config.RUNTIME_URL;
+        let runtimeHome = this.config.RUNTIME_HOME;
+
+        const isAbsolute = (url) => url.startsWith('http') || url.startsWith('file') || url.startsWith('blob');
+
+        if (!isAbsolute(runtimeUrl)) {
+            runtimeUrl = window.location.origin + runtimeUrl;
+        }
+        if (!isAbsolute(runtimeHome)) {
+            runtimeHome = window.location.origin + runtimeHome;
+        }
 
         // We use a Blob to inline the worker script so we don't need a separate file request setup
         // This worker will load pyodide

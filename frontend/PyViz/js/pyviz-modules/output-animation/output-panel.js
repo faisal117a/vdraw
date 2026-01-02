@@ -4,43 +4,66 @@ export class OutputPanel {
         this.panel = null;
         this.contentArea = null;
         this.isVisible = false;
+        this.currentFontSize = 18;
     }
 
     create() {
-        if (document.getElementById(this.containerId)) return;
+        // In the new Tabbed layout, the container provided by Executor might be the tab ID itself or we check if panel exists
+        let container = document.getElementById('tab-content-output');
 
-        // Create the panel container
+        if (!container) {
+            console.warn("PyViz: Tab Output container not found, creating fallback.");
+            container = document.body;
+        } else {
+            // Clear placeholder text
+            container.innerHTML = "";
+        }
+
+        // Remove existing panel if it exists (cleanup old floating windows)
+        const existing = document.getElementById(this.containerId);
+        if (existing) {
+            existing.remove();
+        }
+
+        // Create the panel container - Fills the tab
         this.panel = document.createElement("div");
         this.panel.id = this.containerId;
         this.panel.style.cssText = `
-            display: none;
+            display: flex;
             flex-direction: column;
-            background: #1e1e1e;
-            color: #d4d4d4;
-            border: 1px solid #333;
-            border-radius: 4px;
-            margin-bottom: 10px;
-            font-family: 'Consolas', 'Monaco', monospace;
-            height: 200px;
+            background: transparent;
+            width: 100%;
+            height: 100%;
             overflow: hidden;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-            position: relative; /* For z-index context */
-            z-index: 1000;
+            flex: 1;
         `;
 
-        // Title bar
+        // Title bar with Zoom Controls
         const titleBar = document.createElement("div");
         titleBar.style.cssText = `
-            background: #252526;
             padding: 5px 10px;
-            font-size: 12px;
+            font-size: 13px;
             font-weight: bold;
             border-bottom: 1px solid #333;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            background: #1e293b;
+            flex-shrink: 0;
+            border-radius: 4px;
+            margin-bottom: 5px;
         `;
-        titleBar.innerHTML = `<span>Output Results</span> <span id="pyviz-exec-status" style="color: #007acc; font-size: 10px;">READY</span>`;
+
+        titleBar.innerHTML = `
+            <div class="flex items-center gap-2">
+                <span>Output</span>
+                <div class="flex bg-slate-800 rounded border border-slate-600 ml-2">
+                    <button id="pv-out-zoom-out" title="Decrease Font" class="px-2 py-0.5 text-xs text-slate-300 hover:text-white border-r border-slate-600 hover:bg-slate-700 transition-colors rounded-l"><i class="fa-solid fa-minus"></i></button>
+                    <button id="pv-out-zoom-in" title="Increase Font" class="px-2 py-0.5 text-xs text-slate-300 hover:text-white hover:bg-slate-700 transition-colors rounded-r"><i class="fa-solid fa-plus"></i></button>
+                </div>
+            </div>
+            <span id="pyviz-exec-status" style="color: #007acc; font-size: 11px;">READY</span>
+        `;
         this.panel.appendChild(titleBar);
 
         // Content area
@@ -51,26 +74,31 @@ export class OutputPanel {
             padding: 10px;
             overflow-y: auto;
             white-space: pre-wrap;
-            font-size: 13px;
+            font-size: ${this.currentFontSize}px; 
+            font-family: 'Consolas', 'Monaco', monospace;
+            color: #d4d4d4;
+            background: #0f172a; /* darker background for terminal feel */
+            border-radius: 4px;
         `;
         this.panel.appendChild(this.contentArea);
 
-        // Insert into DOM - "New panel added above the Inspector"
-        // I need to find the inspector or a suitable place in the layout.
-        // Assuming there is a container for the inspector.
-        // For now, I'll attempt to find '.inspector-container' or just append to 'body' and move it later if I can't find it.
-        // Better strategy: The index.js will handle the specific injection point, this just returns the element or appends to a target.
+        // Append to the TAB container
+        container.appendChild(this.panel);
+
+        // Event Listeners for Zoom
+        setTimeout(() => {
+            const btnIn = this.panel.querySelector('#pv-out-zoom-in');
+            const btnOut = this.panel.querySelector('#pv-out-zoom-out');
+
+            if (btnIn) btnIn.onclick = () => this.changeFontSize(2);
+            if (btnOut) btnOut.onclick = () => this.changeFontSize(-2);
+        }, 0);
     }
 
-    mount(targetElement, position = "before") {
-        if (!this.panel) this.create();
-
-        if (position === "before" && targetElement) {
-            targetElement.parentNode.insertBefore(this.panel, targetElement);
-        } else if (position === "after" && targetElement) {
-            targetElement.parentNode.insertBefore(this.panel, targetElement.nextSibling);
-        } else if (targetElement) {
-            targetElement.appendChild(this.panel);
+    changeFontSize(delta) {
+        this.currentFontSize = Math.max(10, Math.min(40, this.currentFontSize + delta));
+        if (this.contentArea) {
+            this.contentArea.style.fontSize = `${this.currentFontSize}px`;
         }
     }
 
@@ -81,11 +109,11 @@ export class OutputPanel {
         }
     }
 
+    // Hide is slightly redundant in tab mode but we keep it for clearing
     hide() {
-        if (this.panel) {
-            this.panel.style.display = "none";
-            this.isVisible = false;
-        }
+        // In tab mode we don't really hide the panel, the tab hides.
+        // But we can reset if needed.
+        this.isVisible = false;
     }
 
     clear() {

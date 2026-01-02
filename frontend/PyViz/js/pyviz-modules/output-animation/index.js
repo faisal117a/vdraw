@@ -12,6 +12,12 @@ class OutputAnimationModule {
         if (!CONFIG.ENABLED) return;
         if (this.initialized) return;
 
+        // Cleanup any old floating panels from previous versions
+        const oldPanel = document.getElementById(CONFIG.CONTAINER_ID);
+        if (oldPanel && oldPanel.parentElement === document.body) {
+            oldPanel.remove();
+        }
+
         // 1. Render Button
         this.renderButton();
 
@@ -60,6 +66,11 @@ class OutputAnimationModule {
     }
 
     async startAnimation() {
+        // Auto-switch to output tab immediately
+        if (window.switchPyVizTab) {
+            window.switchPyVizTab('output');
+        }
+
         // 1. Get Code from Global State
         if (typeof window.pyvizState === 'undefined' || !window.pyvizState.lines) {
             console.error("PyViz State not found.");

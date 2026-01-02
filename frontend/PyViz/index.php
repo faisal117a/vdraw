@@ -63,6 +63,7 @@
                         <button data-cat="logic" class="px-3 py-2 text-sm font-bold rounded bg-slate-700 text-slate-300 hover:text-white">Logic</button>
                         <button data-cat="ds" class="px-3 py-2 text-sm font-bold rounded bg-slate-700 text-slate-300 hover:text-white">Data</button>
                         <button data-cat="imports" class="px-3 py-2 text-sm font-bold rounded bg-slate-700 text-slate-300 hover:text-white">Imports</button>
+                        <button data-cat="py_funcs" class="px-3 py-2 text-sm font-bold rounded bg-slate-700 text-slate-300 hover:text-white">Py Funcs</button>
                     </div>
 
                     <!-- Toolbox Content Area (Dynamic) -->
@@ -113,24 +114,47 @@
                     </div>
                 </div>
 
-                <!-- PyViz Inspector (Right) -->
-                <div class="lg:w-[20%] glass-panel rounded-xl flex flex-col h-auto lg:h-full bg-slate-900/80 border border-slate-700 p-4 overflow-y-auto custom-scrollbar min-h-[200px] min-w-0">
-                    <h3 class="text-sm font-bold text-yellow-500 uppercase tracking-wider mb-4 border-b border-slate-700 pb-2">Inspector</h3>
-
-                    <!-- Stats Summary -->
-                    <div class="space-y-3 mb-6">
-                        <div class="flex justify-between items-center border-b border-slate-700/50 pb-2"><span class="text-sm font-bold text-slate-300">Lines</span><span id="pyviz-stat-lines" class="text-blue-400 font-bold font-mono text-lg">0</span></div>
-                        <div class="flex justify-between items-center border-b border-slate-700/50 pb-2"><span class="text-sm font-bold text-slate-300">Variables</span><span id="pyviz-stat-vars" class="text-blue-400 font-bold font-mono text-lg">0</span></div>
-                        <div class="flex justify-between items-center border-b border-slate-700/50 pb-2"><span class="text-sm font-bold text-slate-300">Functions</span><span id="pyviz-stat-funcs" class="text-blue-400 font-bold font-mono text-lg">0</span></div>
-                         <div class="flex justify-between items-center border-b border-slate-700/50 pb-2"><span class="text-sm font-bold text-slate-300">Loops</span><span id="pyviz-stat-loops" class="text-blue-400 font-bold font-mono text-lg">0</span></div>
-                        <div class="flex justify-between items-center border-b border-slate-700/50 pb-2"><span class="text-sm font-bold text-slate-300">Conditionals</span><span id="pyviz-stat-conds" class="text-blue-400 font-bold font-mono text-lg">0</span></div>
-                        <div class="flex justify-between items-center border-b border-slate-700/50 pb-2"><span class="text-sm font-bold text-slate-300">Imports</span><span id="pyviz-stat-imports" class="text-blue-400 font-bold font-mono text-lg">0</span></div>
+                <!-- PyViz Inspector (Right) with Tabs -->
+                <div class="lg:w-[25%] glass-panel rounded-xl flex flex-col h-auto lg:h-full bg-slate-900/80 border border-slate-700 overflow-hidden min-h-[200px] min-w-0">
+                    
+                    <!-- Tab Headers -->
+                    <div class="flex border-b border-slate-700 bg-slate-900/50 shrink-0">
+                        <button onclick="switchPyVizTab('inspector')" id="tab-btn-inspector" class="flex-1 py-3 text-xs font-bold text-yellow-500 border-b-2 border-yellow-500 bg-slate-800/50 hover:bg-slate-800 transition-colors">
+                            <i class="fa-solid fa-circle-info mr-1"></i> Inspector
+                        </button>
+                        <button onclick="switchPyVizTab('output')" id="tab-btn-output" class="flex-1 py-3 text-xs font-bold text-slate-500 hover:text-blue-400 hover:bg-slate-800 transition-colors">
+                            <i class="fa-solid fa-terminal mr-1"></i> Output
+                        </button>
                     </div>
 
-                    <h3 class="text-sm font-bold text-yellow-500 uppercase tracking-wider mb-2 mt-4 border-b border-slate-700 pb-2">Action Log</h3>
-                    <ul id="pyviz-log-list" class="space-y-1 text-xs text-slate-400 font-mono">
-                        <!-- Logs -->
-                    </ul>
+                    <!-- Tab Contents -->
+                    <div class="flex-1 relative overflow-hidden">
+                        
+                        <!-- TAB 1: Inspector -->
+                        <div id="tab-content-inspector" class="absolute inset-0 overflow-y-auto custom-scrollbar p-4">
+                            <!-- Stats Summary -->
+                            <div class="space-y-3 mb-6">
+                                <div class="flex justify-between items-center border-b border-slate-700/50 pb-2"><span class="text-sm font-bold text-slate-300">Lines</span><span id="pyviz-stat-lines" class="text-blue-400 font-bold font-mono text-lg">0</span></div>
+                                <div class="flex justify-between items-center border-b border-slate-700/50 pb-2"><span class="text-sm font-bold text-slate-300">Variables</span><span id="pyviz-stat-vars" class="text-blue-400 font-bold font-mono text-lg">0</span></div>
+                                <div class="flex justify-between items-center border-b border-slate-700/50 pb-2"><span class="text-sm font-bold text-slate-300">Functions</span><span id="pyviz-stat-funcs" class="text-blue-400 font-bold font-mono text-lg">0</span></div>
+                                <div class="flex justify-between items-center border-b border-slate-700/50 pb-2"><span class="text-sm font-bold text-slate-300">Loops</span><span id="pyviz-stat-loops" class="text-blue-400 font-bold font-mono text-lg">0</span></div>
+                                <div class="flex justify-between items-center border-b border-slate-700/50 pb-2"><span class="text-sm font-bold text-slate-300">Conditionals</span><span id="pyviz-stat-conds" class="text-blue-400 font-bold font-mono text-lg">0</span></div>
+                                <div class="flex justify-between items-center border-b border-slate-700/50 pb-2"><span class="text-sm font-bold text-slate-300">Imports</span><span id="pyviz-stat-imports" class="text-blue-400 font-bold font-mono text-lg">0</span></div>
+                            </div>
+
+                            <h3 class="text-sm font-bold text-yellow-500 uppercase tracking-wider mb-2 mt-4 border-b border-slate-700 pb-2">Action Log</h3>
+                            <ul id="pyviz-log-list" class="space-y-1 text-xs text-slate-400 font-mono">
+                                <!-- Logs -->
+                            </ul>
+                        </div>
+
+                        <!-- TAB 2: Output Result -->
+                        <div id="tab-content-output" class="absolute inset-0 hidden flex flex-col bg-slate-950 p-2 overflow-hidden">
+                            <!-- Output Animation Module will mount here -->
+                            <div class="text-center text-slate-600 italic mt-10">Running code will appear here...</div>
+                        </div>
+
+                    </div>
                 </div>
             </div>
         </div>

@@ -17,28 +17,8 @@ export class Executor {
     }
 
     async init() {
-        // Lazy load UI
-        // Find injection point: "New panel added above the Inspector"
-        // Robust strategy: Find a known element inside the Inspector and traverse up
-        const statsEl = document.getElementById('pyviz-stat-lines');
-        let inspector = null;
-
-        if (statsEl) {
-            // Traverse up to find the main panel container (glass-panel)
-            inspector = statsEl.closest('.glass-panel');
-        }
-
-        if (inspector) {
-            this.outputPanel.mount(inspector, "before");
-        } else {
-            console.warn("PyViz Output Animation: Could not find Inspector panel via ID. Appending to body.");
-            this.outputPanel.mount(document.body);
-            // Ensure z-index is high if on body - Fixed positioning
-            this.outputPanel.panel.style.position = 'fixed';
-            this.outputPanel.panel.style.bottom = '20px';
-            this.outputPanel.panel.style.right = '20px';
-            this.outputPanel.panel.style.width = '300px';
-        }
+        // Initialize UI in the new Tab
+        this.outputPanel.create();
 
         // Show panel immediately so user sees "LOADING"
         this.outputPanel.show();
@@ -56,6 +36,12 @@ export class Executor {
 
     async run(code, delay, highlightCallback) {
         if (this.isExecuting) return;
+
+        // Auto-switch to output tab
+        if (window.switchPyVizTab) {
+            window.switchPyVizTab('output');
+        }
+
         this.isExecuting = true;
         this.outputPanel.show();
         this.outputPanel.clear();

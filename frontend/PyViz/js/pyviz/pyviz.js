@@ -3,6 +3,36 @@
  * Focus: Visual formatting, flow, and concepts (Not execution).
  */
 
+// Tab Switching Logic for Inspector
+window.switchPyVizTab = function (tabName) {
+    const btnInspector = document.getElementById('tab-btn-inspector');
+    const btnOutput = document.getElementById('tab-btn-output');
+    const contentInspector = document.getElementById('tab-content-inspector');
+    const contentOutput = document.getElementById('tab-content-output');
+
+    if (!btnInspector || !btnOutput || !contentInspector || !contentOutput) return;
+
+    if (tabName === 'inspector') {
+        contentInspector.classList.remove('hidden');
+        contentOutput.classList.add('hidden');
+
+        btnInspector.classList.add('text-yellow-500', 'border-b-2', 'border-yellow-500');
+        btnInspector.classList.remove('text-slate-500');
+
+        btnOutput.classList.add('text-slate-500');
+        btnOutput.classList.remove('text-yellow-500', 'border-b-2', 'border-yellow-500', 'text-blue-400'); // Clean up potential hover classes
+    } else {
+        contentInspector.classList.add('hidden');
+        contentOutput.classList.remove('hidden');
+
+        btnOutput.classList.add('text-yellow-500', 'border-b-2', 'border-yellow-500');
+        btnOutput.classList.remove('text-slate-500');
+
+        btnInspector.classList.add('text-slate-500');
+        btnInspector.classList.remove('text-yellow-500', 'border-b-2', 'border-yellow-500');
+    }
+}
+
 // Define State Globally
 window.pyvizState = {
     lines: [], // { id, code, indent, type, meta }
@@ -14,7 +44,8 @@ window.pyvizState = {
         "Double check your logic conditions. Is a > b ?",
         "Great start. Try adding a loop to iterate through data."
     ],
-    fontSize: 'text-base'
+    fontSize: 'text-base',
+    functionCallBuffer: []
 };
 
 const pyvizState = window.pyvizState; // Local alias for existing code compatibility
@@ -80,8 +111,380 @@ const toolboxRenderers = {
     funcs: renderFuncBuilder,
     logic: renderLogicLibrary,
     ds: renderDSLibrary,
-    imports: renderImportBuilder
+    imports: renderImportBuilder,
+    py_funcs: renderPyFuncBuilder
 };
+
+const builtInLib = {
+    math: {
+        sqrt: ['x'],
+        pow: ['x', 'y'],
+        floor: ['x'],
+        ceil: ['x'],
+        sin: ['x'],
+        cos: ['x'],
+        tan: ['x'],
+        factorial: ['n'],
+        degrees: ['rad'],
+        radians: ['deg'],
+        pi: [],
+        e: []
+    },
+    random: {
+        randint: ['a', 'b'],
+        random: [],
+        choice: ['seq'],
+        shuffle: ['list']
+    },
+    datetime: {
+        date: ['year', 'month', 'day'],
+        time: ['hour', 'minute', 'second'],
+        now: []
+    },
+    builtins: {
+        len: ['obj'],
+        sum: ['iterable'],
+        max: ['iterable'],
+        min: ['iterable'],
+        abs: ['x']
+    }
+};
+
+function renderPyFuncBuilder(container) {
+    container.innerHTML = `
+        <div class="space-y-4">
+            <div class="bg-slate-800 p-3 rounded border border-slate-700 space-y-3">
+                <h4 class="text-xs font-bold text-yellow-500 uppercase"><i class="fa-solid fa-code mr-1"></i> Python Functions</h4>
+
+                <!-- Mode Selector -->
+                <div>
+                     <label class="text-[10px] text-slate-500 uppercase font-bold block mb-1">Mode</label>
+                     <select id="pv-func-mode" onchange="toggleFuncMode()" class="w-full bg-slate-900 border border-slate-600 rounded p-1.5 text-xs text-white">
+                        <option value="define">User-Defined Function (Def)</option>
+                        <option value="builtin">Built-in Function</option>
+                        <option value="call">Function Call (User)</option>
+                        <option value="return">Return Statement</option>
+                     </select>
+                </div>
+
+                <!-- 1. Define Function Mode -->
+                <div id="pv-func-define-ui" class="space-y-3">
+                    <div>
+                        <label class="text-[10px] text-slate-500 uppercase font-bold block mb-1">Function Name</label>
+                        <input type="text" id="pv-func-def-name" class="w-full bg-slate-900 border border-slate-600 rounded p-1.5 text-xs text-white placeholder-slate-600" placeholder="e.g. calculate_sum">
+                    </div>
+
+                    <div>
+                        <label class="text-[10px] text-slate-500 uppercase font-bold block mb-1">Parameters</label>
+                        <div id="pv-func-params" class="space-y-2 mb-2"></div>
+                        <button onclick="addFnParamInput()" class="px-2 py-1 bg-slate-700 hover:bg-slate-600 text-slate-300 text-[10px] rounded w-full"><i class="fa-solid fa-plus"></i> Add Parameter</button>
+                    </div>
+
+                    <button onclick="createFnDef()" class="w-full py-2 bg-yellow-600 hover:bg-yellow-500 text-white text-xs font-bold rounded transition-colors">
+                        Define Function
+                    </button>
+                </div>
+
+                <!-- 2. Built-in Function Mode -->
+                <div id="pv-func-builtin-ui" class="space-y-3 hidden">
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="text-[10px] text-slate-500 uppercase font-bold block mb-1">Package</label>
+                            <select id="pv-bi-pkg" onchange="updateBuiltInFuncs()" class="w-full bg-slate-900 border border-slate-600 rounded p-1.5 text-xs text-white">
+                                <option value="math">math</option>
+                                <option value="random">random</option>
+                                <option value="builtins">built-in</option>
+                                <option value="datetime">datetime</option>
+                            </select>
+                        </div>
+                         <div>
+                            <label class="text-[10px] text-slate-500 uppercase font-bold block mb-1">Function</label>
+                            <select id="pv-bi-func" onchange="updateBuiltInParams()" class="w-full bg-slate-900 border border-slate-600 rounded p-1.5 text-xs text-white">
+                                <!-- Populated dynamically -->
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Dynamic Parameters for Built-in -->
+                     <div id="pv-bi-params-container" class="space-y-2">
+                        <!-- Inputs generated here -->
+                     </div>
+
+                    <button onclick="createBuiltInCall()" class="w-full py-2 bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold rounded transition-colors">
+                        Insert Built-in Call
+                    </button>
+                </div>
+
+                <!-- 3. Function Call Mode -->
+                <div id="pv-func-call-ui" class="space-y-3 hidden">
+                    <div>
+                        <label class="text-[10px] text-slate-500 uppercase font-bold block mb-1">Select Function</label>
+                        <select id="pv-func-call-select" class="w-full bg-slate-900 border border-slate-600 rounded p-1.5 text-xs text-white font-mono">
+                            <option value="">(No functions found)</option>
+                        </select>
+                        <p class="text-[9px] text-slate-500 mt-1 italic">Lists functions defined in your code starting with 'def'.</p>
+                    </div>
+
+                    <div>
+                        <label class="text-[10px] text-slate-500 uppercase font-bold block mb-1">Arguments</label>
+                        <div id="pv-func-args" class="space-y-2 mb-2"></div>
+                        <button onclick="addFnCallArgInput()" class="px-2 py-1 bg-slate-700 hover:bg-slate-600 text-slate-300 text-[10px] rounded w-full"><i class="fa-solid fa-plus"></i> Add Argument</button>
+                    </div>
+
+                    <button onclick="createFnCall()" class="w-full py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded transition-colors">
+                        Insert Function Call
+                    </button>
+                </div>
+
+                <!-- 4. Return Statement Mode -->
+                <div id="pv-func-return-ui" class="space-y-3 hidden">
+                    <div>
+                         <label class="text-[10px] text-slate-500 uppercase font-bold block mb-1">Return Value / Expression</label>
+                        <input type="text" id="pv-return-val" class="w-full bg-slate-900 border border-slate-600 rounded p-1.5 text-xs text-white placeholder-slate-600" placeholder="e.g. 10, a + b, result">
+                    </div>
+                    <button onclick="createReturnStmt()" class="w-full py-2 bg-green-600 hover:bg-green-500 text-white text-xs font-bold rounded transition-colors">
+                        Insert Return
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+
+    // Initial Population
+    toggleFuncMode();
+}
+
+window.toggleFuncMode = function () {
+    const mode = document.getElementById('pv-func-mode').value;
+    const defUI = document.getElementById('pv-func-define-ui');
+    const biUI = document.getElementById('pv-func-builtin-ui');
+    const callUI = document.getElementById('pv-func-call-ui');
+    const retUI = document.getElementById('pv-func-return-ui');
+
+    defUI.classList.add('hidden');
+    biUI.classList.add('hidden');
+    callUI.classList.add('hidden');
+    retUI.classList.add('hidden');
+
+    if (mode === 'define') {
+        defUI.classList.remove('hidden');
+    } else if (mode === 'builtin') {
+        biUI.classList.remove('hidden');
+        updateBuiltInFuncs();
+    } else if (mode === 'call') {
+        callUI.classList.remove('hidden');
+        refreshUserFuncs();
+    } else if (mode === 'return') {
+        retUI.classList.remove('hidden');
+    }
+}
+
+window.createReturnStmt = function () {
+    const val = document.getElementById('pv-return-val').value.trim();
+    let code = 'return';
+    if (val) {
+        code += ` ${val}`;
+    }
+
+    addLine({
+        code: code,
+        type: 'logic'
+    });
+}
+
+// --- Built-in Helpers ---
+
+window.updateBuiltInFuncs = function () {
+    const pkg = document.getElementById('pv-bi-pkg').value;
+    const funcSelect = document.getElementById('pv-bi-func');
+    const funcs = Object.keys(builtInLib[pkg]);
+
+    funcSelect.innerHTML = funcs.map(f => `<option value="${f}">${f}</option>`).join('');
+    updateBuiltInParams();
+}
+
+window.updateBuiltInParams = function () {
+    const pkg = document.getElementById('pv-bi-pkg').value;
+    const func = document.getElementById('pv-bi-func').value;
+    const container = document.getElementById('pv-bi-params-container');
+
+    const params = builtInLib[pkg][func];
+
+    if (!params || params.length === 0) {
+        container.innerHTML = '<p class="text-[10px] text-slate-500 italic">No parameters required.</p>';
+        return;
+    }
+
+    container.innerHTML = params.map(p => `
+        <div>
+            <label class="text-[10px] text-slate-500 uppercase font-bold block mb-1">${p}</label>
+            <input type="text" class="pv-bi-param-val w-full bg-slate-900 border border-slate-600 rounded p-1 text-xs text-white placeholder-slate-600" data-param="${p}" placeholder="Value for ${p}">
+        </div>
+    `).join('');
+}
+
+window.createBuiltInCall = function () {
+    const pkg = document.getElementById('pv-bi-pkg').value;
+    const func = document.getElementById('pv-bi-func').value;
+    const inputs = document.querySelectorAll('.pv-bi-param-val');
+
+    const args = Array.from(inputs).map(i => i.value.trim());
+
+    let code = "";
+    if (pkg === 'builtins') {
+        code = `${func}(${args.join(', ')})`;
+    } else if (pkg === 'datetime' && func === 'now') {
+        code = `datetime.datetime.now()`;
+    } else {
+        code = `${pkg}.${func}(${args.join(', ')})`;
+    }
+
+    // Push to Buffer
+    pyvizState.functionCallBuffer.push(code);
+    alert(`Generated "${code}"\nAdded to 'Generated Calls' list in Vars/Funcs tabs.`);
+}
+
+// --- User Call Helpers ---
+
+window.refreshUserFuncs = function () {
+    const select = document.getElementById('pv-func-call-select');
+    // Scan pyvizState for defs
+    const defs = pyvizState.lines
+        .filter(l => l.code.trim().startsWith('def '))
+        .map(l => {
+            // Extract name: def foo(x): -> foo
+            const match = l.code.match(/^def\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*\(/);
+            return match ? match[1] : null;
+        })
+        .filter(n => n);
+
+    if (defs.length === 0) {
+        select.innerHTML = '<option value="">(No functions defined)</option>';
+        return;
+    }
+
+    select.innerHTML = defs.map(n => `<option value="${n}">${n}()</option>`).join('');
+}
+
+// --- Reuse Existing Param/Def Logic ---
+// We keep addFnParamInput, toggleParamVal, createFnDef from before
+// But we need to update createFnCall to read from SELECT instead of INPUT
+
+window.addFnParamInput = function () {
+    const container = document.getElementById('pv-func-params');
+    const div = document.createElement('div');
+    div.className = "bg-slate-900/50 p-2 rounded border border-slate-700/50 space-y-2 relative";
+    div.innerHTML = `
+        <button onclick="this.parentElement.remove()" class="absolute top-1 right-1 text-red-400 hover:text-red-300 text-[10px]"><i class="fa-solid fa-times"></i></button>
+        <div class="flex gap-2">
+            <input type="text" class="fn-param-name flex-1 bg-slate-900 border border-slate-600 rounded p-1 text-xs text-white placeholder-slate-600" placeholder="Param Name">
+            <select class="fn-param-type w-24 bg-slate-900 border border-slate-600 rounded p-1 text-xs text-white" onchange="toggleParamVal(this)">
+                <option value="normal">Normal</option>
+                <option value="default">Default</option>
+            </select>
+        </div>
+        <div class="fn-param-val-container hidden">
+            <input type="text" class="fn-param-val w-full bg-slate-900 border border-slate-600 rounded p-1 text-xs text-white placeholder-slate-600" placeholder="Default Value (e.g. 0, None)">
+        </div>
+    `;
+    container.appendChild(div);
+}
+
+window.toggleParamVal = function (select) {
+    const valContainer = select.parentElement.nextElementSibling;
+    if (select.value === 'default') {
+        valContainer.classList.remove('hidden');
+    } else {
+        valContainer.classList.add('hidden');
+    }
+}
+
+window.createFnDef = function () {
+    const name = document.getElementById('pv-func-def-name').value.trim();
+    if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(name)) {
+        alert("Invalid function name.");
+        return;
+    }
+    const paramDivs = document.querySelectorAll('#pv-func-params > div');
+    let params = [];
+    for (let div of paramDivs) {
+        let pName = div.querySelector('.fn-param-name').value.trim();
+        let pType = div.querySelector('.fn-param-type').value;
+        let pVal = div.querySelector('.fn-param-val').value.trim();
+        if (!pName) continue;
+        if (pType === 'default') {
+            if (!pVal) pVal = 'None';
+            params.push(`${pName}=${pVal}`);
+        } else {
+            params.push(pName);
+        }
+    }
+    const code = `def ${name}(${params.join(', ')}):`;
+    addLine({
+        code: code,
+        type: 'logic',
+        meta: { name: name }
+    });
+}
+
+window.createFnCall = function () {
+    const name = document.getElementById('pv-func-call-select').value;
+    if (!name) { alert("Please select a function."); return; }
+
+    const argInputs = document.querySelectorAll('.fn-call-arg');
+    const args = Array.from(argInputs).map(i => i.value.trim()).filter(x => x);
+    const code = `${name}(${args.join(', ')})`;
+
+    // Return Value Check (Simple Heuristic)
+    let returnsValue = false;
+    let foundDef = false;
+    let defIndent = 0;
+
+    for (let i = 0; i < pyvizState.lines.length; i++) {
+        const line = pyvizState.lines[i];
+        if (!foundDef) {
+            // Find def line: "def name("
+            if (line.code.trim().startsWith(`def ${name}(`)) {
+                foundDef = true;
+                defIndent = line.indent;
+            }
+        } else {
+            // Scan Body
+            if (line.indent <= defIndent && line.code.trim() !== '' && !line.code.trim().startsWith('#')) {
+                // End of function block
+                break;
+            }
+            // Check for return
+            if (line.code.trim().startsWith('return') || line.code.trim().includes(' return ')) { // Simplistic
+                returnsValue = true;
+                break;
+            }
+        }
+    }
+
+    if (returnsValue) {
+        // Push to Buffer
+        pyvizState.functionCallBuffer.push(code);
+        alert(`Generated "${code}" (Returns Value)\nAdded to 'Generated Calls' list.`);
+    } else {
+        // Add to Playground
+        addLine({
+            code: code,
+            type: 'func'
+        });
+    }
+}
+
+window.addFnCallArgInput = function () {
+    const container = document.getElementById('pv-func-args');
+    const div = document.createElement('div');
+    div.className = "flex gap-1";
+    div.innerHTML = `
+        <input type="text" class="fn-call-arg flex-1 bg-slate-900 border border-slate-600 rounded p-1 text-xs text-white placeholder-slate-600" placeholder="Value / Variable">
+        <button onclick="this.parentElement.remove()" class="text-red-400 hover:text-red-300 px-1"><i class="fa-solid fa-times"></i></button>
+    `;
+    container.appendChild(div);
+}
 
 function loadToolbox(category) {
     // Tab Styling
@@ -99,6 +502,11 @@ function loadToolbox(category) {
 
 // 1. Variable Builder
 function renderVarBuilder(container) {
+    // Generate Buffer Options
+    const bufferOpts = pyvizState.functionCallBuffer && pyvizState.functionCallBuffer.length > 0
+        ? pyvizState.functionCallBuffer.map((c, i) => `<option value="${c}">${c}</option>`).join('')
+        : '<option value="">(No generated calls)</option>';
+
     container.innerHTML = `
         <div class="bg-slate-800 p-3 rounded border border-slate-700 space-y-3">
             <h4 class="text-xs font-bold text-blue-400 uppercase">Create Variable</h4>
@@ -109,9 +517,17 @@ function renderVarBuilder(container) {
             </div>
 
             <div>
-                <label class="text-[10px] text-slate-500 uppercase font-bold block mb-1">Value</label>
-                <input type="text" id="pv-var-val" class="w-full bg-slate-900 border border-slate-600 rounded p-1.5 text-xs text-white placeholder-slate-600 focus:border-blue-500 focus:outline-none" placeholder="e.g. 10, 'hello', x + 5">
-                <p class="text-[10px] text-slate-600 mt-1 italic">Auto-detects int, float, str, or expr.</p>
+                <label class="text-[10px] text-slate-500 uppercase font-bold block mb-1">Value (Manual)</label>
+                <input type="text" id="pv-var-val" class="w-full bg-slate-900 border border-slate-600 rounded p-1.5 text-xs text-white placeholder-slate-600 focus:border-blue-500 focus:outline-none" placeholder="e.g. 10">
+            </div>
+            
+            <!-- Generated Calls Dropdown -->
+            <div>
+                <label class="text-[10px] text-slate-500 uppercase font-bold block mb-1">OR Generated Call</label>
+                <select id="pv-var-buffer-select" class="w-full bg-slate-900 border border-slate-600 rounded p-1.5 text-xs text-white font-mono">
+                    <option value="">-- Select Generated Call --</option>
+                    ${bufferOpts}
+                </select>
             </div>
 
             <button onclick="createVariable()" class="w-full py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded transition-colors">
@@ -132,54 +548,70 @@ function renderVarBuilder(container) {
 function createVariable() {
     const nameInput = document.getElementById('pv-var-name');
     const valInput = document.getElementById('pv-var-val');
+    const bufferSelect = document.getElementById('pv-var-buffer-select');
+
     const name = nameInput.value.trim();
     let rawVal = valInput.value.trim();
+    const bufferVal = bufferSelect ? bufferSelect.value : '';
+
+    // Priority: Manual > Buffer
+    if (!rawVal && bufferVal) {
+        rawVal = bufferVal;
+    }
 
     // Validation
     if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(name)) {
         alert("Invalid variable name. Use alphanumeric characters and underscores only (must start with letter/_).");
         return;
     }
-    if (!name || rawVal === '') return;
+    if (!name || rawVal === '') {
+        alert("Please provide a name and value (or select a generated call).");
+        return;
+    }
 
     // Type Inference Logic
     let processedVal = rawVal;
+    // ... [existing inference logic] ...
+    // Note: If using buffer (e.g. "math.sqrt(16)"), it shouldn't be quoted.
+    // We need to differentiate "Math Call" from "String".
+    // Simple check: If rawVal === bufferVal, assume it's code (expression) and don't quote.
 
-    // Check if it's a number
-    if (!isNaN(parseFloat(rawVal)) && isFinite(rawVal)) {
-        // It's a number, keep as is
-    } else if (rawVal.startsWith('"') || rawVal.startsWith("'") || rawVal.startsWith('[')) {
-        // Already string or list structure
-    } else {
-        // Check if it matches a known variable reference
-        const knownVars = pyvizState.lines
-            .filter(l => l.type === 'var')
-            .map(l => l.meta?.name); // We need to store meta
+    const isBuffer = (rawVal === bufferVal && bufferVal !== '');
 
-        // Simple heuristic: if it looks like a word and isn't a known var/keyword, quote it?
-        if (!knownVars.includes(rawVal) && /^[a-zA-Z0-9_ ]+$/.test(rawVal) && rawVal !== 'True' && rawVal !== 'False') {
-            // Treat as string if simple text
-            processedVal = `"${rawVal}"`;
+    if (!isBuffer) {
+        // Run standard inference
+        if (!isNaN(parseFloat(rawVal)) && isFinite(rawVal)) {
+            // Number
+        } else if (rawVal.startsWith('"') || rawVal.startsWith("'") || rawVal.startsWith('[')) {
+            // Already string/struct
+        } else {
+            const knownVars = pyvizState.lines
+                .filter(l => l.type === 'var')
+                .map(l => l.meta?.name);
+
+            if (!knownVars.includes(rawVal) && /^[a-zA-Z0-9_ ]+$/.test(rawVal) && rawVal !== 'True' && rawVal !== 'False') {
+                processedVal = `"${rawVal}"`;
+            }
         }
     }
 
     const code = `${name} = ${processedVal}`;
 
-    // Type Inference for Meta
     let dsType = 'unknown';
     if (processedVal.startsWith('[')) dsType = 'list';
     else if (processedVal.startsWith('(')) dsType = 'tuple';
-    else if (processedVal.startsWith('{')) dsType = 'dict'; // or set
+    else if (processedVal.startsWith('{')) dsType = 'dict';
 
     addLine({
         code: code,
         type: 'var',
-        meta: { name: name, dsType: dsType } // Store metadata
+        meta: { name: name, dsType: dsType }
     });
 
     // Reset inputs
     nameInput.value = '';
     valInput.value = '';
+    if (bufferSelect) bufferSelect.value = '';
     renderActiveVars();
 }
 
@@ -214,7 +646,12 @@ function insertTextToInput(txt) {
 
 
 // 3. Function Builder (Print, Input)
+// 3. Function Builder (Print, Input)
 function renderFuncBuilder(container) {
+    const bufferOpts = pyvizState.functionCallBuffer && pyvizState.functionCallBuffer.length > 0
+        ? pyvizState.functionCallBuffer.map((c, i) => `<option value="${c}">${c}</option>`).join('')
+        : '<option value="">(No generated calls)</option>';
+
     container.innerHTML = `
         <div class="space-y-4">
             <!-- Print Builder -->
@@ -227,8 +664,18 @@ function renderFuncBuilder(container) {
                     </div>
                 </div>
                 
-                <div class="flex gap-2">
-                     <button onclick="addPrintArgInput()" class="px-2 py-1 bg-slate-700 hover:bg-slate-600 text-slate-300 text-[10px] rounded"><i class="fa-solid fa-plus"></i> Add Arg</button>
+                <div class="space-y-2">
+                     <div>
+                        <label class="text-[10px] text-slate-500 uppercase font-bold block mb-1">Add Generated Call (Optional)</label>
+                        <select id="pv-print-buffer-select" class="w-full bg-slate-900 border border-slate-600 rounded p-1.5 text-xs text-white font-mono">
+                            <option value="">-- Select Generated Call --</option>
+                            ${bufferOpts}
+                        </select>
+                    </div>
+
+                    <div class="flex gap-2">
+                         <button onclick="addPrintArgInput()" class="w-full px-2 py-1 bg-slate-700 hover:bg-slate-600 text-slate-300 text-[10px] rounded"><i class="fa-solid fa-plus"></i> Add Arg (Text or Selected Call)</button>
+                    </div>
                 </div>
 
                  <div class="flex items-center gap-2 mt-2">
@@ -275,10 +722,20 @@ function renderFuncBuilder(container) {
 
 function addPrintArgInput() {
     const container = document.getElementById('pv-print-args');
+    const bufferSelect = document.getElementById('pv-print-buffer-select');
+    const selectedCall = bufferSelect ? bufferSelect.value : '';
+
     const div = document.createElement('div');
     div.className = "flex gap-1";
-    div.innerHTML = ` <input type="text" class="print-arg flex-1 bg-slate-900 border border-slate-600 rounded p-1.5 text-xs text-white placeholder-slate-600" placeholder="Next Arg">`;
+
+    // If a call is selected, pre-fill it and clear the dropdown
+    div.innerHTML = ` 
+        <input type="text" class="print-arg flex-1 bg-slate-900 border border-slate-600 rounded p-1.5 text-xs text-white placeholder-slate-600" placeholder="Next Arg" value="${selectedCall}">
+        <button onclick="this.parentElement.remove()" class="text-red-400 hover:text-red-300 px-1"><i class="fa-solid fa-times"></i></button>
+    `;
     container.appendChild(div);
+
+    if (bufferSelect) bufferSelect.value = ''; // Reset dropdown
 }
 
 function createPrint() {
@@ -300,6 +757,7 @@ function createPrint() {
     addLine({ code: code, type: 'func' });
 
     // Reset?
+    // Don't reset everything violently, maybe just values
     document.querySelectorAll('.print-arg').forEach(i => i.value = '');
 }
 
@@ -422,6 +880,10 @@ function addImport(code) {
 // --- Builder Logic ---
 
 function addLine(item) {
+    // 1. Auto-Import Check
+    checkAutoImports(item.code);
+
+    // 2. Add Line Logic
     const prevLine = pyvizState.lines[pyvizState.lines.length - 1];
     let indent = 0;
 
@@ -452,6 +914,41 @@ function addLine(item) {
     logAction(`Added ${item.label || 'Code Line'}`);
     renderPyViz();
     updateStats();
+}
+
+function checkAutoImports(code) {
+    // Detect standard modules
+    const modules = ['math', 'random', 'datetime', 'json', 'collections'];
+
+    modules.forEach(mod => {
+        // Regex: word boundary + mod + dot. e.g. "math."
+        // Avoids matching "mymath." or "math_utils"
+        const regex = new RegExp(`\\b${mod}\\.`);
+
+        if (regex.test(code)) {
+            const importStmt = `import ${mod}`;
+            // check if present
+            const exists = pyvizState.lines.some(l =>
+                l.code.trim() === importStmt ||
+                l.code.trim().startsWith(`import ${mod} `) ||
+                l.code.trim().startsWith(`from ${mod} `)
+            );
+
+            if (!exists) {
+                addImport(importStmt);
+                // Notification (optional, maybe console log or non-intrusive)
+                console.log(`Auto-imported ${mod}`);
+            }
+        }
+    });
+
+    // Special case for numpy/pandas shortnames if used (though visual only)
+    if (/\bnp\./.test(code) && !pyvizState.lines.some(l => l.code.includes('numpy'))) {
+        addImport('import numpy as np');
+    }
+    if (/\bpd\./.test(code) && !pyvizState.lines.some(l => l.code.includes('pandas'))) {
+        addImport('import pandas as pd');
+    }
 }
 
 function removeLine(id) {

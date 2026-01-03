@@ -104,6 +104,8 @@ window.initPyViz = function () {
     renderPyViz();
 };
 
+
+
 // --- Toolbox Logic ---
 
 const toolboxRenderers = {
@@ -884,21 +886,97 @@ function addLine(item) {
     checkAutoImports(item.code);
 
     // 2. Add Line Logic
-    const prevLine = pyvizState.lines[pyvizState.lines.length - 1];
-    let indent = 0;
+    let indent = (item.indent !== undefined) ? item.indent : 0;
 
-    // Simple auto-indent logic based on previous line
-    if (prevLine) {
-        indent = prevLine.indent;
-        // If previous line ended with ':', indent next
-        if (prevLine.code.trim().endsWith(':')) {
-            indent += 1;
+    // Determine insertion index
+    let insertIdx = pyvizState.lines.length; // Default append
+    let prevLine = pyvizState.lines[pyvizState.lines.length - 1];
+
+    // Check Insertion Mode (Append vs Cursor)
+    const modeSelect = document.getElementById('pv-insert-mode');
+    const mode = modeSelect ? modeSelect.value : 'append';
+
+    if (mode === 'cursor' && pyvizState.selectedLineId !== null) {
+        const selIdx = pyvizState.lines.findIndex(l => l.id === pyvizState.selectedLineId);
+        if (selIdx !== -1) {
+            insertIdx = selIdx + 1; // Insert AFTER selected
+            prevLine = pyvizState.lines[selIdx];
+
+            // Auto-indent if not explicit from Voice
+            if (item.indent === undefined) {
+                indent = prevLine.indent;
+                if (prevLine.code.trim().endsWith(':')) {
+                    indent += 1;
+                }
+            }
+        }
+    } else {
+        // Append Mode Logic (Standard)
+        if (item.indent === undefined && prevLine) {
+            indent = prevLine.indent;
+            if (prevLine.code.trim().endsWith(':')) {
+                indent += 1;
+            }
         }
     }
 
     // Adjust for 'else' or 'elif' dedent
     if (item.code.startsWith('else:') || item.code.startsWith('elif')) {
         indent = Math.max(0, indent - 1);
+    }
+
+    // Voice Code explicit indentation adjustment if inserting inside a block
+    // If voice gave us indentation (e.g. 0 for loop start), but we are inserting INSIDE an existing block,
+    // we might want to respect the block's level.
+    // However, user requirement says: "If select row is a loop... with : ... new code must be added with Indentation otherwise with zero indentation"
+    // The logic above handles the parent's indent.
+    // BUT if the item comes with explicit indent (from LLM), it might be relative to 0.
+    // If we are inserting, we should probably Add to the current context level?
+    // Let's stick to the rule: "Indentation otherwise zero".
+
+    // If Item has explicit indent (LLM), and we are in Cursor mode...
+    // The LLM indent is 0-based. If we insert inside a function (indent 1), LLM code should probably shift?
+    // User Update: "If select row is a loop... with : ... new code must be added with Indentation otherwise with zero indentation"
+
+    // Refinement:
+    if (mode === 'cursor' && prevLine && item.indent !== undefined) {
+        if (prevLine.code.trim().endsWith(':')) {
+            // Parent is a block starter
+            // Base indent should be prevLine.indent + 1
+            // LLM relative indent should be added to that?
+            // Or just use the calculated indent?
+            // "otherwise with zero indentation" -> implies absolute zero if not a block
+
+            // If block:
+            const baseIndent = prevLine.indent + 1;
+            indent = baseIndent + item.indent;
+        } else {
+            // Not a block starter
+            // "Otherwise with zero indentation" -> use item.indent (relative to 0)
+            // But if we are inside a block (e.g. line 2 of a function), shouldn't we match that indent?
+            // Request says: "Otherwise with zero indentation". Okay.
+            // But wait, if we pick a line inside a loop (not the header), should it zero out?
+            // "If select row is a loop or condition or function with : symbol then new code must be added with Indentation otherwise with zero indentation"
+            // This suggests strictly only indent if *directly* after a colon line.
+
+            // So if prev line ends with :, we assume indent. IF NOT, we assume 0 (root).
+            // This seems destructive if inserting in middle of block, but it's what was asked.
+
+            // However, item.indent comes from LLM structure (e.g. the print inside a generated loop).
+            // If we rely on LLM structure, we should preserve it.
+            // Let's implement the specific rule requested for the *Root* of generated code.
+
+            if (prevLine.code.trim().endsWith(':')) {
+                const base = prevLine.indent + 1;
+                indent = base + item.indent;
+            } else {
+                // Explicitly requested zero-based or just LLM's relative
+                // "otherwise with zero indentation"
+                // If item.indent is 0 (root of voice code), it stays 0.
+                // If item.indent is 1 (nested in voice code), it stays 1.
+                // So we just use item.indent as is.
+            }
+        }
     }
 
     const newLine = {
@@ -910,7 +988,9 @@ function addLine(item) {
         meta: item.meta || {}
     };
 
-    pyvizState.lines.push(newLine);
+    // Insert at index
+    pyvizState.lines.splice(insertIdx, 0, newLine);
+
     logAction(`Added ${item.label || 'Code Line'}`);
     renderPyViz();
     updateStats();
@@ -989,7 +1069,16 @@ function renderPyViz() {
 
     pyvizState.lines.forEach((line, idx) => {
         const row = document.createElement('div');
-        row.className = `flex items-center group hover:bg-slate-900/50 py-1 -mx-2 px-2 rounded ${pyvizState.fontSize}`;
+        // Dynamic class for selection
+        const isSelected = pyvizState.selectedLineId === line.id;
+        const bgClass = isSelected ? 'bg-slate-800 border-l-2 border-yellow-500' : 'hover:bg-slate-900/50';
+        row.className = `flex items-center group ${bgClass} py-1 -mx-2 px-2 rounded ${pyvizState.fontSize} cursor-pointer transition-colors`;
+
+        row.onclick = () => {
+            if (pyvizState.selectedLineId === line.id) pyvizState.selectedLineId = null; // Toggle off
+            else pyvizState.selectedLineId = line.id; // Toggle on
+            renderPyViz(); // Re-render to show selection
+        };
 
         const num = document.createElement('span');
         num.className = "text-slate-600 text-xs w-8 select-none text-right mr-4 shrink-0";
@@ -1134,14 +1223,25 @@ function renderLogicLibrary(container) {
 
             <hr class="border-slate-700">
 
-            <!-- For Loop Specific -->
+            <!-- For Range Loop -->
             <div class="bg-slate-800 p-3 rounded border border-slate-700 space-y-2">
                  <h4 class="text-xs font-bold text-pink-400 uppercase"><i class="fa-solid fa-rotate mr-1"></i> For Range Loop</h4>
-                 <div class="flex gap-2 items-center">
-                    <span class="text-xs text-slate-400 font-mono">for i in range(</span>
-                    <input type="text" id="pv-loop-count" class="w-12 bg-slate-900 border border-slate-600 rounded p-1 text-xs text-white text-center" value="10">
-                    <span class="text-xs text-slate-400 font-mono">):</span>
+                 
+                 <div class="grid grid-cols-3 gap-2">
+                    <div>
+                        <label class="text-[9px] text-slate-500 uppercase font-bold block mb-1">Start</label>
+                        <input type="text" id="pv-loop-start" class="w-full bg-slate-900 border border-slate-600 rounded p-1 text-xs text-white text-center" placeholder="0">
+                    </div>
+                    <div>
+                        <label class="text-[9px] text-slate-500 uppercase font-bold block mb-1">Stop</label>
+                        <input type="text" id="pv-loop-stop" class="w-full bg-slate-900 border border-slate-600 rounded p-1 text-xs text-white text-center" value="10">
+                    </div>
+                    <div>
+                        <label class="text-[9px] text-slate-500 uppercase font-bold block mb-1">Step</label>
+                        <input type="text" id="pv-loop-step" class="w-full bg-slate-900 border border-slate-600 rounded p-1 text-xs text-white text-center" placeholder="1">
+                    </div>
                  </div>
+
                  <button onclick="createForLoop()" class="w-full py-1 bg-slate-700 hover:bg-slate-600 text-white text-xs rounded">Add Loop</button>
             </div>
 
@@ -1194,9 +1294,28 @@ function createCondition() {
 }
 
 function createForLoop() {
-    const count = document.getElementById('pv-loop-count').value;
+    const start = document.getElementById('pv-loop-start').value.trim();
+    const stop = document.getElementById('pv-loop-stop').value.trim();
+    const step = document.getElementById('pv-loop-step').value.trim();
+
+    if (!stop) { alert("Stop value is required."); return; }
+
+    let rangeArgs = "";
+
+    if (step) {
+        // range(start, stop, step)
+        // usage: if step is there, start MUST be there. default start to 0 if missing.
+        rangeArgs = `${start || '0'}, ${stop}, ${step}`;
+    } else if (start) {
+        // range(start, stop)
+        rangeArgs = `${start}, ${stop}`;
+    } else {
+        // range(stop)
+        rangeArgs = `${stop}`;
+    }
+
     addLine({
-        code: `for i in range(${count}):`,
+        code: `for i in range(${rangeArgs}):`,
         type: 'logic'
     });
 }

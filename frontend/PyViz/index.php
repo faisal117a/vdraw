@@ -59,7 +59,7 @@
                     <!-- Toolbox Tabs/Category Selector -->
                     <div class="flex flex-wrap gap-1 mb-4" id="pyviz-toolbox-cats">
                         <button data-cat="vars" class="px-3 py-2 text-sm font-bold rounded bg-blue-600 text-white">Vars</button>
-                        <button data-cat="funcs" class="px-3 py-2 text-sm font-bold rounded bg-slate-700 text-slate-300 hover:text-white">Funcs</button>
+                        <button data-cat="funcs" class="px-3 py-2 text-sm font-bold rounded bg-slate-700 text-slate-300 hover:text-white">Input/Output</button>
                         <button data-cat="logic" class="px-3 py-2 text-sm font-bold rounded bg-slate-700 text-slate-300 hover:text-white">Logic</button>
                         <button data-cat="ds" class="px-3 py-2 text-sm font-bold rounded bg-slate-700 text-slate-300 hover:text-white">Data</button>
                         <button data-cat="imports" class="px-3 py-2 text-sm font-bold rounded bg-slate-700 text-slate-300 hover:text-white">Imports</button>
@@ -80,6 +80,13 @@
                             <i class="fa-brands fa-python mr-2 text-blue-400"></i> Playground
                         </h3>
                         <div class="flex space-x-2 items-center">
+                            <div class="flex items-center space-x-1 mr-2 bg-slate-800 rounded px-1 border border-slate-700">
+                                <select id="pv-insert-mode" class="bg-transparent text-[10px] text-slate-300 focus:outline-none border-none">
+                                   <option value="append">Append</option>
+                                   <option value="cursor">Cursor</option>
+                                </select>
+                            </div>
+
                             <!-- Font Size Controls -->
                             <div class="flex items-center space-x-1 mr-2 bg-slate-800 rounded px-1 border border-slate-700">
                                 <button onclick="changeFontSize(-1)" class="w-5 h-5 flex items-center justify-center text-slate-400 hover:text-white text-xs" title="Decrease Font"><i class="fa-solid fa-minus"></i></button>
@@ -88,6 +95,9 @@
                             </div>
 
                             <button id="pyviz-btn-clear" class="text-xs text-red-400 hover:text-red-300"><i class="fa-solid fa-trash mr-1"></i>Clear</button>
+                            <button id="pyviz-btn-mic" onclick="toggleVoiceRecording()" class="text-xs text-slate-400 hover:text-white border border-slate-700/50 rounded px-2 py-1 transition-all" title="Voice to Code (60s)">
+                                <i class="fa-solid fa-microphone"></i>
+                            </button>
                             <button id="pyviz-btn-download" class="text-xs text-blue-400 hover:text-blue-300"><i class="fa-solid fa-download mr-1"></i>.py</button>
                         </div>
                     </div>
@@ -161,7 +171,8 @@
     </main>
 
     <!-- App Scripts -->
-    <script src="js/pyviz/pyviz.js?v=6"></script>
+    <script src="js/pyviz/pyviz.js?v=7"></script>
+    <script src="js/pyviz/voice_code.js"></script>
     <script>
         // Force Init
         document.addEventListener('DOMContentLoaded', () => {

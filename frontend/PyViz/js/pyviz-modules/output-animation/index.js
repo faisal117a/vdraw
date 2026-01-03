@@ -54,8 +54,15 @@ class OutputAnimationModule {
             btn.className = "text-xs text-green-400 hover:text-green-300 font-bold";
             btn.onclick = () => this.startAnimation();
 
+            // Stop Button (New)
+            const stopBtn = document.createElement("button");
+            stopBtn.innerHTML = '<i class="fa-solid fa-stop mr-1"></i> Stop';
+            stopBtn.className = "text-xs text-red-500 hover:text-red-400 font-bold ml-2";
+            stopBtn.onclick = () => this.stopAnimation();
+
             container.appendChild(select);
             container.appendChild(btn);
+            container.appendChild(stopBtn);
 
             // Insert at the beginning of the button group
             headerBtns.insertBefore(container, headerBtns.firstChild);
@@ -80,7 +87,8 @@ class OutputAnimationModule {
 
         const lines = window.pyvizState.lines;
         if (lines.length === 0) {
-            alert("No code to execute. Please build some code first.");
+            console.warn("No code to execute. Please build some code first.");
+            // Optional: Show UI message instead of blocking alert
             return;
         }
 
@@ -88,7 +96,7 @@ class OutputAnimationModule {
         const code = lines.map(l => "    ".repeat(l.indent) + l.code).join("\n");
 
         if (!code.trim()) {
-            alert("Code is empty.");
+            console.warn("Code is empty.");
             return;
         }
 
@@ -100,6 +108,12 @@ class OutputAnimationModule {
         const delay = delaySelect ? parseInt(delaySelect.value) : 1000;
 
         this.executor.run(code, delay, this.highlightLine.bind(this));
+    }
+
+    stopAnimation() {
+        if (this.executor) {
+            this.executor.stop();
+        }
     }
 
     highlightLine(lineno) {

@@ -1,0 +1,134 @@
+/**
+ * Voice to Code Feature (Phase 8)
+ * Handles Microphone recording and backend communication.
+ */
+
+let pvMediaRecorder;
+let pvAudioChunks = [];
+let pvIsRecording = false;
+
+window.toggleVoiceRecording = async function () {
+    const btn = document.getElementById('pyviz-btn-mic');
+
+    if (pvIsRecording) {
+        // Stop
+        if (pvMediaRecorder && pvMediaRecorder.state === 'recording') {
+            pvMediaRecorder.stop();
+        }
+        pvIsRecording = false;
+        // UI Reset happens in onstop
+    } else {
+        // Start
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            pvMediaRecorder = new MediaRecorder(stream);
+            pvAudioChunks = [];
+
+            pvMediaRecorder.ondataavailable = event => {
+                pvAudioChunks.push(event.data);
+            };
+
+            pvMediaRecorder.onstop = async () => {
+                const audioBlob = new Blob(pvAudioChunks, { type: 'audio/webm' });
+                // Stop all tracks
+                stream.getTracks().forEach(track => track.stop());
+
+                // Reset UI
+                if (btn) {
+                    btn.classList.remove('animate-pulse', 'text-red-500', 'border-red-500');
+                    btn.classList.add('text-slate-400');
+                    btn.innerHTML = '<i class="fa-solid fa-microphone"></i>';
+                }
+
+                await sendAudioToBackend(audioBlob);
+            };
+
+            pvMediaRecorder.start();
+            pvIsRecording = true;
+
+            // Auto stop after 60s (as per user config)
+            setTimeout(() => {
+                if (pvIsRecording && pvMediaRecorder.state === 'recording') {
+                    pvMediaRecorder.stop();
+                    pvIsRecording = false;
+                }
+            }, 60000);
+
+            // UI Update
+            if (btn) {
+                btn.classList.remove('text-slate-400');
+                btn.classList.add('animate-pulse', 'text-red-500', 'border-red-500');
+                btn.innerHTML = '<i class="fa-solid fa-stop"></i>';
+            }
+
+        } catch (err) {
+            console.error("Mic Error:", err);
+            alert("Could not access microphone. Please allow permissions.");
+        }
+    }
+}
+
+async function sendAudioToBackend(blob) {
+    const aiMsg = document.getElementById('pyviz-ai-message');
+    if (aiMsg) aiMsg.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin text-purple-500 mr-2"></i> Transcribing & Generating...';
+
+    const formData = new FormData();
+    formData.append('audio', blob, 'recording.webm');
+
+    try {
+        // Determine backend URL relative to current location
+        // Assuming /vdraw-anti-auto/backend/voice_code.php
+        const backendUrl = '/vdraw-anti-auto/backend/voice_code.php';
+
+        const response = await fetch(backendUrl, {
+            method: 'POST',
+            body: formData
+        });
+
+        let data;
+        try {
+            data = await response.json();
+        } catch (e) {
+            throw new Error("Invalid backend response");
+        }
+
+        if (data.error) {
+            if (aiMsg) aiMsg.innerHTML = `<span class="text-red-400">Error: ${data.error}</span>`;
+            console.error(data.details || data.error);
+        } else if (data.code) {
+            if (aiMsg) aiMsg.innerHTML = `<span class="text-green-400">Success! Code appended.</span>`;
+
+            // Detect multiple lines
+            const lines = data.code.split('\n');
+            lines.forEach(line => {
+                // Determine indentation
+                const rawLine = line;
+                const trimmed = rawLine.trim();
+
+                if (!trimmed) return; // Skip empty
+
+                // Calculate spaces at start
+                const leadingSpaces = rawLine.match(/^\s*/)[0].length;
+                const indentLevel = Math.floor(leadingSpaces / 4);
+
+                // Simple type inference
+                let type = 'logic';
+                if (trimmed.includes('print(') || trimmed.includes('input(')) type = 'func';
+                if (trimmed.includes('=') && !trimmed.includes('if ') && !trimmed.includes('def ')) type = 'var';
+                if (trimmed.startsWith('#')) type = 'comment';
+
+                if (window.addLine) {
+                    window.addLine({
+                        code: trimmed,
+                        type: type,
+                        label: 'Voice Code',
+                        indent: indentLevel // Respect relative indentation from LLM
+                    });
+                }
+            });
+        }
+    } catch (e) {
+        console.error(e);
+        if (aiMsg) aiMsg.innerHTML = `<span class="text-red-400">Connection Failed</span>`;
+    }
+}

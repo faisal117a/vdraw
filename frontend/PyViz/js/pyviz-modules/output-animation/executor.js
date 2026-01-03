@@ -63,13 +63,26 @@ export class Executor {
                 this.isExecuting = false;
             },
             onInput: (prompt) => {
-                // Handling input is tricky with the constraints (Blocking Worker).
-                // If we succeeded in the worker strategy, we would:
-                // 1. Show modal
-                // 2. on submit -> send value back to worker
+                const sid = this.loader.currentSessionId;
+                if (!sid) {
+                    console.error("No session ID for input");
+                    return;
+                }
+
                 this.inputHandler.requestInput(prompt).then(val => {
-                    // Send to worker (not yet implemented in loader fully)
-                    console.log("Input received:", val);
+                    // Determine Backend URL
+                    let baseUrl = window.location.origin + window.location.pathname;
+                    if (baseUrl.includes('/frontend/')) {
+                        baseUrl = baseUrl.split('/frontend/')[0];
+                    } else if (baseUrl.endsWith('/')) {
+                        baseUrl = baseUrl.slice(0, -1);
+                    }
+                    const ioUrl = `${baseUrl}/backend/io_proxy.php`;
+
+                    // Write to Proxy
+                    fetch(`${ioUrl}?action=write&id=${sid}&val=${encodeURIComponent(val)}`)
+                        .then(() => console.log("Input submitted to proxy"))
+                        .catch(e => console.error("Input proxy failed", e));
                 });
             },
             onFinished: () => {
@@ -77,5 +90,23 @@ export class Executor {
                 this.outputPanel.setStatus("FINISHED");
             }
         });
+    }
+    stop() {
+        if (this.isExecuting) {
+            this.loader.terminate();
+            this.isExecuting = false;
+            this.outputPanel.setStatus("STOPPED");
+            this.outputPanel.clear(); // User asked to clear force
+            this.outputPanel.appendLine("[System] Execution stopped by user.", "error");
+
+            // Remove highlight
+            const codeArea = document.getElementById('pyviz-code-area');
+            if (codeArea) {
+                Array.from(codeArea.children).forEach(child => {
+                    child.style.backgroundColor = "";
+                    child.style.boxShadow = "";
+                });
+            }
+        }
     }
 }

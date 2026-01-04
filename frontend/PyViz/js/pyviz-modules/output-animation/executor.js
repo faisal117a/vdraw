@@ -47,11 +47,20 @@ export class Executor {
         this.outputPanel.clear();
         this.outputPanel.setStatus("RUNNING...");
 
+        // Clear Dry Run Table
+        if (window.clearDryRunTable) window.clearDryRunTable();
+
         // Small delay to allow UI to paint the clear operation before heavy worker usage
         setTimeout(() => {
             this.loader.run(code, {
                 delay: delay,
-                onLine: (lineno) => {
+                onLine: (lineno, locals, prev_lineno) => {
+                    // Dry Run Update: Log the *Previous* Line using the *Current* State.
+                    // This creates the "After Execution" effect.
+                    if (prev_lineno && window.updateDryRunTable && locals) {
+                        window.updateDryRunTable(prev_lineno, locals);
+                    }
+
                     // Determine highlighting strategy.
                     // Assuming `highlightCallback` is provided by index.js which knows about the editor.
                     if (highlightCallback) highlightCallback(lineno);

@@ -108,7 +108,8 @@ const toolboxRenderers = {
     logic: renderLogicLibrary,
     ds: renderDSLibrary,
     imports: renderImportBuilder,
-    py_funcs: renderPyFuncBuilder
+    py_funcs: renderPyFuncBuilder,
+    dry_run: renderDryRunBuilder
 };
 
 const builtInLib = {
@@ -1509,31 +1510,48 @@ window.importPyFile = function (input) {
         lines.forEach(line => {
             // Trim trailing newlines only to preserve indentation
             // Actually, pyviz addLine logic might expect trimmed code + separate indent param? 
-            // Or does it handle spacing? 
-            // Let's check addLine logic. It seems addLine takes `indent` param. 
-            // If we pass raw string with spaces, we need to calculate indent.
+            // Determine indent (4 spaces = 1 tab logic)
+            const indentMatch = line.match(/^(\s*)/);
+            const spaces = indentMatch ? indentMatch[1].length : 0;
+            const indent = Math.floor(spaces / 4);
 
-            const rawLine = line.replace('\r', '');
-            if (!rawLine.trim()) return; // Skip empty lines for now or maybe add as spacers?
+            const trimmed = line.trim();
+            if (!trimmed) return; // Skip empty
 
-            // Calculate spaces
-            const leadingSpaces = rawLine.match(/^\s*/)[0].length;
-            const indentLevel = Math.floor(leadingSpaces / 4);
-            const trimmedCode = rawLine.trim();
-
-            // Infer Type
             let type = 'logic';
-            if (trimmedCode.startsWith('import ') || trimmedCode.startsWith('from ')) type = 'import';
-            else if (trimmedCode.startsWith('def ')) type = 'logic';
-            else if (trimmedCode.startsWith('class ')) type = 'logic';
-            else if (trimmedCode.startsWith('#')) type = 'comment';
-            else if (trimmedCode.includes('=')) type = 'var'; // heuristic
-            else if (trimmedCode.includes('(')) type = 'func'; // heuristic
+            let meta = {};
+
+            if (trimmed.startsWith('import ') || trimmed.startsWith('from ')) type = 'import';
+            else if (trimmed.startsWith('#')) type = 'comment';
+            else if (trimmed.startsWith('def ')) type = 'logic';
+            else if (trimmed.includes('=')) {
+                // Assignment check
+                const parts = trimmed.split('=');
+                const lhs = parts[0].trim();
+                const rhs = parts.slice(1).join('=').trim();
+
+                // Only treat simple assignments as vars/ds
+                if (/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(lhs)) {
+                    if (rhs.startsWith('[') && rhs.endsWith(']')) {
+                        type = 'ds'; meta = { name: lhs, dsType: 'list' };
+                    } else if (rhs.startsWith('(') && rhs.endsWith(')')) {
+                        type = 'ds'; meta = { name: lhs, dsType: 'tuple' };
+                    } else if (rhs.includes('deque(')) {
+                        type = 'ds'; meta = { name: lhs, dsType: 'stack' };
+                    } else if (rhs.includes('queue.Queue(')) {
+                        type = 'ds'; meta = { name: lhs, dsType: 'queue' };
+                    } else {
+                        type = 'var'; meta = { name: lhs };
+                    }
+                }
+            }
+            else if (trimmed.startsWith('print') || trimmed.endsWith(')')) type = 'func';
 
             addLine({
-                code: trimmedCode,
+                code: trimmed,
                 type: type,
-                indent: indentLevel
+                indent: indent,
+                meta: meta
             });
         });
 
@@ -2154,4 +2172,215 @@ function highlightLineTokenized(codeStr) {
         // Escape generic
         return escapeHtml(token);
     }).join('');
+}
+
+// --- Dry Run (Double Run) Logic ---
+
+function renderDryRunBuilder(container) {
+    if (!pyvizState.dryRunVars) pyvizState.dryRunVars = [];
+
+    container.innerHTML = `
+        <div class="space-y-4 h-full flex flex-col">
+            <!-- Configuration -->
+            <div class="bg-slate-800 p-3 rounded border border-slate-700 space-y-3 shrink-0">
+                <h4 class="text-xs font-bold text-teal-400 uppercase"><i class="fa-solid fa-table mr-1"></i> Dry Run Config</h4>
+                
+                <p class="text-[10px] text-slate-400">Select variables to trace during execution.</p>
+                
+                <div class="flex gap-2">
+                    <select id="pv-dry-run-select" class="flex-1 bg-slate-900 border border-slate-600 rounded p-1.5 text-xs text-white">
+                        <!-- Populated dynamically -->
+                    </select>
+                    <button onclick="addDryRunVar()" class="px-3 py-1 bg-teal-600 hover:bg-teal-500 text-white text-xs font-bold rounded">Add</button>
+                </div>
+
+                <!-- Selected Vars List -->
+                <div id="pv-dry-run-list" class="flex flex-wrap gap-2 min-h-[30px] p-2 bg-slate-900 rounded border border-slate-700">
+                    <!-- Badges -->
+                </div>
+            </div>
+
+            <!-- Table Display -->
+            <div class="flex-1 overflow-hidden flex flex-col bg-slate-800 rounded border border-slate-700">
+                <div class="p-2 border-b border-slate-700 bg-slate-900">
+                     <h4 class="text-xs font-bold text-slate-300 uppercase">Execution Trace</h4>
+                </div>
+                
+                <div class="overflow-auto custom-scrollbar flex-1 relative w-full">
+                    <table class="min-w-full text-xs text-left border-separate border-spacing-0" id="pv-dry-run-table">
+                        <thead class="text-slate-500 bg-slate-900/50 sticky top-0 z-10">
+                            <tr>
+                                <th class="p-2 border-b border-slate-700 font-mono w-12 text-center">#</th>
+                                <!-- Dynamic Headers -->
+                            </tr>
+                        </thead>
+                        <tbody class="text-slate-300 font-mono whitespace-nowrap">
+                            <!-- Rows -->
+                            <tr><td class="p-4 text-center text-slate-600 italic" colspan="100%">Run code to see trace...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    `;
+
+    refreshDryRunVarsList();
+    refreshDryRunBadges();
+}
+
+function refreshDryRunVarsList() {
+    const select = document.getElementById('pv-dry-run-select');
+    if (!select) return;
+
+    // Scan code for variables. 
+    // Heuristic: Assignments "x =" or just defined Vars in state
+    const candidates = new Set();
+
+    // 1. From Vars Tab State (if user created them via UI)
+    pyvizState.lines.forEach(l => {
+        if (l.type === 'var' || l.type === 'ds') {
+            if (l.meta && l.meta.name) candidates.add(l.meta.name);
+        }
+    });
+
+    // 2. Scan code lines for assignments
+    pyvizState.lines.forEach(l => {
+        const codeline = l.code.split('#')[0]; // Ignore comments
+        if (codeline.includes('=')) {
+            const parts = codeline.split('=');
+            let lhs = parts[0].trim();
+            // Basic identifier check (ignore complex LHS like x[0] for now)
+            if (/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(lhs)) {
+                candidates.add(lhs);
+            }
+            // Tuple unpacking? "a, b = 1, 2" 
+            if (lhs.includes(',')) {
+                lhs.split(',').forEach(v => {
+                    const clean = v.trim();
+                    if (/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(clean)) candidates.add(clean);
+                });
+            }
+        }
+    });
+
+    const selected = new Set(pyvizState.dryRunVars || []);
+
+    const options = Array.from(candidates)
+        .filter(c => !selected.has(c))
+        .sort();
+
+    if (options.length === 0) {
+        select.innerHTML = '<option value="">(No valid variables found)</option>';
+    } else {
+        select.innerHTML = options.map(o => `<option value="${o}">${o}</option>`).join('');
+    }
+}
+
+function addDryRunVar() {
+    const select = document.getElementById('pv-dry-run-select');
+    const val = select.value;
+    if (!val) return;
+
+    if (!pyvizState.dryRunVars) pyvizState.dryRunVars = [];
+    if (!pyvizState.dryRunVars.includes(val)) {
+        pyvizState.dryRunVars.push(val);
+        refreshDryRunBadges();
+        refreshDryRunVarsList();
+        renderDryRunTableHeader();
+    }
+}
+
+function removeDryRunVar(name) {
+    if (!pyvizState.dryRunVars) return;
+    pyvizState.dryRunVars = pyvizState.dryRunVars.filter(v => v !== name);
+    refreshDryRunBadges();
+    refreshDryRunVarsList();
+    renderDryRunTableHeader();
+}
+
+function refreshDryRunBadges() {
+    const container = document.getElementById('pv-dry-run-list');
+    if (!container) return;
+
+    if (!pyvizState.dryRunVars || pyvizState.dryRunVars.length === 0) {
+        container.innerHTML = '<span class="text-[10px] text-slate-500 italic">No variables tracked.</span>';
+        return;
+    }
+
+    container.innerHTML = pyvizState.dryRunVars.map(v => `
+        <span class="inline-flex items-center px-2 py-1 rounded bg-teal-900/50 border border-teal-700/50 text-teal-300 text-[10px]">
+            ${v}
+            <button onclick="removeDryRunVar('${v}')" class="ml-1 hover:text-white"><i class="fa-solid fa-times"></i></button>
+        </span>
+    `).join('');
+}
+
+function renderDryRunTableHeader() {
+    const table = document.getElementById('pv-dry-run-table');
+    if (!table) return;
+
+    const theadRow = table.querySelector('thead tr');
+    if (!theadRow) return;
+
+    // Preserve first column (#)
+    // Updated Style: text-sm, text-slate-300 (Light Gray for Variable Names in Header)
+    let html = '<th class="p-2 border-b border-slate-700 bg-slate-900/90 font-mono w-12 text-center sticky top-0 text-sm text-slate-400">#</th>';
+
+    if (pyvizState.dryRunVars) {
+        pyvizState.dryRunVars.forEach(v => {
+            html += `<th class="p-2 border-b border-slate-700 bg-slate-900/90 font-mono min-w-[80px] whitespace-nowrap sticky top-0 text-sm text-slate-300 font-bold">${v}</th>`;
+        });
+    }
+
+    theadRow.innerHTML = html;
+}
+
+window.clearDryRunTable = function () {
+    const table = document.getElementById('pv-dry-run-table');
+    if (!table) return;
+    const body = table.querySelector('tbody');
+    // Clear content
+    body.innerHTML = '';
+
+    // Force re-render header to ensure it matches current vars
+    if (window.renderDryRunTableHeader) window.renderDryRunTableHeader();
+}
+
+window.updateDryRunTable = function (lineno, locals) {
+    const table = document.getElementById('pv-dry-run-table');
+    if (!table) return;
+    const body = table.querySelector('tbody');
+
+    const vars = pyvizState.dryRunVars || [];
+    if (vars.length === 0) return;
+
+    const row = document.createElement('tr');
+    row.className = "hover:bg-slate-700/50 transition-colors border-b border-slate-800/50";
+
+    // Row Number: text-sm, text-orange-400 (Light Orange)
+    let html = `<td class="p-2 border-r border-slate-800 text-center text-orange-400 font-bold text-sm">${lineno}</td>`;
+
+    vars.forEach(v => {
+        let rawVal = locals[v];
+        let displayVal;
+
+        if (rawVal === undefined) {
+            displayVal = '<span class="text-blue-400 font-bold text-sm">-</span>';
+            rawVal = "-";
+        } else {
+            // Basic Formatting
+            if (typeof rawVal === 'string') displayVal = `<span class="text-green-400">'${escapeHtml(rawVal)}'</span>`;
+            else if (typeof rawVal === 'number') displayVal = `<span class="text-pink-400">${rawVal}</span>`;
+            else if (typeof rawVal === 'boolean') displayVal = `<span class="text-orange-400">${rawVal}</span>`;
+            else displayVal = escapeHtml(String(rawVal));
+        }
+
+        html += `<td class="p-2 border-r border-slate-800 whitespace-pre overflow-hidden text-ellipsis max-w-[150px]" title="${String(rawVal).replace(/"/g, '&quot;')}">${displayVal}</td>`;
+    });
+
+    row.innerHTML = html;
+    body.appendChild(row);
+
+    // Auto scroll
+    row.scrollIntoView({ behavior: 'smooth', block: 'end' });
 }

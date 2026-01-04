@@ -123,11 +123,50 @@ def _safe_import(name, globals=None, locals=None, fromlist=(), level=0):
     return _real_import(name, globals, locals, fromlist, level)
 
 builtins.__import__ = _safe_import
+import sys # Ensure sys is available here if not already
+
+def _serialize_locals(locs):
+    l = {}
+    exclude = set(['__name__', '__doc__', '__package__', '__loader__', '__spec__', '__builtins__', 
+            'sys', 'time', 'js', 'builtins', 'XMLHttpRequest', 'Unbuffered', 'MockLib', 
+            '_real_import', '_safe_import', '_input_wrapper', '_trace_dispatch', '_user_wrapper',
+             'compile', 'src', 'code_obj', '_serialize_locals'])
+    for k, v in locs.items():
+        if k in exclude or k.startswith('_'): continue
+        try:
+            if isinstance(v, (int, float, bool, str, type(None))):
+                l[k] = v
+            elif isinstance(v, (list, tuple, dict, set)):
+                s = str(v)
+                l[k] = s if len(s) < 100 else s[:100] + "..."
+            elif hasattr(v, 'queue') and type(v).__name__ == 'Queue':
+                # Handle queue.Queue
+                s = str(list(v.queue))
+                l[k] = s if len(s) < 100 else s[:100] + "..."
+            else:
+                l[k] = str(v)
+        except:
+            l[k] = "<n/a>"
+    return l
 
 def _trace_dispatch(frame, event, arg):
-    # ONLY trace user code, ignore helpers/wrappers
+    # ONLY trace user code
     if event == 'line' and frame.f_code.co_filename == '<user_code>':
-        js.sendPythonMessage("trace_line", js.Object.fromEntries([("lineno", frame.f_lineno)]))
+        # Prepare Trace
+        l = _serialize_locals(frame.f_locals)
+        payload = [("lineno", frame.f_lineno), ("locals", js.Object.fromEntries(list(l.items())))]
+        
+        # Post-Execution Report for PREVIOUS line
+        try:
+            if hasattr(sys, 'last_lineno') and sys.last_lineno is not None:
+                payload.append(("prev_lineno", sys.last_lineno))
+        except:
+            pass
+            
+        js.sendPythonMessage("trace_line", js.Object.fromEntries(payload))
+        
+        sys.last_lineno = frame.f_lineno
+        
         try:
             delay = float(js.global_delay)
         except:
@@ -176,7 +215,41 @@ self.onmessage = async (e) => {
             await pyodide.runPythonAsync(\`
 import sys
 sys.settrace(None)
+sys.last_lineno = None
+
+def _serialize_locals(locs):
+    l = {}
+    exclude = set(['__name__', '__doc__', '__package__', '__loader__', '__spec__', '__builtins__', 
+            'sys', 'time', 'js', 'builtins', 'XMLHttpRequest', 'Unbuffered', 'MockLib', 
+            '_real_import', '_safe_import', '_input_wrapper', '_trace_dispatch', '_user_wrapper',
+             'compile', 'src', 'code_obj', '_serialize_locals'])
+    for k, v in locs.items():
+        if k in exclude or k.startswith('_'): continue
+        try:
+            if isinstance(v, (int, float, bool, str, type(None))):
+                l[k] = v
+            elif isinstance(v, (list, tuple, dict, set)):
+                s = str(v)
+                l[k] = s if len(s) < 100 else s[:100] + "..."
+            else:
+                l[k] = str(v)
+        except:
+            l[k] = "<n/a>"
+    return l
+
 def _user_wrapper():
+    # Cleanup Globals
+    keep = {'__name__', '__doc__', '__package__', '__loader__', '__spec__', '__builtins__', 
+            'sys', 'time', 'js', 'builtins', 'XMLHttpRequest', 'Unbuffered', 'MockLib', 
+            '_real_import', '_safe_import', '_input_wrapper', '_trace_dispatch', '_user_wrapper',
+            '_serialize_locals'}
+    
+    for k in list(globals().keys()):
+        if k not in keep:
+            del globals()[k]
+    
+    sys.last_lineno = None
+
     sys.settrace(_trace_dispatch)
     try:
         # Compile with specific filename to target tracer
@@ -187,6 +260,12 @@ def _user_wrapper():
         print(f"Error: {e}")
     finally:
         sys.settrace(None)
+        # Final Flush for Loop/End
+        if sys.last_lineno is not None:
+             l = _serialize_locals(globals())
+             # Send update for the last executed line
+             payload = [("prev_lineno", sys.last_lineno), ("locals", js.Object.fromEntries(list(l.items())))]
+             js.sendPythonMessage("trace_line", js.Object.fromEntries(payload))
 
 _user_wrapper()
 \`);
@@ -240,8 +319,11 @@ _user_wrapper()
         // Generate ID
         this.currentSessionId = Math.random().toString(36).substring(7);
 
-        this.messageCallbacks['trace_line'] = (msg) => callbacks.onLine(msg.lineno);
+        // Updated message callback for trace_line to include locals and prev_lineno
+        this.messageCallbacks['trace_line'] = (msg) => callbacks.onLine(msg.lineno, msg.locals, msg.prev_lineno);
+
         this.messageCallbacks['img_stdout'] = (msg) => callbacks.onPrint(msg.content);
+        // ... existing ...
         this.messageCallbacks['error'] = (msg) => callbacks.onError(msg.content);
         this.messageCallbacks['finished'] = () => callbacks.onFinished();
         this.messageCallbacks['input_request'] = (msg) => callbacks.onInput(msg.prompt);

@@ -86,6 +86,7 @@
                         <button data-cat="ds" class="px-3 py-2 text-sm font-bold rounded bg-slate-700 text-slate-300 hover:text-white">Data</button>
                         <button data-cat="imports" class="px-3 py-2 text-sm font-bold rounded bg-slate-700 text-slate-300 hover:text-white">Imports</button>
                         <button data-cat="py_funcs" class="px-3 py-2 text-sm font-bold rounded bg-slate-700 text-slate-300 hover:text-white">Py Funcs</button>
+                        <button data-cat="dry_run" class="px-3 py-2 text-sm font-bold rounded bg-slate-700 text-slate-300 hover:text-white">Dry Run</button>
                     </div>
 
                     <!-- Toolbox Content Area (Dynamic) -->

@@ -107,6 +107,9 @@ class OutputAnimationModule {
         const delaySelect = document.getElementById('pyviz-speed-select');
         const delay = delaySelect ? parseInt(delaySelect.value) : 1000;
 
+        // Trigger AI Check
+        if (typeof window.runAICheck === 'function') window.runAICheck();
+
         this.executor.run(code, delay, this.highlightLine.bind(this));
     }
 

@@ -89,18 +89,22 @@ from js import XMLHttpRequest
 
 # --- Helper Classes (Defined in Init) ---
 class Unbuffered(object):
-   def __init__(self, stream):
-       self.stream = stream
+   def __init__(self, stream=None):
+       # We don't use the stream anymore, but keep arg for compatibility
+       pass
    def write(self, data):
-       self.stream.write(data)
-       self.stream.flush()
+       # Send directly to Main Thread via JS, bypassing Pyodide buffering
+       js.sendPythonMessage("img_stdout", js.Object.fromEntries([("content", data)]))
    def writelines(self, datas):
-       self.stream.writelines(datas)
-       self.stream.flush()
+       for data in datas:
+           self.write(data)
+   def flush(self):
+       pass
    def __getattr__(self, attr):
-       return getattr(self.stream, attr)
+       return getattr(sys.__stdout__, attr)
 
-sys.stdout = Unbuffered(sys.stdout)
+sys.stdout = Unbuffered()
+sys.stderr = Unbuffered() # Capture stderr too if needed, or keep separate
 
 _real_import = builtins.__import__
 class MockLib:

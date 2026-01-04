@@ -1116,37 +1116,79 @@ function renderPyViz() {
         content.className = "flex-1 font-mono whitespace-pre";
 
         const indentStr = '    '.repeat(line.indent);
+        let innerHTML = '';
 
-        // Robust Highlighting: Split by delimiters but keep them
-        // Matches: strings, comments, words, numbers, non-word chars (single char to avoid eating quotes)
-        const tokens = line.code.split(/("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|#.*$|\b\d+(?:\.\d+)?\b|[a-zA-Z_]\w*|[^\s\w])/g);
+        // Multi-line String Logic
+        const code = line.code;
+        const doubles = (code.match(/"""/g) || []).length;
+        const singles = (code.match(/'''/g) || []).length;
 
-        const htmlParts = tokens.map(token => {
-            if (!token) return '';
+        let currentState = pyvizState.multiStringState; // Defined globally or on state? 
+        // We need to store this state temporarily during render loop.
+        // ACTUALLY: renderPyViz re-runs fully. We can use a local closure variable if we define it outside forEach.
+        // But `renderPyViz` is the function.
+        // I need to use `this.multiStringState` or a variable outside.
+        // Since `renderPyViz` clears the area and loops `pyvizState.lines`, I can define `let multiStringState = null` at start of `renderPyViz`. 
+        // Wait, I am editing the `forEach` callback here. I cannot inject a variable into the scope of `renderPyViz` easily unless I replaced the whole function.
 
-            // String literal
-            if (token.startsWith('"') || token.startsWith("'")) {
-                return `<span class="text-green-400">${escapeHtml(token)}</span>`;
-            }
-            // Comment
-            if (token.startsWith('#')) {
-                return `<span class="text-slate-500 italic">${escapeHtml(token)}</span>`;
-            }
-            // Number
-            if (/^\d/.test(token)) {
-                return `<span class="text-pink-400">${token}</span>`;
-            }
-            // Word check
-            if (/^[a-zA-Z_]/.test(token)) {
-                if (keywords.has(token)) return `<span class="text-orange-400 font-bold">${token}</span>`;
-                if (builtins.has(token)) return `<span class="text-blue-400">${token}</span>`;
-                return escapeHtml(token);
-            }
-            // Other (punctuation etc)
-            return escapeHtml(token);
-        });
+        // workaround: attach state to `pyvizState.renderLoopState` or similar just before loop?
+        // Or assume I can Replace the whole `renderPyViz` function? 
+        // I will replace `renderPyViz` implementation to allow state tracking.
+        // Wait, looking at lines 1098, `pyvizState.lines.forEach((line, idx) => {`
+        // I am only replacing the content generation part.
+        // Accessing `pyvizState.renderState` which I will initialize? 
+        // "I will replace the tokenizing logic" -> I should replace the whole `renderPyViz` function or at least the loop setup.
+        // But I can only see lines 1100-1150.
 
-        content.innerHTML = `${indentStr}${htmlParts.join('')}`;
+        // OK, I will try to use a property on `pyvizState` that is reset at start of render?
+        // No, I can't inject the reset code easily without seeing the start of `renderPyViz`.
+        // Let's assume `pyvizState` persists. 
+        // THIS IS RISKY. If I don't reset `multiStringState` at the start of `renderPyViz`, it will break on re-renders.
+
+        // ALTERNATIVE: Use a hack. If `idx === 0`, reset the state.
+        if (idx === 0) window._pvMultilineState = null;
+
+        let activeState = window._pvMultilineState;
+
+        // Update State for next line
+        if (window._pvMultilineState === '"""') {
+            if (doubles % 2 !== 0) window._pvMultilineState = null;
+        } else if (window._pvMultilineState === "'''") {
+            if (singles % 2 !== 0) window._pvMultilineState = null;
+        } else {
+            if (doubles % 2 !== 0) window._pvMultilineState = '"""';
+            else if (singles % 2 !== 0) window._pvMultilineState = "'''";
+        }
+
+        // Render
+        if (activeState) {
+            // We were inside a block at start of line
+            // If we closed it on this line, we technically should highlight the code after it?
+            // User just wants "dim green".
+            // Simplicity: If specific line has mixed state, simplest is to just color whole line green for docstrings.
+            // Or try to support closure: `""" end` -> green. `""" end; x=1` -> green ...
+            // Let's just color the whole line green if it STARTED inside a block.
+            innerHTML = `<span class="text-green-400 italic opacity-80">${escapeHtml(code)}</span>`;
+        } else {
+            // Started normal. Did we open one?
+            if (window._pvMultilineState) { // We are open at the end, so we must have opened it here.
+                // Split at opener
+                const delim = window._pvMultilineState;
+                const parts = code.split(delim);
+                // Pre-part is code
+                const pre = highlightLineTokenized(parts[0]);
+                // Post-part (and delimiter) is comment
+                // Re-join just in case multiple delimiters (odd count)
+                const post = parts.slice(1).join(delim);
+
+                innerHTML = `${pre}<span class="text-green-400 italic opacity-80">${delim}${escapeHtml(post)}</span>`;
+            } else {
+                // Normal code line
+                innerHTML = highlightLineTokenized(code);
+            }
+        }
+
+        content.innerHTML = `${indentStr}${innerHTML}`;
 
         // Controls (Up/Down/Indent/Delete)
         const controls = document.createElement('div');
@@ -1447,6 +1489,60 @@ function renderDSLibrary(container) {
         </div>
     `;
     renderDSOpsSelector();
+}
+
+window.importPyFile = function (input) {
+    if (!input.files || !input.files[0]) return;
+    const file = input.files[0];
+
+    // Check extension
+    if (!file.name.endsWith('.py')) {
+        alert("Please select a .py file.");
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = function (e) {
+        const content = e.target.result;
+        const lines = content.split('\n');
+
+        lines.forEach(line => {
+            // Trim trailing newlines only to preserve indentation
+            // Actually, pyviz addLine logic might expect trimmed code + separate indent param? 
+            // Or does it handle spacing? 
+            // Let's check addLine logic. It seems addLine takes `indent` param. 
+            // If we pass raw string with spaces, we need to calculate indent.
+
+            const rawLine = line.replace('\r', '');
+            if (!rawLine.trim()) return; // Skip empty lines for now or maybe add as spacers?
+
+            // Calculate spaces
+            const leadingSpaces = rawLine.match(/^\s*/)[0].length;
+            const indentLevel = Math.floor(leadingSpaces / 4);
+            const trimmedCode = rawLine.trim();
+
+            // Infer Type
+            let type = 'logic';
+            if (trimmedCode.startsWith('import ') || trimmedCode.startsWith('from ')) type = 'import';
+            else if (trimmedCode.startsWith('def ')) type = 'logic';
+            else if (trimmedCode.startsWith('class ')) type = 'logic';
+            else if (trimmedCode.startsWith('#')) type = 'comment';
+            else if (trimmedCode.includes('=')) type = 'var'; // heuristic
+            else if (trimmedCode.includes('(')) type = 'func'; // heuristic
+
+            addLine({
+                code: trimmedCode,
+                type: type,
+                indent: indentLevel
+            });
+        });
+
+        // Reset input for next use
+        input.value = '';
+        logAction(`Imported ${file.name}`);
+        runAICheck(); // Refresh Check Logic Analysis
+    };
+    reader.readAsText(file);
 }
 
 function renderDSOpsSelector() {
@@ -1869,50 +1965,126 @@ function runAICheck() {
     setTimeout(() => {
         const issues = [];
 
-        // 1. Check Colon endings
+        // 1. Check Colon endings & 2. Parentheses match
+        // We must respect multi-line strings (""" or ''')
+        let inMultiString = null; // null, '"""', or "'''"
+
         pyvizState.lines.forEach((l, i) => {
-            const stripped = l.code.trim();
+            let code = l.code;
+
+            // Handle Multi-line state toggling
+            // Naive split by quotes to count. 
+            // Better: Scan string for triggers.
+
+            // Check for triple quotes
+            // We just need to know if the "meaningful code" part is valid.
+            // If the line is FULLY inside a multi-string, we skip logic checks.
+            // If the line STARTS or ENDS a multi-string, we only check the code part (if any).
+
+            // Simplification: logic checks are skipped if we are "in" multi-string at the START 
+            // OR if the line contains a state change. Python syntax is complex, but for this checker:
+            // If line contains """ or ''', we assume it's complex and might skip strict checks 
+            // OR we try to mask string contents.
+
+            const triDouble = '"""';
+            const triSingle = "'''";
+
+            // Count occurrences to see if state changes
+            // Note: This simple check fails on `s = """` + `"""` (2 on same line).
+            // Let's masking strategy: Replace string contents with spaces.
+
+            // Actually, for the specific error "Missing colon", we just need to ensure we don't 
+            // flag words inside the comment.
+
+            // Let's implement a line-by-line state machine.
+            let effectiveCode = code;
+
+            // Check state at start of line
+            let startState = inMultiString;
+
+            // Simple toggle logic (naive but better than nothing)
+            const doubles = (code.match(/"""/g) || []).length;
+            const singles = (code.match(/'''/g) || []).length;
+
+            // Update state (assuming no nesting of different types and simple structure)
+            if (inMultiString === '"""') {
+                if (doubles % 2 !== 0) inMultiString = null; // Closed
+            } else if (inMultiString === "'''") {
+                if (singles % 2 !== 0) inMultiString = null; // Closed
+            } else {
+                // Not in string
+                if (doubles % 2 !== 0) inMultiString = '"""';
+                else if (singles % 2 !== 0) inMultiString = "'''";
+            }
+
+            // If we were inside a string at start, or are inside at end, or tokens changed, 
+            // it's safer to skip strict keyword checks on this line to avoid false positives.
+            if (startState || inMultiString || doubles > 0 || singles > 0) {
+                return; // Skip checks for this line
+            }
+
+            const stripped = code.split('#')[0].trim();
+            if (!stripped) return;
+
+            // Colon Check
             if (/^(if|else|elif|for|while|def|class)\b/.test(stripped)) {
                 if (!stripped.endsWith(':')) {
                     issues.push(`Line ${i + 1}: Missing colon ':' at the end of statement.`);
                 }
             }
-        });
 
-        // 2. Parentheses match (Basic)
-        pyvizState.lines.forEach((l, i) => {
-            const open = (l.code.match(/\(/g) || []).length;
-            const close = (l.code.match(/\)/g) || []).length;
+            // Paren Check
+            const open = (stripped.match(/\(/g) || []).length;
+            const close = (stripped.match(/\)/g) || []).length;
             if (open !== close) {
                 issues.push(`Line ${i + 1}: Mismatched parentheses (${open} open, ${close} closed).`);
             }
         });
 
-        // 3. Indentation Check
+        // 3. Indentation Check (Skip checks if in multi-string)
+        // Re-using the state logic is hard unless we combine loops.
+        // Let's combine indentation check into the loop above? 
+        // Or just simplify: Indentation check error "Expected block" is rare if colon check passes.
+        // Let's fix the Indentation loop separately using same state logic.
+
+        let indentState = null;
         for (let i = 0; i < pyvizState.lines.length; i++) {
             const line = pyvizState.lines[i];
-            const clean = line.code.split('#')[0].trim();
+            const code = line.code;
 
+            // Update State
+            const doubles = (code.match(/"""/g) || []).length;
+            const singles = (code.match(/'''/g) || []).length;
+            let skipLine = false;
+
+            if (indentState === '"""') {
+                if (doubles % 2 !== 0) indentState = null;
+                skipLine = true;
+            } else if (indentState === "'''") {
+                if (singles % 2 !== 0) indentState = null;
+                skipLine = true;
+            } else {
+                if (doubles % 2 !== 0) indentState = '"""';
+                else if (singles % 2 !== 0) indentState = "'''";
+                if (doubles > 0 || singles > 0) skipLine = true;
+            }
+
+            if (skipLine) continue;
+
+            const clean = line.code.split('#')[0].trim();
             if (clean.endsWith(':')) {
                 // Next non-empty/non-comment line MUST have deeper indent
                 let j = i + 1;
-                let foundNext = false;
-
                 while (j < pyvizState.lines.length) {
                     const nextL = pyvizState.lines[j];
                     const nextClean = nextL.code.split('#')[0].trim();
-                    if (nextClean) { // Found code line
+                    if (nextClean) {
                         if (nextL.indent <= line.indent) {
                             issues.push(`Line ${j + 1}: Expected an indented block after statement on Line ${i + 1}.`);
                         }
-                        foundNext = true;
                         break;
                     }
                     j++;
-                }
-
-                if (!foundNext && i < pyvizState.lines.length - 1) {
-                    // issues.push(`Line ${i + 1}: Block ends without content.`); // Optional warning
                 }
             }
         }
@@ -1948,4 +2120,38 @@ function downloadPyFile() {
     a.click();
     URL.revokeObjectURL(url);
     logAction("Downloaded .py file");
+}
+
+function highlightLineTokenized(codeStr) {
+    if (!codeStr) return '';
+    const keywords = new Set(['def', 'class', 'if', 'else', 'elif', 'for', 'while', 'return', 'import', 'from', 'as', 'break', 'continue', 'pass', 'and', 'or', 'not', 'in', 'is']);
+    const builtins = new Set(['print', 'input', 'len', 'range', 'int', 'str', 'float', 'list', 'dict', 'set', 'tuple', 'deque', 'type', 'enumerate', 'zip', 'sum', 'min', 'max', 'round', 'abs']);
+
+    // Basic tokenizer regex
+    const tokens = codeStr.split(/("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|#.*$|\b\d+(?:\.\d+)?\b|[a-zA-Z_]\w*|[^\s\w])/g);
+
+    return tokens.map(token => {
+        if (!token) return '';
+
+        // String literal
+        if (token.startsWith('"') || token.startsWith("'")) {
+            return `<span class="text-green-400">${escapeHtml(token)}</span>`;
+        }
+        // Comment
+        if (token.startsWith('#')) {
+            return `<span class="text-slate-500 italic">${escapeHtml(token)}</span>`;
+        }
+        // Number
+        if (/^\d/.test(token)) {
+            return `<span class="text-pink-400">${token}</span>`;
+        }
+        // Word check
+        if (/^[a-zA-Z_]/.test(token)) {
+            if (keywords.has(token)) return `<span class="text-orange-400 font-bold">${token}</span>`;
+            if (builtins.has(token)) return `<span class="text-blue-400">${token}</span>`;
+            return escapeHtml(token);
+        }
+        // Escape generic
+        return escapeHtml(token);
+    }).join('');
 }

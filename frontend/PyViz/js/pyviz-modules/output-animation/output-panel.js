@@ -126,17 +126,26 @@ export class OutputPanel {
     appendLine(text, type = "normal") {
         if (!this.contentArea) return;
 
-        const line = document.createElement("div");
-        line.textContent = text;
+        // Stream Output Handling
+        // If type is normal, we just append a Text Node or Span to the main area.
+        // If type is error/system, we wrap in a span with color.
+        // We do NOT create block display divs anymore to avoid double spacing with \n.
+
+        let span = document.createElement("span");
+        span.textContent = text;
 
         if (type === "error") {
-            line.style.color = "#f48771";
+            span.style.color = "#f48771";
+            // Ensure errors start on new line if previous didn't end with one?
+            // Actually stream errors usually just appear.
         } else if (type === "system") {
-            line.style.color = "#6a9955";
-            line.style.fontStyle = "italic";
+            span.style.color = "#6a9955";
+            span.style.fontStyle = "italic";
+            // System messages (like "READY") should probably be block or have explicit newlines.
+            span.style.display = 'block';
         }
 
-        this.contentArea.appendChild(line);
+        this.contentArea.appendChild(span);
         this.contentArea.scrollTop = this.contentArea.scrollHeight;
     }
 

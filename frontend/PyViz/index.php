@@ -120,6 +120,8 @@
                             <button id="pyviz-btn-mic" onclick="toggleVoiceRecording()" class="text-xs text-slate-400 hover:text-white border border-slate-700/50 rounded px-2 py-1 transition-all" title="Voice to Code (<?php echo $maxSeconds; ?>s)">
                                 <i class="fa-solid fa-microphone"></i>
                             </button>
+                            <button id="pyviz-btn-import" onclick="document.getElementById('pv-file-import').click()" class="text-xs text-green-400 hover:text-green-300 ml-1" title="Import .py File"><i class="fa-solid fa-file-import mr-1"></i>Imp</button>
+                            <input type="file" id="pv-file-import" accept=".py" class="hidden" onchange="importPyFile(this)">
                             <button id="pyviz-btn-download" class="text-xs text-blue-400 hover:text-blue-300"><i class="fa-solid fa-download mr-1"></i>.py</button>
                         </div>
                     </div>

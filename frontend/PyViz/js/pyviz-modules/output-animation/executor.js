@@ -47,49 +47,52 @@ export class Executor {
         this.outputPanel.clear();
         this.outputPanel.setStatus("RUNNING...");
 
-        this.loader.run(code, {
-            delay: delay,
-            onLine: (lineno) => {
-                // Determine highlighting strategy.
-                // Assuming `highlightCallback` is provided by index.js which knows about the editor.
-                if (highlightCallback) highlightCallback(lineno);
-            },
-            onPrint: (text) => {
-                this.outputPanel.appendLine(text);
-            },
-            onError: (err) => {
-                this.outputPanel.appendLine(err, "error");
-                this.outputPanel.setStatus("ERROR");
-                this.isExecuting = false;
-            },
-            onInput: (prompt) => {
-                const sid = this.loader.currentSessionId;
-                if (!sid) {
-                    console.error("No session ID for input");
-                    return;
-                }
-
-                this.inputHandler.requestInput(prompt).then(val => {
-                    // Determine Backend URL
-                    let baseUrl = window.location.origin + window.location.pathname;
-                    if (baseUrl.includes('/frontend/')) {
-                        baseUrl = baseUrl.split('/frontend/')[0];
-                    } else if (baseUrl.endsWith('/')) {
-                        baseUrl = baseUrl.slice(0, -1);
+        // Small delay to allow UI to paint the clear operation before heavy worker usage
+        setTimeout(() => {
+            this.loader.run(code, {
+                delay: delay,
+                onLine: (lineno) => {
+                    // Determine highlighting strategy.
+                    // Assuming `highlightCallback` is provided by index.js which knows about the editor.
+                    if (highlightCallback) highlightCallback(lineno);
+                },
+                onPrint: (text) => {
+                    this.outputPanel.appendLine(text);
+                },
+                onError: (err) => {
+                    this.outputPanel.appendLine(err, "error");
+                    this.outputPanel.setStatus("ERROR");
+                    this.isExecuting = false;
+                },
+                onInput: (prompt) => {
+                    const sid = this.loader.currentSessionId;
+                    if (!sid) {
+                        console.error("No session ID for input");
+                        return;
                     }
-                    const ioUrl = `${baseUrl}/backend/io_proxy.php`;
 
-                    // Write to Proxy
-                    fetch(`${ioUrl}?action=write&id=${sid}&val=${encodeURIComponent(val)}`)
-                        .then(() => console.log("Input submitted to proxy"))
-                        .catch(e => console.error("Input proxy failed", e));
-                });
-            },
-            onFinished: () => {
-                this.isExecuting = false;
-                this.outputPanel.setStatus("FINISHED");
-            }
-        });
+                    this.inputHandler.requestInput(prompt).then(val => {
+                        // Determine Backend URL
+                        let baseUrl = window.location.origin + window.location.pathname;
+                        if (baseUrl.includes('/frontend/')) {
+                            baseUrl = baseUrl.split('/frontend/')[0];
+                        } else if (baseUrl.endsWith('/')) {
+                            baseUrl = baseUrl.slice(0, -1);
+                        }
+                        const ioUrl = `${baseUrl}/backend/io_proxy.php`;
+
+                        // Write to Proxy
+                        fetch(`${ioUrl}?action=write&id=${sid}&val=${encodeURIComponent(val)}`)
+                            .then(() => console.log("Input submitted to proxy"))
+                            .catch(e => console.error("Input proxy failed", e));
+                    });
+                },
+                onFinished: () => {
+                    this.isExecuting = false;
+                    this.outputPanel.setStatus("FINISHED");
+                }
+            });
+        }, 50);
     }
     stop() {
         if (this.isExecuting) {

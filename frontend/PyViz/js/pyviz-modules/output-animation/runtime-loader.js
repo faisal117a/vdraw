@@ -84,10 +84,45 @@ async function loadPyodideRuntime() {
 import sys
 import time
 import js
+import builtins
 from js import XMLHttpRequest
 
+# --- Helper Classes (Defined in Init) ---
+class Unbuffered(object):
+   def __init__(self, stream):
+       self.stream = stream
+   def write(self, data):
+       self.stream.write(data)
+       self.stream.flush()
+   def writelines(self, datas):
+       self.stream.writelines(datas)
+       self.stream.flush()
+   def __getattr__(self, attr):
+       return getattr(self.stream, attr)
+
+sys.stdout = Unbuffered(sys.stdout)
+
+_real_import = builtins.__import__
+class MockLib:
+    def __init__(self, name):
+        self._name = name
+    def __getattr__(self, attr):
+        raise ImportError(f"Library '{self._name}' is not supported in this demo environment.")
+    def __call__(self, *args, **kwargs):
+        raise ImportError(f"Library '{self._name}' is not supported in this demo environment.")
+
+def _safe_import(name, globals=None, locals=None, fromlist=(), level=0):
+    BLOCK_LIST = ['numpy', 'pandas', 'scipy', 'matplotlib', 'sklearn', 'tensorflow', 'pytorch', 'cv2', 'requests']
+    base = name.split('.')[0]
+    if base in BLOCK_LIST:
+         return MockLib(name)
+    return _real_import(name, globals, locals, fromlist, level)
+
+builtins.__import__ = _safe_import
+
 def _trace_dispatch(frame, event, arg):
-    if event == 'line':
+    # ONLY trace user code, ignore helpers/wrappers
+    if event == 'line' and frame.f_code.co_filename == '<user_code>':
         js.sendPythonMessage("trace_line", js.Object.fromEntries([("lineno", frame.f_lineno)]))
         try:
             delay = float(js.global_delay)
@@ -140,8 +175,10 @@ sys.settrace(None)
 def _user_wrapper():
     sys.settrace(_trace_dispatch)
     try:
+        # Compile with specific filename to target tracer
         src = \"\"\"\${code.replace(/\\\\/g, '\\\\\\\\').replace(/"/g, '\\\\"')}\"\"\"
-        exec(src, globals())
+        code_obj = compile(src, '<user_code>', 'exec')
+        exec(code_obj, globals())
     except Exception as e:
         print(f"Error: {e}")
     finally:

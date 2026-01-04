@@ -80,12 +80,6 @@ window.initPyViz = function () {
     pyvizDom.aiMsg = document.getElementById('pyviz-ai-message');
 
     // Stats
-    pyvizDom.statLines = document.getElementById('pyviz-stat-lines');
-    pyvizDom.statVars = document.getElementById('pyviz-stat-vars');
-    pyvizDom.statFuncs = document.getElementById('pyviz-stat-funcs');
-    pyvizDom.statLoops = document.getElementById('pyviz-stat-loops');
-    pyvizDom.statConds = document.getElementById('pyviz-stat-conds');
-    pyvizDom.statImports = document.getElementById('pyviz-stat-imports');
     pyvizDom.logList = document.getElementById('pyviz-log-list');
 
     // Controls
@@ -166,6 +160,7 @@ function renderPyFuncBuilder(container) {
                         <option value="builtin">Built-in Function</option>
                         <option value="call">Function Call (User)</option>
                         <option value="return">Return Statement</option>
+                        <option value="main">main() function</option>
                      </select>
                 </div>
 
@@ -248,6 +243,14 @@ function renderPyFuncBuilder(container) {
                         Insert Return
                     </button>
                 </div>
+
+                <!-- 5. Main Function Mode -->
+                <div id="pv-func-main-ui" class="space-y-3 hidden">
+                    <p class="text-[10px] text-slate-400">Inserts a standard <code>def main():</code> block with entry point check.</p>
+                    <button onclick="createMainFunc()" class="w-full py-2 bg-pink-600 hover:bg-pink-500 text-white text-xs font-bold rounded transition-colors">
+                        Insert Main Function
+                    </button>
+                </div>
             </div>
         </div>
     `;
@@ -262,11 +265,13 @@ window.toggleFuncMode = function () {
     const biUI = document.getElementById('pv-func-builtin-ui');
     const callUI = document.getElementById('pv-func-call-ui');
     const retUI = document.getElementById('pv-func-return-ui');
+    const mainUI = document.getElementById('pv-func-main-ui');
 
     defUI.classList.add('hidden');
     biUI.classList.add('hidden');
     callUI.classList.add('hidden');
     retUI.classList.add('hidden');
+    if (mainUI) mainUI.classList.add('hidden');
 
     if (mode === 'define') {
         defUI.classList.remove('hidden');
@@ -278,7 +283,30 @@ window.toggleFuncMode = function () {
         refreshUserFuncs();
     } else if (mode === 'return') {
         retUI.classList.remove('hidden');
+    } else if (mode === 'main') {
+        if (mainUI) mainUI.classList.remove('hidden');
     }
+}
+
+window.createMainFunc = function () {
+    // 1. def main():
+    // User might be nested, but main usually goes at root or after everything.
+    // If we want it at root, we might force indent 0?
+    // Let's assume user knows where to put it or we let regular flow handle it.
+    // Ideally main() is top level.
+
+    // Check if we can deduce indentation from context? 
+    // Usually main is defined at Module level.
+
+    addLine({ code: 'def main():', type: 'logic', indent: 0 });
+    // Next line indented automatically by addLine if previous ends with :
+    addLine({ code: 'print("This is a main function")', type: 'func' });
+
+    // Add spacer line? Optional.
+
+    // if __name__ ...
+    addLine({ code: 'if __name__ == "__main__":', type: 'logic', indent: 0 });
+    addLine({ code: 'main()', type: 'func' });
 }
 
 window.createReturnStmt = function () {
@@ -1607,35 +1635,209 @@ function createDS() {
 }
 
 // Updated Stats Logic
-function updateStats() { // Recalc
-    const lines = pyvizState.lines.length;
+// Comprehensive Stats Logic
+function updateStats() {
+    const rawLines = pyvizState.lines.map(l => l.code.trim());
 
-    // Unique Variables (from 'var' and 'ds' types)
-    const uniqueVars = new Set(
-        pyvizState.lines
-            .filter(l => (l.type === 'var' || l.type === 'ds'))
-            .map(l => l.meta?.name)
-            .filter(n => n)
-    ).size;
+    const stats = {
+        'Lines': rawLines.length,
+        'Variables': new Set(pyvizState.lines.filter(l => (l.type === 'var' || l.type === 'ds')).map(l => l.meta?.name).filter(n => n)).size,
+        'Constants': 0, // Placeholder: Hard to track without AST (maybe literals in var assignments)
+        'User Funcs': rawLines.filter(l => l.startsWith('def ')).length,
+        'Built-in Funcs': 0, // Heuristic below
+        'Func Args': 0, // Args passed in calls
+        'Func Params': 0, // Params in definitions
+        'Lists': 0,
+        'Queues': 0,
+        'Stacks': 0,
+        'Other DS': 0,
+        'Packages': rawLines.filter(l => l.startsWith('import ') || l.startsWith('from ')).length,
+        'If': 0,
+        'If-Else': 0,
+        'If-Elif-Else': 0,
+        'For Loops': rawLines.filter(l => l.startsWith('for ')).length,
+        'While Loops': rawLines.filter(l => l.startsWith('while ')).length,
+        'Single Comments': rawLines.filter(l => l.startsWith('#')).length,
+        'Multi Comments': rawLines.filter(l => l.startsWith('"""') || l.startsWith("'''")).length,
+        'Inputs': 0,
+        'Outputs (Print)': 0,
+        'Conditions': 0, // Logical chunks
+        'Relational Ops': 0,
+        'Logical Ops': 0
+    };
 
-    // Functions: Split user-defined vs built-ins is hard without 'def'. 
-    // Current 'func' type is just print/input.
-    // Let's count 'def' keywords as user functions, and 'func' items as Built-in Calls + 'def' lines.
+    // --- Detail Parsing ---
 
-    const defs = pyvizState.lines.filter(l => l.code.startsWith('def ')).length;
-    const calls = pyvizState.lines.filter(l => l.type === 'func').length; // print/input mainly
+    // 1. Control Flow Chains (If / If-Else / If-Elif-Else)
+    // We scan indent levels to find chains. This is tricky on a flat list but we approximate.
+    // 'if' starts a chain. If we see 'else' at same indent, it's connected.
+    // Simplifying: Count raw keywords first.
+    let ifCount = 0;
+    let elifCount = 0;
+    let elseCount = 0;
 
-    const loops = pyvizState.lines.filter(l => l.code.match(/\b(for|while)\b/)).length;
-    const conds = pyvizState.lines.filter(l => l.code.match(/\b(if|elif|else)\b/)).length;
-    const imports = pyvizState.lines.filter(l => l.type === 'import').length;
+    rawLines.forEach(l => {
+        if (l.startsWith('if ')) ifCount++;
+        if (l.startsWith('elif ')) elifCount++;
+        if (l.startsWith('else:')) elseCount++;
+    });
 
-    if (pyvizDom.statLines) pyvizDom.statLines.textContent = lines;
-    if (pyvizDom.statVars) pyvizDom.statVars.textContent = uniqueVars; // Fixed
-    if (pyvizDom.statFuncs) pyvizDom.statFuncs.textContent = `${defs} Def / ${calls} Calls`; // Split
+    // Approximate Structure Counts based on counts (not perfect matching)
+    // Every 'elif' implies it belongs to an If-Elif-Else or If-Elif structure.
+    // Every 'else' implies If-Else or If-[Elif]-Else.
+    // We can define:
+    // Simple If = Total If - (those that have else/elif) -> Hard to knowing exact linkage.
+    // Let's just report the Raw Counts of the structures as requested?
+    // User asked "Total if", "total ifelse"... this implies structural identification.
 
-    if (pyvizDom.statLoops) pyvizDom.statLoops.textContent = loops;
-    if (pyvizDom.statConds) pyvizDom.statConds.textContent = conds;
-    if (pyvizDom.statImports) pyvizDom.statImports.textContent = imports;
+    // Heuristic:
+    // Iterate lines. If 'if' found at indent X, look ahead for 'elif'/'else' at indent X.
+    for (let i = 0; i < pyvizState.lines.length; i++) {
+        const line = pyvizState.lines[i];
+        if (line.code.trim().startsWith('if ')) {
+            const indent = line.indent;
+            let hasElif = false;
+            let hasElse = false;
+
+            // Scan forward
+            for (let j = i + 1; j < pyvizState.lines.length; j++) {
+                const searchL = pyvizState.lines[j];
+                if (searchL.indent < indent) break; // Block ended
+
+                if (searchL.indent === indent) {
+                    const sCode = searchL.code.trim();
+                    if (sCode.startsWith('elif ')) hasElif = true;
+                    if (sCode.startsWith('else:')) {
+                        hasElse = true;
+                        break; // else ends the chain
+                    }
+                }
+            }
+
+            if (hasElif || hasElse) {
+                if (hasElif) stats['If-Elif-Else']++;
+                else stats['If-Else']++;
+            } else {
+                stats['If']++;
+            }
+        }
+    }
+
+    // 2. Data Structures
+    // ... [existing] ...
+
+    // 2b. Packages (Split Standard vs Limit)
+    const stdLibs = new Set(['math', 'random', 'datetime', 'time', 'sys', 'os', 're', 'string', 'collections', 'itertools', 'functools', 'statistics', 'json', 'builtins', 'platform', 'io', 'typing']);
+    let packCount = 0; // Standard
+    let libCount = 0;  // External
+
+    rawLines.forEach(l => {
+        if (l.startsWith('import ') || l.startsWith('from ')) {
+            // Extract module name
+            // import numpy as np -> numpy
+            // from math import sqrt -> math
+            let mod = '';
+            if (l.startsWith('import ')) {
+                mod = l.split(' ')[1];
+            } else {
+                mod = l.split(' ')[1];
+            }
+            // Clean 'import numpy as ...' -> numpy
+            mod = mod.split('.')[0].trim();
+
+            if (stdLibs.has(mod)) packCount++;
+            else libCount++;
+        }
+    });
+    stats['Pack/Lib'] = `${packCount} / ${libCount}`;
+
+    // 3. Operators & I/O
+    rawLines.forEach(l => {
+        // I/O
+        if (l.includes('input(')) stats['Inputs']++;
+        if (l.startsWith('print(')) stats['Outputs (Print)']++;
+
+        // Built-ins (approximate calls)
+        const callMatch = l.match(/\b([a-zA-Z_]\w*)\(/g);
+        if (callMatch) {
+            callMatch.forEach(m => {
+                const name = m.slice(0, -1);
+                // Simple list of common builtins or non-def calls
+                if (!l.startsWith('def ') && !l.startsWith('class ')) {
+                    stats['Built-in Funcs']++; // We count all calls as built-in usage for now unless matched against user defs
+                    // Ideally we filter against known Defs
+                }
+            });
+        }
+
+        // Args (commas in calls)
+        if (l.includes('(') && !l.startsWith('def ') && !l.startsWith('class ')) {
+            // Count commas inside parens roughly
+            const inside = l.match(/\((.*)\)/);
+            if (inside && inside[1].trim()) {
+                stats['Func Args'] += inside[1].split(',').length;
+            }
+        }
+
+        // Params (commas in defs)
+        if (l.startsWith('def ')) {
+            const inside = l.match(/\((.*)\)/);
+            if (inside && inside[1].trim()) {
+                stats['Func Params'] += inside[1].split(',').length;
+            }
+        }
+
+        // Operators
+        const relOps = (l.match(/(==|!=|<=|>=|<|>)/g) || []).length;
+        // Ignore < > in HTML/XML strings? Unlikely in basic python.
+        // Also ignore arrows ->
+        if (!l.includes('->')) stats['Relational Ops'] += relOps;
+
+        const logOps = (l.match(/\b(and|or|not)\b/g) || []).length;
+        if (!l.startsWith('#') && !l.startsWith('import')) {
+            stats['Logical Ops'] += logOps;
+        }
+
+        // Conditions (Total boolean expressions? Approximation: RelOps + LogOps + Boolean literals)
+        // User asked for "Total conditions". 
+        // Maybe count `if`, `elif`, `while` lines?
+        if (l.startsWith('if ') || l.startsWith('elif ') || l.startsWith('while ')) {
+            stats['Conditions']++;
+        }
+    });
+
+    // Sub-adjust User Func Calls
+    // stats['Built-in Funcs'] currently counts ALL calls. We should subtract User Func Calls.
+    // Hard to trace exactly without symbol table.
+
+    // Render
+    const grid = document.getElementById('pyviz-stats-grid');
+    if (!grid) return;
+
+    // Sort keys based on user request order approximate
+    const order = [
+        'Lines', 'Variables', 'Constants',
+        'Func Args', 'Func Params', 'User Funcs',
+        'Built-in Funcs', 'Lists', 'Queues',
+        'Stacks', 'Other DS', 'Pack/Lib',
+        'If', 'If-Else', 'If-Elif-Else',
+        'For Loops', 'While Loops', 'Single Comments',
+        'Multi Comments', 'Inputs', 'Outputs (Print)',
+        'Conditions', 'Relational Ops', 'Logical Ops'
+    ];
+
+    let html = '';
+    order.forEach(key => {
+        let val = stats[key] || 0;
+        html += `
+            <div class="flex flex-col bg-slate-800/50 rounded border border-slate-700/50 p-2">
+                <span class="text-[10px] uppercase font-bold text-slate-300 truncate" title="${key}">${key}</span>
+                <span class="text-lg font-mono font-bold text-blue-400 text-right">${val}</span>
+            </div>
+        `;
+    });
+
+    grid.innerHTML = html;
 }
 
 function changeFontSize(delta) {

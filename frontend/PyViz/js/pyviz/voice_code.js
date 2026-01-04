@@ -46,13 +46,14 @@ window.toggleVoiceRecording = async function () {
             pvMediaRecorder.start();
             pvIsRecording = true;
 
-            // Auto stop after 60s (as per user config)
+            // Auto stop after configured time or default 60s
+            const maxDuration = (window.PV_CONFIG?.MAX_AUDIO_SECONDS || 60) * 1000;
             setTimeout(() => {
                 if (pvIsRecording && pvMediaRecorder.state === 'recording') {
                     pvMediaRecorder.stop();
                     pvIsRecording = false;
                 }
-            }, 60000);
+            }, maxDuration);
 
             // UI Update
             if (btn) {

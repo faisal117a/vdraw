@@ -29,6 +29,28 @@
         .custom-scrollbar::-webkit-scrollbar { width: 6px; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 3px; }
     </style>
+    <?php
+    // Simple Environment Loader
+    $envPath = __DIR__ . '/../../.env';
+    $maxSeconds = 60; // Default
+    if (file_exists($envPath)) {
+        $lines = file($envPath, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+        foreach ($lines as $line) {
+            if (strpos(trim($line), '#') === 0) continue;
+            list($name, $value) = explode('=', $line, 2);
+            $name = trim($name);
+            $value = trim($value);
+            if ($name === 'MAX_AUDIO_SECONDS') {
+                $maxSeconds = (int)$value;
+            }
+        }
+    }
+    ?>
+    <script>
+        window.PV_CONFIG = {
+            MAX_AUDIO_SECONDS: <?php echo $maxSeconds; ?>
+        };
+    </script>
 </head>
 <body class="h-screen flex overflow-hidden text-slate-100 bg-slate-950">
 
@@ -95,7 +117,7 @@
                             </div>
 
                             <button id="pyviz-btn-clear" class="text-xs text-red-400 hover:text-red-300"><i class="fa-solid fa-trash mr-1"></i>Clear</button>
-                            <button id="pyviz-btn-mic" onclick="toggleVoiceRecording()" class="text-xs text-slate-400 hover:text-white border border-slate-700/50 rounded px-2 py-1 transition-all" title="Voice to Code (60s)">
+                            <button id="pyviz-btn-mic" onclick="toggleVoiceRecording()" class="text-xs text-slate-400 hover:text-white border border-slate-700/50 rounded px-2 py-1 transition-all" title="Voice to Code (<?php echo $maxSeconds; ?>s)">
                                 <i class="fa-solid fa-microphone"></i>
                             </button>
                             <button id="pyviz-btn-download" class="text-xs text-blue-400 hover:text-blue-300"><i class="fa-solid fa-download mr-1"></i>.py</button>
@@ -143,13 +165,9 @@
                         <!-- TAB 1: Inspector -->
                         <div id="tab-content-inspector" class="absolute inset-0 overflow-y-auto custom-scrollbar p-4">
                             <!-- Stats Summary -->
-                            <div class="space-y-3 mb-6">
-                                <div class="flex justify-between items-center border-b border-slate-700/50 pb-2"><span class="text-sm font-bold text-slate-300">Lines</span><span id="pyviz-stat-lines" class="text-blue-400 font-bold font-mono text-lg">0</span></div>
-                                <div class="flex justify-between items-center border-b border-slate-700/50 pb-2"><span class="text-sm font-bold text-slate-300">Variables</span><span id="pyviz-stat-vars" class="text-blue-400 font-bold font-mono text-lg">0</span></div>
-                                <div class="flex justify-between items-center border-b border-slate-700/50 pb-2"><span class="text-sm font-bold text-slate-300">Functions</span><span id="pyviz-stat-funcs" class="text-blue-400 font-bold font-mono text-lg">0</span></div>
-                                <div class="flex justify-between items-center border-b border-slate-700/50 pb-2"><span class="text-sm font-bold text-slate-300">Loops</span><span id="pyviz-stat-loops" class="text-blue-400 font-bold font-mono text-lg">0</span></div>
-                                <div class="flex justify-between items-center border-b border-slate-700/50 pb-2"><span class="text-sm font-bold text-slate-300">Conditionals</span><span id="pyviz-stat-conds" class="text-blue-400 font-bold font-mono text-lg">0</span></div>
-                                <div class="flex justify-between items-center border-b border-slate-700/50 pb-2"><span class="text-sm font-bold text-slate-300">Imports</span><span id="pyviz-stat-imports" class="text-blue-400 font-bold font-mono text-lg">0</span></div>
+                            <!-- Stats Summary Grid -->
+                            <div id="pyviz-stats-grid" class="grid grid-cols-4 gap-2 mb-6">
+                                <!-- Populated via JS -->
                             </div>
 
                             <h3 class="text-sm font-bold text-yellow-500 uppercase tracking-wider mb-2 mt-4 border-b border-slate-700 pb-2">Action Log</h3>

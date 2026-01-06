@@ -50,14 +50,16 @@ class OutputAnimationModule {
             // Run Button
             const btn = document.createElement("button");
             btn.id = CONFIG.BUTTON_ID;
-            btn.innerHTML = '<i class="fa-solid fa-play mr-1"></i> Run';
-            btn.className = "text-xs text-green-400 hover:text-green-300 font-bold";
+            btn.innerHTML = '<i class="fa-solid fa-play"></i>';
+            btn.className = "px-2 py-1 text-xs text-green-400 hover:text-green-300 font-bold border border-green-900/30 rounded transition-all";
+            btn.title = "Run Code";
             btn.onclick = () => this.startAnimation();
 
             // Stop Button (New)
             const stopBtn = document.createElement("button");
-            stopBtn.innerHTML = '<i class="fa-solid fa-stop mr-1"></i> Stop';
-            stopBtn.className = "text-xs text-red-500 hover:text-red-400 font-bold ml-2";
+            stopBtn.innerHTML = '<i class="fa-solid fa-stop"></i>';
+            stopBtn.className = "px-2 py-1 text-xs text-red-500 hover:text-red-400 font-bold ml-2 border border-red-900/30 rounded transition-all";
+            stopBtn.title = "Stop Execution";
             stopBtn.onclick = () => this.stopAnimation();
 
             container.appendChild(select);

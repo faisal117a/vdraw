@@ -83,14 +83,16 @@ window.initPyViz = function () {
     pyvizDom.logList = document.getElementById('pyviz-log-list');
 
     // Controls
-    document.getElementById('pyviz-btn-clear')?.addEventListener('click', clearPyViz);
+    // document.getElementById('pyviz-btn-clear')?.addEventListener('click', clearPyViz);
     document.getElementById('pyviz-btn-check-ai')?.addEventListener('click', runAICheck);
-    document.getElementById('pyviz-btn-download')?.addEventListener('click', downloadPyFile);
+    // document.getElementById('pyviz-btn-download')?.addEventListener('click', downloadPyFile);
 
     // Toolbox Tabs
     const catButtons = document.querySelectorAll('#pyviz-toolbox-cats button');
     catButtons.forEach(btn => {
-        btn.onclick = () => loadToolbox(btn.dataset.cat);
+        if (btn.dataset.cat) {
+            btn.onclick = () => loadToolbox(btn.dataset.cat);
+        }
     });
 
     // Initial Load
@@ -1753,6 +1755,69 @@ function createDS() {
 function updateStats() {
     const rawLines = pyvizState.lines.map(l => l.code.trim());
 
+    // Robust Counter Logic (State Machine)
+    let forCount = 0;
+    let whileCount = 0;
+    let ifCount = 0;
+    let elifCount = 0;
+    let elseCount = 0;
+
+    let multiStringState = null;
+
+    rawLines.forEach(line => {
+        let text = line; // Already trimmed
+        if (!text) return;
+
+        // Multi-line String logic
+        if (multiStringState) {
+            if (text.includes(multiStringState)) {
+                // Found closing delimiter
+                const parts = text.split(multiStringState);
+                if (parts.length > 1) {
+                    multiStringState = null;
+                    text = parts.slice(1).join(multiStringState).trim();
+                } else return; // Consumed
+            } else return; // Consumed
+        }
+
+        if (!multiStringState) {
+            // Check for start of multi-line
+            if (text.includes('"""')) {
+                const cnt = (text.match(/"""/g) || []).length;
+                if (cnt % 2 !== 0) {
+                    multiStringState = '"""';
+                    text = text.split('"""')[0];
+                } else {
+                    text = text.replace(/""".*?"""/g, '');
+                }
+            } else if (text.includes("'''")) {
+                const cnt = (text.match(/'''/g) || []).length;
+                if (cnt % 2 !== 0) {
+                    multiStringState = "'''";
+                    text = text.split("'''")[0];
+                } else {
+                    text = text.replace(/'''.*?'''/g, '');
+                }
+            }
+        }
+
+        // Strip Basic Strings and Comments
+        // 1. Strip escaped
+        let safe = text.replace(/\\./g, '__');
+        // 2. Strip single/double quoted strings
+        safe = safe.replace(/"[^"]*"/g, '').replace(/'[^']*'/g, '');
+        // 3. Strip comment
+        if (safe.includes('#')) safe = safe.split('#')[0];
+
+        safe = safe.trim();
+
+        if (safe.startsWith('for ') || safe.startsWith('async for ')) forCount++;
+        else if (safe.startsWith('while ')) whileCount++;
+        else if (safe.startsWith('if ')) ifCount++;
+        else if (safe.startsWith('elif ')) elifCount++;
+        else if (safe.startsWith('else:')) elseCount++;
+    });
+
     const stats = {
         'Lines': rawLines.length,
         'Variables': new Set(pyvizState.lines.filter(l => (l.type === 'var' || l.type === 'ds')).map(l => l.meta?.name).filter(n => n)).size,
@@ -1769,8 +1834,8 @@ function updateStats() {
         'If': 0,
         'If-Else': 0,
         'If-Elif-Else': 0,
-        'For Loops': rawLines.filter(l => l.startsWith('for ')).length,
-        'While Loops': rawLines.filter(l => l.startsWith('while ')).length,
+        'For Loops': forCount,
+        'While Loops': whileCount,
         'Single Comments': rawLines.filter(l => l.startsWith('#')).length,
         'Multi Comments': rawLines.filter(l => l.startsWith('"""') || l.startsWith("'''")).length,
         'Inputs': 0,
@@ -1786,15 +1851,7 @@ function updateStats() {
     // We scan indent levels to find chains. This is tricky on a flat list but we approximate.
     // 'if' starts a chain. If we see 'else' at same indent, it's connected.
     // Simplifying: Count raw keywords first.
-    let ifCount = 0;
-    let elifCount = 0;
-    let elseCount = 0;
-
-    rawLines.forEach(l => {
-        if (l.startsWith('if ')) ifCount++;
-        if (l.startsWith('elif ')) elifCount++;
-        if (l.startsWith('else:')) elseCount++;
-    });
+    // Counts already calculated above (ifCount, elifCount, elseCount)
 
     // Approximate Structure Counts based on counts (not perfect matching)
     // Every 'elif' implies it belongs to an If-Elif-Else or If-Elif structure.
@@ -2128,17 +2185,9 @@ function runAICheck() {
     }, 800);
 }
 
-function downloadPyFile() {
-    const content = pyvizState.lines.map(l => '    '.repeat(l.indent) + l.code).join('\n');
-    const blob = new Blob([content], { type: 'text/x-python' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'main.py';
-    a.click();
-    URL.revokeObjectURL(url);
-    logAction("Downloaded .py file");
-}
+// --- Global Action Functions (Exposed for onclick) ---
+
+// [Legacy functions removed to prevent conflict with end-of-file overrides]
 
 function highlightLineTokenized(codeStr) {
     if (!codeStr) return '';
@@ -2265,8 +2314,11 @@ function refreshDryRunVarsList() {
 
     const selected = new Set(pyvizState.dryRunVars || []);
 
+    // Explicitly exclude print kwargs that get picked up by naive parser
+    const exclude = new Set(['end', 'sep', 'file', 'flush']);
+
     const options = Array.from(candidates)
-        .filter(c => !selected.has(c))
+        .filter(c => !selected.has(c) && !exclude.has(c))
         .sort();
 
     if (options.length === 0) {
@@ -2384,3 +2436,105 @@ window.updateDryRunTable = function (lineno, locals) {
     // Auto scroll
     row.scrollIntoView({ behavior: 'smooth', block: 'end' });
 }
+
+// ==========================================
+// FIXES: Toast Notifications & Robust Actions
+// ==========================================
+
+window.showToast = function (msg, type = 'info') {
+    const container = document.getElementById('pv-toast-container') || createToastContainer();
+    const toast = document.createElement('div');
+
+    let colors = "border-blue-500/50 bg-slate-800 text-blue-400";
+    let icon = "fa-circle-info";
+    if (type === 'success') { colors = "border-green-500/50 bg-slate-800 text-green-400"; icon = "fa-check-circle"; }
+    else if (type === 'error') { colors = "border-red-500/50 bg-slate-800 text-red-400"; icon = "fa-circle-exclamation"; }
+
+    toast.className = `flex items-center gap-3 p-4 rounded-lg border shadow-2xl backdrop-blur-md transform transition-all duration-300 animate-slide-in-right ${colors} mb-3 min-w-[300px] z-[9999]`;
+    toast.innerHTML = `
+        <i class="fa-solid ${icon} text-lg"></i>
+        <div class="flex-1 text-sm font-semibold text-slate-200">${msg}</div>
+    `;
+
+    container.appendChild(toast);
+
+    // Animate In
+    requestAnimationFrame(() => {
+        toast.style.transform = "translateX(0)";
+        toast.style.opacity = "1";
+    });
+
+    // Remove after 3s
+    setTimeout(() => {
+        toast.style.transform = "translateX(100%)";
+        toast.style.opacity = "0";
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+}
+
+function createToastContainer() {
+    const div = document.createElement('div');
+    div.id = 'pv-toast-container';
+    div.className = "fixed bottom-5 right-5 z-[9999] flex flex-col items-end pointer-events-none";
+    div.style.pointerEvents = "none";
+    // Children have pointer events by default
+    document.body.appendChild(div);
+    return div;
+}
+
+window.showConfirm = function (msg, onYes) {
+    const div = document.createElement('div');
+    div.className = "fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-sm animate-fade-in";
+    div.innerHTML = `
+        <div class="bg-slate-900 border border-slate-700/50 p-6 rounded-xl shadow-2xl max-w-sm w-full transform scale-100 ring-1 ring-white/10">
+            <h3 class="text-white font-bold text-lg mb-4 flex items-center gap-2">
+                <i class="fa-solid fa-triangle-exclamation text-yellow-500"></i> Confirmation
+            </h3>
+            <p class="text-slate-300 mb-6 text-sm leading-relaxed">${msg}</p>
+            <div class="flex justify-end gap-3">
+                <button id="confirm-no" class="px-4 py-2 text-slate-400 hover:text-white text-sm font-bold bg-slate-800 hover:bg-slate-700 rounded transition-colors border border-slate-700">Cancel</button>
+                <button id="confirm-yes" class="px-4 py-2 bg-red-600 hover:bg-red-500 text-white text-sm font-bold rounded shadow-lg transition-colors border border-red-500/50">Yes, Proceed</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(div);
+
+    const cleanup = () => div.remove();
+    div.querySelector('#confirm-no').onclick = cleanup;
+    div.querySelector('#confirm-yes').onclick = () => { cleanup(); onYes(); };
+}
+
+// Override Native Alert with Toast
+window.originalAlert = window.alert;
+window.alert = function (msg) {
+    showToast(msg, 'info');
+    console.log("[PyViz Alert Overridden]:", msg);
+};
+
+// Redefine Actions with New UI
+window.clearPyViz = function () {
+    showConfirm("Are you sure you want to clear all code?", () => {
+        pyvizState.lines = [];
+        pyvizState.nextId = 1;
+        renderPyViz();
+        updateStats();
+        logAction("Cleared Playground");
+        showToast("Playground cleared successfully.", "success");
+    });
+};
+
+// RENAMED to avoid conflict
+// Restore Original Client-Side Download (Matches Live Site)
+window.downloadPyFile = function () {
+    const content = pyvizState.lines.map(l => '    '.repeat(l.indent) + l.code).join('\n');
+    const blob = new Blob([content], { type: 'text/x-python' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'main.py';
+    a.click(); // Direct click without appending
+    URL.revokeObjectURL(url);
+    logAction("Downloaded .py file");
+    showToast("Downloaded main.py", "success");
+}
+

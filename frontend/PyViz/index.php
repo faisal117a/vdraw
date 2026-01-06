@@ -1,3 +1,6 @@
+<?php
+// PHP handler removed (reverted to Client-Side)
+?>
 <!DOCTYPE html>
 <html lang="en" class="dark">
 <head>
@@ -28,6 +31,12 @@
         .glass-panel { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.05); }
         .custom-scrollbar::-webkit-scrollbar { width: 6px; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 3px; }
+        
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .animate-fade-in { animation: fadeIn 0.3s ease-out forwards; }
+        
+        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-slide-up { animation: slideUp 0.3s ease-out forwards; }
     </style>
     <?php
     // Simple Environment Loader
@@ -87,6 +96,7 @@
                         <button data-cat="imports" class="px-3 py-2 text-sm font-bold rounded bg-slate-700 text-slate-300 hover:text-white">Imports</button>
                         <button data-cat="py_funcs" class="px-3 py-2 text-sm font-bold rounded bg-slate-700 text-slate-300 hover:text-white">Py Funcs</button>
                         <button data-cat="dry_run" class="px-3 py-2 text-sm font-bold rounded bg-slate-700 text-slate-300 hover:text-white">Dry Run</button>
+                        <button id="pyviz-btn-my-programs" onclick="if(window.MyPrograms) MyPrograms.open()" class="px-3 py-2 text-sm font-bold rounded bg-slate-700 text-slate-300 hover:text-white border border-slate-600/50"><i class="fa-solid fa-book-open mr-1"></i> My Programs</button>
                     </div>
 
                     <!-- Toolbox Content Area (Dynamic) -->
@@ -117,13 +127,13 @@
                                 <button onclick="changeFontSize(1)" class="w-5 h-5 flex items-center justify-center text-slate-400 hover:text-white text-xs" title="Increase Font"><i class="fa-solid fa-plus"></i></button>
                             </div>
 
-                            <button id="pyviz-btn-clear" class="text-xs text-red-400 hover:text-red-300"><i class="fa-solid fa-trash mr-1"></i>Clear</button>
-                            <button id="pyviz-btn-mic" onclick="toggleVoiceRecording()" class="text-xs text-slate-400 hover:text-white border border-slate-700/50 rounded px-2 py-1 transition-all" title="Voice to Code (<?php echo $maxSeconds; ?>s)">
-                                <i class="fa-solid fa-microphone"></i>
+                            <button id="pyviz-btn-clear" onclick="clearPyViz()" title="Clear Code" class="flex items-center justify-center text-xs text-red-500 hover:text-red-400 font-bold border border-red-900/30 rounded px-2 py-1 transition-all"><i class="fa-solid fa-trash pointer-events-none"></i></button>
+                            <button id="pyviz-btn-mic" onclick="toggleVoiceRecording()" class="flex items-center justify-center text-xs text-slate-400 hover:text-white border border-slate-700/50 rounded px-2 py-1 transition-all" title="Voice to Code (<?php echo $maxSeconds; ?>s)">
+                                <i class="fa-solid fa-microphone pointer-events-none"></i>
                             </button>
-                            <button id="pyviz-btn-import" onclick="document.getElementById('pv-file-import').click()" class="text-xs text-green-400 hover:text-green-300 ml-1" title="Import .py File"><i class="fa-solid fa-file-import mr-1"></i>Imp</button>
+                            <button id="pyviz-btn-import" onclick="document.getElementById('pv-file-import').click()" class="flex items-center justify-center text-xs text-green-400 hover:text-green-300 ml-1 border border-green-900/30 rounded px-2 py-1 transition-all" title="Import .py File"><i class="fa-solid fa-file-import pointer-events-none"></i></button>
                             <input type="file" id="pv-file-import" accept=".py" class="hidden" onchange="importPyFile(this)">
-                            <button id="pyviz-btn-download" class="text-xs text-blue-400 hover:text-blue-300"><i class="fa-solid fa-download mr-1"></i>.py</button>
+                            <button id="pyviz-btn-download" onclick="downloadPyFile()" title="Download .py" class="flex items-center justify-center text-xs text-blue-400 hover:text-blue-300 ml-1 border border-blue-900/30 rounded px-2 py-1 transition-all"><i class="fa-solid fa-download pointer-events-none"></i></button>
                         </div>
                     </div>
 
@@ -192,14 +202,32 @@
     </main>
 
     <!-- App Scripts -->
-    <script src="js/pyviz/pyviz.js?v=7"></script>
-    <script src="js/pyviz/voice_code.js"></script>
-    <script>
-        // Force Init
-        document.addEventListener('DOMContentLoaded', () => {
-             if(typeof initPyViz === 'function') initPyViz();
-        });
-    </script>
-    <script type="module" src="js/pyviz-modules/output-animation/index.js"></script>
-</body>
-</html>
+    <script src="js/pyviz-modules/my-programs/my-programs-data.js?v=<?php echo time(); ?>"></script>
+    <script src="js/pyviz-modules/my-programs/my-programs.js?v=<?php echo time(); ?>"></script>
+    <script src="js/pyviz/pyviz.js?v=<?php echo time(); ?>"></script>
+    <script src="js/pyviz/voice_code.js?v=<?php echo time(); ?>"></script>
+     <script>
+         document.addEventListener('DOMContentLoaded', () => {
+              console.log("DOM loaded. Initializing modules...");
+              if(typeof initPyViz === 'function') {
+                  console.log("Initializing PyViz core...");
+                  initPyViz();
+              } else {
+                  console.error("initPyViz not found");
+              }
+ 
+              // Wait a tick for scripts to ensure parsing
+              setTimeout(() => {
+                  if(window.MyPrograms) {
+                      console.log("Initializing MyPrograms...");
+                      window.MyPrograms.init();
+                  } else {
+                      console.error("MyPrograms object not found on window");
+                  }
+              }, 100);
+         });
+     </script>
+     
+     <script type="module" src="js/pyviz-modules/output-animation/index.js?v=<?php echo time(); ?>"></script>
+ </body>
+ </html>

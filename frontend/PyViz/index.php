@@ -1,5 +1,5 @@
 <?php
-// PHP handler removed (reverted to Client-Side)
+// PHP logic moved to download.php
 ?>
 <!DOCTYPE html>
 <html lang="en" class="dark">

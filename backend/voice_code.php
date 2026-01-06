@@ -148,7 +148,7 @@ $data = [
         ["role" => "user", "content" => "Make python code for: " . $transcript]
     ],
     "temperature" => 0.1,
-    "max_tokens" => 60 // Keep it short per Phase 8 cost control
+    "max_tokens" => 300 // increased to allow full logic generation
 ];
 
 $ch = curl_init();

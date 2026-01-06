@@ -1244,25 +1244,29 @@ function moveLine(id, direction) {
 
 // 4. Logic Builder
 // Fix Logic Builder UI (Vertical stacking for small widths)
+// Fix Logic Builder UI (Advanced Complex Builder)
 function renderLogicLibrary(container) {
     container.innerHTML = `
         <div class="space-y-4">
-            <!-- New Condition Builder -->
+            <!-- Advanced Condition Builder -->
              <div class="bg-slate-800 p-3 rounded border border-slate-700 space-y-3">
                 <h4 class="text-xs font-bold text-orange-400 uppercase"><i class="fa-solid fa-code-branch mr-1"></i> If / Loop Builder</h4>
                 
-                <div class="grid grid-cols-1 gap-2">
-                     <div class="flex gap-2">
-                         <select id="pv-logic-kw" class="w-20 bg-slate-900 border border-slate-600 rounded p-1.5 text-xs text-white mobile-full">
-                            <option value="if">if</option>
-                            <option value="elif">elif</option>
-                            <option value="while">while</option>
-                         </select>
-                         <input type="text" id="pv-logic-exp1" class="flex-1 bg-slate-900 border border-slate-600 rounded p-1.5 text-xs text-white placeholder-slate-600" placeholder="Exp 1 (e.g. x)">
-                     </div>
-                     
-                     <div class="flex gap-2">
-                         <select id="pv-logic-op" class="w-16 bg-slate-900 border border-slate-600 rounded p-1.5 text-xs text-white font-mono mobile-full">
+                <!-- Keyword Select -->
+                <div class="flex items-center gap-2 mb-2">
+                    <span class="text-[10px] text-slate-500 font-bold uppercase">Statement:</span>
+                    <select id="pv-logic-kw" class="w-24 bg-slate-900 border border-slate-600 rounded p-1.5 text-xs text-white">
+                        <option value="if">if</option>
+                        <option value="elif">elif</option>
+                        <option value="while">while</option>
+                    </select>
+                </div>
+
+                <!-- Condition Staging Inputs -->
+                <div class="p-2 bg-slate-900 rounded border border-slate-700/50 space-y-2">
+                    <div class="flex gap-2">
+                         <input type="text" id="pv-logic-exp1" class="flex-1 min-w-0 bg-slate-800 border border-slate-600 rounded p-1.5 text-xs text-white placeholder-slate-500" placeholder="LHS">
+                         <select id="pv-logic-op" class="w-14 bg-slate-800 border border-slate-600 rounded p-1.5 text-xs text-white font-mono">
                             <option value="==">==</option>
                             <option value="!=">!=</option>
                             <option value=">">></option>
@@ -1271,22 +1275,35 @@ function renderLogicLibrary(container) {
                             <option value="<="><=</option>
                             <option value="in">in</option>
                          </select>
-                         <input type="text" id="pv-logic-exp2" class="flex-1 bg-slate-900 border border-slate-600 rounded p-1.5 text-xs text-white placeholder-slate-600" placeholder="Exp 2 (e.g. 10)">
-                     </div>
-                </div>
-                
-                <div class="flex items-center gap-2">
-                     <span class="text-[10px] text-slate-500 font-bold uppercase">Logical Op (Optional)</span>
-                     <select id="pv-logic-join" class="w-20 bg-slate-900 border border-slate-600 rounded p-1.5 text-xs text-white">
-                        <option value="">None</option>
-                        <option value="and">and</option>
-                        <option value="or">or</option>
-                     </select>
+                         <input type="text" id="pv-logic-exp2" class="flex-1 min-w-0 bg-slate-800 border border-slate-600 rounded p-1.5 text-xs text-white placeholder-slate-500" placeholder="RHS">
+                    </div>
+                    <button onclick="appendConditionPart()" class="w-full py-1 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded">Append Condition</button>
                 </div>
 
-                <div class="grid grid-cols-2 gap-2">
-                     <button onclick="createCondition()" class="py-2 bg-orange-600 hover:bg-orange-500 text-white text-xs font-bold rounded transition-colors">
-                        Add Condition
+                <!-- Logical Operators & Parentheses -->
+                <div class="flex gap-1 justify-center">
+                    <button onclick="appendToBuilder('(')" class="px-3 py-1 bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs font-bold rounded font-mono">(</button>
+                    <button onclick="appendToBuilder(')')" class="px-3 py-1 bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs font-bold rounded font-mono">)</button>
+                    <button onclick="appendToBuilder(' and ')" class="px-3 py-1 bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold rounded">AND</button>
+                    <button onclick="appendToBuilder(' or ')" class="px-3 py-1 bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold rounded">OR</button>
+                    <button onclick="appendToBuilder(' not ')" class="px-3 py-1 bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold rounded">NOT</button>
+                </div>
+
+                <!-- Final Expression Preview (Editable) -->
+                <div>
+                    <label class="text-[9px] text-slate-500 uppercase font-bold block mb-1">Current Expression:</label>
+                    <textarea id="pv-logic-builder-out" rows="2" class="w-full bg-slate-950 border border-slate-600 rounded p-2 text-xs text-green-400 font-mono resize-none focus:outline-none focus:border-blue-500" placeholder="Build or type logic here..."></textarea>
+                    
+                    <div class="flex justify-between mt-1">
+                        <button onclick="document.getElementById('pv-logic-builder-out').value=''" class="text-[10px] text-red-500 hover:text-red-400 underline">Clear</button>
+                        <span class="text-[10px] text-slate-600 italic">Editable</span>
+                    </div>
+                </div>
+
+                <!-- Finalize Buttons -->
+                <div class="grid grid-cols-2 gap-2 mt-2">
+                     <button onclick="createComplexCondition()" class="py-2 bg-orange-600 hover:bg-orange-500 text-white text-xs font-bold rounded transition-colors shadow-lg shadow-orange-900/20">
+                        <i class="fa-solid fa-plus mr-1"></i> Create Block
                     </button>
                     <button onclick="addLine({code:'else:', type:'logic'})" class="py-2 bg-slate-700 hover:bg-slate-600 text-white text-xs font-bold rounded transition-colors">
                         Add 'else'
@@ -1346,24 +1363,62 @@ function renderLogicLibrary(container) {
 
 // ... existing createCondition ...
 
-function createCondition() {
-    const kw = document.getElementById('pv-logic-kw').value;
+// --- New Builder Logic ---
+
+function appendConditionPart() {
     const exp1 = document.getElementById('pv-logic-exp1').value.trim();
     const op = document.getElementById('pv-logic-op').value;
     const exp2 = document.getElementById('pv-logic-exp2').value.trim();
-    const join = document.getElementById('pv-logic-join').value;
 
-    if (!exp1 || !exp2) { alert("Please complete the condition expressions"); return; }
+    if (!exp1 || !exp2) { showToast("Complete LHS and RHS", "error"); return; }
 
-    let cond = `${exp1} ${op} ${exp2}`;
-    if (join) {
-        cond += ` ${join} ...`; // Simplified placeholder
+    // Auto-quote strings if needed (basic heuristic)
+    // Actually, user might want variable vs string. Let user handle quotes or simplistic check?
+    // Let's trust user input for now to support variables.
+
+    const part = `${exp1} ${op} ${exp2}`;
+    appendToBuilder(part);
+
+    // Clear inputs for next part
+    document.getElementById('pv-logic-exp1').value = '';
+    document.getElementById('pv-logic-exp2').value = '';
+    document.getElementById('pv-logic-exp1').focus();
+}
+
+function appendToBuilder(text) {
+    const out = document.getElementById('pv-logic-builder-out');
+    if (!out) return;
+
+    // Smart spacing?
+    let current = out.value;
+    if (current && !current.endsWith(' ') && !text.startsWith(' ') && text !== ')') {
+        // If appending a word or start-paren, add space?
+        // ' and ' comes with spaces. '(' generally doesn't need space if prev is '('.
     }
+
+    out.value += text;
+}
+
+function createComplexCondition() {
+    const kw = document.getElementById('pv-logic-kw').value;
+    const cond = document.getElementById('pv-logic-builder-out').value.trim();
+
+    if (!cond) { showToast("Expression is empty", "error"); return; }
 
     addLine({
         code: `${kw} ${cond}:`,
         type: 'logic'
     });
+
+    // Optional: Clear after add?
+    // document.getElementById('pv-logic-builder-out').value = '';
+}
+
+// Legacy function stub if needed, or remove? 
+// The new UI calls createComplexCondition, so createCondition is obsolete.
+// Keeping it just in case of weird cache, but creating a dummy to redirect.
+function createCondition() {
+    createComplexCondition();
 }
 
 function createForLoop() {
@@ -2527,14 +2582,28 @@ window.clearPyViz = function () {
 // Restore Original Client-Side Download (Matches Live Site)
 window.downloadPyFile = function () {
     const content = pyvizState.lines.map(l => '    '.repeat(l.indent) + l.code).join('\n');
-    const blob = new Blob([content], { type: 'text/x-python' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'main.py';
-    a.click(); // Direct click without appending
-    URL.revokeObjectURL(url);
+
+    // Server-Side Download (Form POST) to ensure correct headers and filename
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = 'download.php'; // Targeted Handler
+    form.style.display = 'none';
+
+    const input = document.createElement('textarea');
+    input.name = 'content'; // Simplified name
+    input.value = content;
+
+    form.appendChild(input);
+    document.body.appendChild(form);
+
+    form.submit();
+
+    // Cleanup
+    setTimeout(() => {
+        document.body.removeChild(form);
+    }, 1000);
+
     logAction("Downloaded .py file");
-    showToast("Downloaded main.py", "success");
+    showToast("Downloading main.py...", "success");
 }
 

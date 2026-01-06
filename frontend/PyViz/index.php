@@ -134,6 +134,8 @@
                             <button id="pyviz-btn-import" onclick="document.getElementById('pv-file-import').click()" class="flex items-center justify-center text-xs text-green-400 hover:text-green-300 ml-1 border border-green-900/30 rounded px-2 py-1 transition-all" title="Import .py File"><i class="fa-solid fa-file-import pointer-events-none"></i></button>
                             <input type="file" id="pv-file-import" accept=".py" class="hidden" onchange="importPyFile(this)">
                             <button id="pyviz-btn-download" onclick="downloadPyFile()" title="Download .py" class="flex items-center justify-center text-xs text-blue-400 hover:text-blue-300 ml-1 border border-blue-900/30 rounded px-2 py-1 transition-all"><i class="fa-solid fa-download pointer-events-none"></i></button>
+                            <!-- Experimental Editor Toggle -->
+                            <button id="pyviz-btn-editor" onclick="toggleEditorMode()" title="Toggle Editor Mode" class="flex items-center justify-center text-xs text-yellow-400 hover:text-yellow-300 ml-1 border border-yellow-900/30 rounded px-2 py-1 transition-all"><i id="pv-editor-icon" class="fa-solid fa-pen-to-square pointer-events-none"></i></button>
                         </div>
                     </div>
 

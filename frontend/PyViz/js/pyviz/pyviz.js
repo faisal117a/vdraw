@@ -2578,8 +2578,185 @@ window.clearPyViz = function () {
     });
 };
 
-// RENAMED to avoid conflict
-// Restore Original Client-Side Download (Matches Live Site)
+// --- Experimental Editor Mode (Phase 9) ---
+
+// Wrapper to track active category
+if (window.loadToolbox && !window.originalLoadToolbox) {
+    window.originalLoadToolbox = window.loadToolbox;
+    window.loadToolbox = function (cat) {
+        pyvizState.activeCategory = cat;
+        window.originalLoadToolbox(cat);
+    }
+}
+
+pyvizState.isEditorMode = false;
+
+window.toggleEditorMode = function () {
+    const btn = document.getElementById('pyviz-btn-editor');
+    const icon = document.getElementById('pv-editor-icon');
+    const area = pyvizDom.codeArea;
+
+    if (!pyvizState.isEditorMode) {
+        // Switch TO Editor Mode
+        pyvizState.isEditorMode = true;
+
+        // Convert blocks to text
+        const codeText = pyvizState.lines.map(l => '    '.repeat(l.indent) + l.code).join('\n');
+
+        area.innerHTML = `
+            <textarea id="pv-editor-textarea" spellcheck="false" 
+                class="w-full h-full bg-slate-950 text-slate-300 font-mono text-sm p-4 outline-none resize-none border-none"
+                placeholder="Type Python code here...">${codeText}</textarea>
+        `;
+
+        // UI Update
+        btn.classList.add('bg-yellow-500/20', 'text-yellow-300');
+        icon.className = "fa-solid fa-code pointer-events-none"; // Show 'code' or 'blocks' icon? Code is active. Show 'blocks' to switch back.
+        icon.className = "fa-solid fa-cubes pointer-events-none"; // Switch to blocks icon
+        showToast("Editor Mode Active", "info");
+
+    } else {
+        // Switch BACK to Playground (Refine & Sync)
+        const textarea = document.getElementById('pv-editor-textarea');
+        const rawCode = textarea ? textarea.value : "";
+
+        // Parsing & Refinement
+        const refinedLines = parseAndRefineCode(rawCode);
+
+        // Update State
+        pyvizState.lines = refinedLines;
+        pyvizState.nextId = Math.max(...refinedLines.map(l => l.id), 0) + 1;
+        pyvizState.isEditorMode = false;
+
+        // Metadata Sync (Vars, Funcs)
+        scanCodeMetadata(refinedLines);
+
+        // Render
+        renderPyViz();
+        updateStats();
+
+        // Refresh Active Toolbox (Immediate Sync)
+        if (pyvizState.activeCategory && window.loadToolbox) {
+            window.loadToolbox(pyvizState.activeCategory);
+        }
+
+        // UI Update
+        btn.classList.remove('bg-yellow-500/20', 'text-yellow-300');
+        icon.className = "fa-solid fa-pen-to-square pointer-events-none";
+        showToast("Code Refined & Synced", "success");
+    }
+}
+
+function parseAndRefineCode(raw) {
+    const lines = raw.split('\n');
+    const newLines = [];
+    let idCounter = 1;
+
+    // Context Tracking for Indentation Enforcement
+    let lastIndent = 0;
+    let lastEndsWithColon = false;
+
+    lines.forEach(lineStr => {
+        if (!lineStr.trim()) return;
+
+        // 1. Indentation Calculation
+        const leadingSpaces = lineStr.match(/^\s*/)[0].length;
+        let indent = 0;
+        if (leadingSpaces > 0 && leadingSpaces < 4) {
+            indent = 1; // Correction
+        } else {
+            indent = Math.floor(leadingSpaces / 4);
+        }
+
+        // 2. Code Refinement
+        let code = lineStr.trim();
+        code = code.replace(/([a-zA-Z0-9_]+)=([a-zA-Z0-9_"\.\[\{]+)/g, '$1 = $2');
+
+        // 3. Indentation Enforcement (Auto-Fix Logic)
+        // Rule A: If previous line ended with ':', current line MUST be indented (start of block).
+        // This fixes cases where user forgets to indent after 'if a:'.
+        if (lastEndsWithColon) {
+            indent = lastIndent + 1;
+        }
+        // Rule B: If no colon previously, indent cannot increase (invalid nesting).
+        // It can stay same or decrease (dedent).
+        else {
+            if (indent > lastIndent) {
+                indent = lastIndent;
+            }
+        }
+
+        // 4. Type & Metadata Extraction
+        let type = 'logic';
+        let meta = {};
+
+        // Strip comments for colon check logic later
+        const codeNoComment = code.split('#')[0].trim();
+
+        if (code.startsWith('#')) {
+            type = 'comment';
+        }
+        else if (code.startsWith('def ')) {
+            type = 'func';
+            const match = code.match(/^def\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*\((.*)\):/);
+            if (match) {
+                meta = { name: match[1], params: match[2] };
+            }
+        }
+        else if (code.startsWith('import ') || code.startsWith('from ')) {
+            type = 'import';
+        }
+        else if (code.includes('=') && !code.startsWith('if ') && !code.startsWith('while ') && !code.startsWith('for ')) {
+            // Assignment
+            const parts = code.split('=');
+            const lhs = parts[0].trim();
+            const rhs = parts.slice(1).join('=').trim();
+
+            if (/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(lhs)) {
+                type = 'var';
+                meta = { name: lhs };
+
+                if (rhs.startsWith('[') && rhs.endsWith(']')) {
+                    type = 'ds'; meta.dsType = 'list';
+                } else if (rhs.startsWith('(') && rhs.endsWith(')')) {
+                    type = 'ds'; meta.dsType = 'tuple';
+                } else if (rhs.includes('deque(')) {
+                    type = 'ds'; meta.dsType = 'stack';
+                } else if (rhs.includes('queue.Queue')) {
+                    type = 'ds'; meta.dsType = 'queue';
+                }
+            }
+        }
+
+        newLines.push({
+            id: idCounter++,
+            code: code,
+            indent: indent,
+            type: type,
+            meta: meta
+        });
+
+        // Update Context
+        lastIndent = indent;
+        lastEndsWithColon = codeNoComment.endsWith(':');
+    });
+
+    return newLines;
+}
+
+function scanCodeMetadata(lines) {
+    // Metadata is now extracted during parsing above.
+    // This allows toolboxes to find variables immediately via pyvizState.lines
+}
+
+// Override renderPyViz to block rendering in Editor Mode
+const originalRenderPyViz = window.renderPyViz;
+window.renderPyViz = function () {
+    if (pyvizState.isEditorMode) return; // Block re-render
+    originalRenderPyViz();
+}
+
+// ... existing download code ...
 window.downloadPyFile = function () {
     const content = pyvizState.lines.map(l => '    '.repeat(l.indent) + l.code).join('\n');
 

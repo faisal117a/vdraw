@@ -152,6 +152,12 @@ def _serialize_locals(locs):
 def _trace_dispatch(frame, event, arg):
     # ONLY trace user code
     if event == 'line' and frame.f_code.co_filename == '<user_code>':
+        # Infinite Loop Guard
+        if not hasattr(sys, 'execution_count'): sys.execution_count = 0
+        sys.execution_count += 1
+        if sys.execution_count > 100:
+             raise RuntimeError("Infinite execution loop detected (Trace limited to 100 steps). Aborting.")
+
         # Prepare Trace
         l = _serialize_locals(frame.f_locals)
         payload = [("lineno", frame.f_lineno), ("locals", js.Object.fromEntries(list(l.items())))]
@@ -216,6 +222,7 @@ self.onmessage = async (e) => {
 import sys
 sys.settrace(None)
 sys.last_lineno = None
+sys.execution_count = 0
 
 def _serialize_locals(locs):
     l = {}

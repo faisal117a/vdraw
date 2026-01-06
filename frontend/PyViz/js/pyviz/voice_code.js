@@ -71,6 +71,13 @@ window.toggleVoiceRecording = async function () {
 
 async function sendAudioToBackend(blob) {
     const aiMsg = document.getElementById('pyviz-ai-message');
+
+    // Optimization: Don't send empty/tiny audio (e.g. immediate stop)
+    if (blob.size < 2000) { // < 2KB is likely just a click
+        if (aiMsg) aiMsg.innerHTML = '<span class="text-orange-400 text-xs">Audio too short/empty. Ignored.</span>';
+        return;
+    }
+
     if (aiMsg) aiMsg.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin text-purple-500 mr-2"></i> Transcribing & Generating...';
 
     const formData = new FormData();
@@ -81,10 +88,16 @@ async function sendAudioToBackend(blob) {
         // Assuming /vdraw-anti-auto/backend/voice_code.php
         const backendUrl = '/vdraw-anti-auto/backend/voice_code.php';
 
+        // Timeout Signal (30s max)
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 30000);
+
         const response = await fetch(backendUrl, {
             method: 'POST',
-            body: formData
+            body: formData,
+            signal: controller.signal
         });
+        clearTimeout(timeoutId);
 
         let data;
         try {

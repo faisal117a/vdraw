@@ -185,6 +185,18 @@ $currentUser = Auth::user();
             <h1 class="text-4xl md:text-5xl font-bold text-white mb-6 leading-tight">Visual Learning for Python, Data Structures & Statistics</h1>
             <h2 class="text-xl md:text-2xl font-semibold text-brand-400 mb-6">Learn complex computer science concepts using animations, graphs, charts, and AI-powered Python tools.</h2>
 
+            <div class="flex flex-wrap justify-center gap-4 mt-8">
+                <span class="px-4 py-2 rounded-full bg-slate-800/50 border border-brand-500/30 text-brand-300 text-sm font-medium animate-fade-in-up opacity-0 shadow-lg shadow-brand-500/10 backdrop-blur-md" style="animation-delay: 0.8s; animation-fill-mode: forwards;">
+                    <i class="fa-solid fa-lightbulb mr-2 text-yellow-400"></i> Focus on Explanation
+                </span>
+                <span class="px-4 py-2 rounded-full bg-slate-800/50 border border-brand-500/30 text-brand-300 text-sm font-medium animate-fade-in-up opacity-0 shadow-lg shadow-brand-500/10 backdrop-blur-md" style="animation-delay: 1.2s; animation-fill-mode: forwards;">
+                    <i class="fa-solid fa-brain mr-2 text-pink-400"></i> Memorize Less
+                </span>
+                <span class="px-4 py-2 rounded-full bg-slate-800/50 border border-brand-500/30 text-brand-300 text-sm font-medium animate-fade-in-up opacity-0 shadow-lg shadow-brand-500/10 backdrop-blur-md" style="animation-delay: 1.6s; animation-fill-mode: forwards;">
+                    <i class="fa-solid fa-layer-group mr-2 text-cyan-400"></i> Simple with Depth
+                </span>
+            </div>
+
         </div>
 
         <!-- Video Section -->

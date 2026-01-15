@@ -29,12 +29,21 @@ class MailService {
         $conf = self::getSMTPSettings();
         if (empty($conf['host']) || empty($conf['user'])) {
             // Log that email was attempted but not sent due to missing config
-            error_log("MailService: Missing SMTP config. Would send to $to: $subject");
-            return false;
+            $errorMsg = "MailService: Missing SMTP config (host=" . ($conf['host'] ?: 'empty') . ", user=" . ($conf['user'] ?: 'empty') . "). Cannot send to $to: $subject";
+            error_log($errorMsg);
+            throw new Exception($errorMsg);
         }
 
-        $smtp = new SimpleSMTP($conf['host'], $conf['port'], $conf['user'], $conf['pass']);
-        return $smtp->send($to, $subject, $htmlBody);
+        $smtp = new SimpleSMTP($conf['host'], (int)$conf['port'], $conf['user'], $conf['pass']);
+        $result = $smtp->send($to, $subject, $htmlBody);
+        
+        if (!$result) {
+            $errorMsg = "MailService: Failed to send email to $to - " . $smtp->getLastError();
+            error_log($errorMsg);
+            throw new Exception($errorMsg);
+        }
+        
+        return true;
     }
     
     // Templates

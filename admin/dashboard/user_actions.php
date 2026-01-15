@@ -50,6 +50,39 @@ try {
             echo json_encode(['status' => 'success', 'message' => "Email for $email manually verified."]);
             break;
 
+        case 'send_verification_email':
+            // Find user by email
+            $userQ = DB::query("SELECT id, email_verified_at FROM users WHERE email = ?", [$email], "s");
+            $userRes = $userQ->get_result();
+            
+            if ($userRes->num_rows === 0) {
+                echo json_encode(['status' => 'error', 'message' => 'User not found']);
+                break;
+            }
+            
+            $user = $userRes->fetch_assoc();
+            
+            if (!is_null($user['email_verified_at'])) {
+                echo json_encode(['status' => 'error', 'message' => 'Email is already verified']);
+                break;
+            }
+            
+            // Generate new verification code
+            $code = rand(100000, 999999);
+            DB::query("INSERT INTO user_email_verifications (user_id, code6, expires_at, created_at) VALUES (?, ?, DATE_ADD(NOW(), INTERVAL 30 MINUTE), NOW())", [$user['id'], $code], "is");
+            
+            // Send Email
+            try {
+                require_once __DIR__ . '/../../auth/MailService.php';
+                MailService::sendVerificationEmail($email, $code);
+                error_log("Admin sent verification email to $email");
+                echo json_encode(['status' => 'success', 'message' => "Verification email sent to $email"]);
+            } catch (Exception $e) {
+                error_log("Admin send verification mail error for $email: " . $e->getMessage());
+                echo json_encode(['status' => 'error', 'message' => 'Failed to send email: ' . $e->getMessage()]);
+            }
+            break;
+
         case 'verify_teacher':
             // Check if email verified first
             $check = DB::query("SELECT id, email_verified_at FROM users WHERE email = ?", [$email], "s")->get_result()->fetch_assoc();

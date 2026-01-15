@@ -57,6 +57,45 @@ switch ($action) {
     case 'logout':
         echo json_encode(Auth::logout());
         break;
+    
+    case 'resend_verification':
+        $email = $_POST['email'] ?? '';
+        if (empty($email)) {
+            echo json_encode(['status' => 'error', 'message' => 'Email is required']);
+            exit;
+        }
+        
+        // Find user by email
+        $userQ = DB::query("SELECT id, email_verified_at FROM users WHERE email = ?", [$email], "s");
+        $userRes = $userQ->get_result();
+        
+        if ($userRes->num_rows === 0) {
+            echo json_encode(['status' => 'error', 'message' => 'User not found']);
+            exit;
+        }
+        
+        $user = $userRes->fetch_assoc();
+        
+        if (!is_null($user['email_verified_at'])) {
+            echo json_encode(['status' => 'error', 'message' => 'Email is already verified']);
+            exit;
+        }
+        
+        // Generate new verification code
+        $code = rand(100000, 999999);
+        DB::query("INSERT INTO user_email_verifications (user_id, code6, expires_at, created_at) VALUES (?, ?, DATE_ADD(NOW(), INTERVAL 30 MINUTE), NOW())", [$user['id'], $code], "is");
+        
+        // Send Email
+        try {
+            require_once __DIR__ . '/MailService.php';
+            MailService::sendVerificationEmail($email, $code);
+            error_log("Resend verification: Email sent to $email");
+            echo json_encode(['status' => 'success', 'message' => 'Verification code sent']);
+        } catch (Exception $e) {
+            error_log("Resend verification mail error for $email: " . $e->getMessage());
+            echo json_encode(['status' => 'error', 'message' => 'Failed to send email. Please try again later.']);
+        }
+        break;
         
     case 'check_status':
         $user = Auth::user();

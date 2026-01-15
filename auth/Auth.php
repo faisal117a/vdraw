@@ -75,18 +75,29 @@ class Auth {
             // Phase 14: Login MUST be blocked if email_verified != 1
             // Do NOT log them in automatically.
             
-            // Send Email
-            
-            // Send Email
+            // Send Verification Email
+            $emailSent = false;
+            $emailError = '';
             try {
                 require_once __DIR__ . '/MailService.php';
                 MailService::sendVerificationEmail($email, $code);
+                $emailSent = true;
+                error_log("Registration: Verification email sent successfully to $email");
             } catch (Exception $e) {
-                error_log("Mail Error: " . $e->getMessage());
-                // Continue even if mail fails (Localhost issue)
+                $emailError = $e->getMessage();
+                error_log("Registration Mail Error for $email: " . $emailError);
             }
             
-            return ['status' => 'success', 'message' => 'Registration successful. Please verify your email.', 'verification_code' => $code]; 
+            $message = 'Registration successful. Please verify your email.';
+            if (!$emailSent) {
+                // On production, warn user if email failed
+                $isLocalhost = ($_SERVER['SERVER_NAME'] ?? '') === 'localhost' || ($_SERVER['REMOTE_ADDR'] ?? '') === '127.0.0.1';
+                if (!$isLocalhost) {
+                    $message .= ' (Warning: Email delivery may be delayed. Please try again in a few minutes if you do not receive the code.)';
+                }
+            }
+            
+            return ['status' => 'success', 'message' => $message, 'verification_code' => $code, 'email_sent' => $emailSent]; 
         } else {
             return ['status' => 'error', 'message' => 'Registration failed.'];
         }

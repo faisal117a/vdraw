@@ -539,7 +539,8 @@ $blockedIPs = Security::getBlockedIPs();
                                         <button onclick="viewUserLogs('<?php echo $u['id']; ?>', '<?php echo htmlspecialchars($u['full_name'], ENT_QUOTES); ?>')" title="View Activities" class="hover:bg-slate-700 text-slate-300 border border-slate-600 p-1.5 rounded transition"><i class="fa-solid fa-list-check"></i></button>
                                         <button onclick="openEditUser('<?php echo $u['id']; ?>', '<?php echo htmlspecialchars($u['email'], ENT_QUOTES); ?>', '<?php echo $u['role']; ?>')" title="Edit User" class="hover:bg-purple-900/50 text-purple-400 border border-purple-900 p-1.5 rounded transition"><i class="fa-solid fa-pen-to-square"></i></button>
                                         <?php if(empty($u['email_verified_at'])): ?>
-                                            <button onclick="performUserAction('manual_verify_email', '<?php echo htmlspecialchars($u['email'], ENT_QUOTES); ?>')" title="Verify Email" class="hover:bg-cyan-900/50 text-cyan-400 border border-cyan-900 p-1.5 rounded transition"><i class="fa-solid fa-envelope-circle-check"></i></button>
+                                            <button onclick="performUserAction('manual_verify_email', '<?php echo htmlspecialchars($u['email'], ENT_QUOTES); ?>')" title="Verify Email (Manual)" class="hover:bg-cyan-900/50 text-cyan-400 border border-cyan-900 p-1.5 rounded transition"><i class="fa-solid fa-envelope-circle-check"></i></button>
+                                            <button onclick="sendVerificationEmail('<?php echo htmlspecialchars($u['email'], ENT_QUOTES); ?>')" title="Send Verification Email" class="hover:bg-orange-900/50 text-orange-400 border border-orange-900 p-1.5 rounded transition"><i class="fa-solid fa-paper-plane"></i></button>
                                         <?php endif; ?>
                                         
                                         <?php if($u['status'] === 'active'): ?>
@@ -1930,6 +1931,31 @@ $blockedIPs = Security::getBlockedIPs();
                     const data = JSON.parse(text);
                     if(data.status === 'success') { alert(data.message); location.reload(); }
                     else { alert('Error: ' + (data.message || 'Unknown')); }
+                } catch(err) {
+                    console.error("Invalid JSON:", text);
+                    alert("Server Error: Response was not JSON. Check Console.");
+                }
+            } catch (e) { alert('Request failed'); console.error(e); }
+        }
+
+        async function sendVerificationEmail(email) {
+            if(!confirm(`Send verification email to ${email}?\n\nThis will generate a new 6-digit code and send it to the user's email address.`)) return;
+
+            const formData = new FormData();
+            formData.append('action', 'send_verification_email');
+            formData.append('email', email);
+            
+            try {
+                const res = await fetch('user_actions.php', { method: 'POST', body: formData });
+                const text = await res.text();
+                try {
+                    const data = JSON.parse(text);
+                    if(data.status === 'success') { 
+                        alert(data.message); 
+                        location.reload(); 
+                    } else { 
+                        alert('Error: ' + (data.message || 'Failed to send email')); 
+                    }
                 } catch(err) {
                     console.error("Invalid JSON:", text);
                     alert("Server Error: Response was not JSON. Check Console.");

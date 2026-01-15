@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dviz | Data Structures Visualization</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Outfit', 'sans-serif'], },
+                    colors: {
+                        brand: { 50: '#faf5ff', 100: '#f3e8ff', 400: '#c084fc', 500: '#a855f7', 600: '#9333ea', 900: '#581c87', }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        :root {
+            --bg-color: #0c0a09;
+            --text-color: #f3e8ff;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+        }
+
+        .glass-panel {
+            background: rgba(88, 28, 135, 0.1);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 3px;
+        }
+    </style>
+    <!-- PDF Viewer Support -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
+    </script>
+</head>
+
+<body class="h-screen flex overflow-hidden text-slate-100 bg-slate-950">
+
+    <!-- Mobile Overlay -->
+    <div id="sidebar-overlay"
+        class="fixed inset-0 bg-black/50 z-20 hidden md:hidden backdrop-blur-sm transition-opacity"></div>
+
+    <!-- Main Content -->
+    <main class="flex-1 flex flex-col relative overflow-hidden transition-all duration-300">
+        <!-- Header -->
+        <header
+            class="h-16 border-b border-slate-800/50 flex items-center justify-between px-3 md:px-8 glass-panel z-10">
+            <div class="flex items-center shrink-0">
+                <i class="fa-solid fa-book-open text-brand-500 text-xl mr-3"></i>
+                <h2 class="text-lg font-semibold text-slate-200">Dviz</h2>
+                <span class="text-xs text-slate-500 ml-2 uppercase tracking-wide">Education</span>
+            </div>
+        </header>
+
+        <!-- Dviz Dashboard Wrapper -->
+        <div id="dviz-dashboard" class="flex-1 transition-opacity duration-300 h-full flex flex-col p-4">
+            <div class="flex-1 flex flex-col lg:flex-row gap-4 h-full overflow-hidden">
+
+                <!-- Sidebar (Level Selector) -->
+                <div id="dviz-sidebar"
+                    class="w-full lg:w-1/4 glass-panel rounded-xl p-4 flex flex-col h-auto lg:h-full shrink-0 overflow-y-auto custom-scrollbar">
+                    <div class="border-b border-slate-700 pb-2 mb-4">
+                        <h3 class="text-sm font-bold text-purple-400 uppercase tracking-wider">Levels</h3>
+                    </div>
+                    <div id="dviz-level-list" class="space-y-2">
+                        <p class="text-xs text-slate-500 italic">Loading levels...</p>
+                    </div>
+                </div>
+
+                <!-- Main Content Area -->
+                <div id="dviz-main"
+                    class="flex-1 glass-panel rounded-xl p-6 flex flex-col h-full overflow-hidden relative">
+                    <!-- Breadcrumbs / Header -->
+                    <div class="flex justify-between items-center mb-6 border-b border-slate-700 pb-4 shrink-0">
+                        <div id="dviz-header">
+                            <h2 class="text-2xl font-bold text-white">Welcome</h2>
+                            <p class="text-slate-400 text-sm">Select a level to begin exploring.</p>
+                        </div>
+                        <div id="dviz-controls" class="hidden flex space-x-2">
+                            <button id="dviz-btn-back"
+                                class="hidden px-3 py-1 bg-slate-700 text-slate-300 rounded hover:text-white text-sm"><i
+                                    class="fa-solid fa-arrow-left mr-1"></i> Back</button>
+                        </div>
+                    </div>
+
+                    <!-- Scrollable Content Grid -->
+                    <div id="dviz-content-area" class="flex-1 overflow-y-auto custom-scrollbar pr-2">
+                        <div class="flex flex-col items-center justify-center h-full text-slate-500 opacity-50">
+                            <i class="fa-solid fa-book-open text-6xl mb-4"></i>
+                            <p class="text-lg">Select a Level from the sidebar</p>
+                        </div>
+                    </div>
+
+                    <!-- Viewer Overlay (Hidden by default) -->
+                    <div id="dviz-viewer-overlay" class="hidden absolute inset-0 bg-slate-900/95 z-50 flex flex-col">
+                        <div
+                            class="h-12 bg-slate-950 flex items-center justify-between px-4 border-b border-slate-800 shrink-0">
+                            <h3 id="dviz-viewer-title" class="text-sm font-bold text-white truncate max-w-[50%]">Viewer
+                            </h3>
+                            <div class="flex items-center space-x-3">
+                                <button id="dviz-viewer-prev" onclick="navigateGallery(-1)"
+                                    class="hidden text-slate-400 hover:text-white" title="Previous"><i
+                                        class="fa-solid fa-chevron-left"></i></button>
+                                <button id="dviz-viewer-next" onclick="navigateGallery(1)"
+                                    class="hidden text-slate-400 hover:text-white" title="Next"><i
+                                        class="fa-solid fa-chevron-right"></i></button>
+                                <div class="w-px h-4 bg-slate-700 mx-2"></div>
+                                <button id="dviz-viewer-fullscreen" onclick="toggleFullScreen()"
+                                    class="text-slate-400 hover:text-white" title="Full Screen"><i
+                                        class="fa-solid fa-expand"></i></button>
+                                <button id="dviz-viewer-close" onclick="closeViewer()"
+                                    class="text-slate-400 hover:text-white ml-2" title="Close"><i
+                                        class="fa-solid fa-xmark text-lg"></i></button>
+                            </div>
+                        </div>
+                        <div id="dviz-viewer-body"
+                            class="flex-1 overflow-hidden relative flex items-center justify-center">
+                            <!-- Iframe or Image -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- App Scripts -->
+    <!-- Offline Data & API Mock -->
+    <script src="js/dviz_data.js?v=2"></script>
+    <script>
+        // Override Fetch for DViz API
+        (function () {
+            const originalFetch = window.fetch;
+            window.fetch = async function (url, options) {
+                if (typeof url === 'string' && url.includes('dviz_api.php')) {
+                    console.warn('[Dviz] API call intercepted. Serving static data.');
+                    return {
+                        ok: true,
+                        status: 200,
+                        json: async () => {
+                            if (window.DVIZ_DATA) return window.DVIZ_DATA;
+                            return { levels: [] }; // Fallback
+                        }
+                    };
+                }
+                return originalFetch(url, options);
+            };
+        })();
+    </script>
+    <script src="js/dviz/dviz.js?v=7"></script>
+    <script>
+        // Force Init
+        document.addEventListener('DOMContentLoaded', () => {
+            if (typeof initDviz === 'function') initDviz();
+        });
+    </script>
+</body>
+
+</html>

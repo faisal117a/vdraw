@@ -1,0 +1,25 @@
+frontend/data/
+vdraw-anti-auto.zip
+**/data/
+
+data/
+**/data/
+
+*.zip
+*.rar
+*.7z
+*.gz
+*.tar
+
+__pycache__/
+*.pyc 
+*.mp4 
+*.MP4 
+*.png 
+*.PNG
+*.zip
+
+node_modules/
+venv/
+.env
+Apps Bak/

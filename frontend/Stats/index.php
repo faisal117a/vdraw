@@ -116,6 +116,49 @@ $currentUser = Auth::user();
             transition: all 0.3s ease;
         }
 
+        /* Custom Scrollbar Styles for Sidebars */
+        .sidebar-scrollbar::-webkit-scrollbar,
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        .sidebar-scrollbar::-webkit-scrollbar-track,
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: rgba(30, 41, 59, 0.5);
+            border-radius: 3px;
+            margin: 4px 0;
+        }
+        
+        .sidebar-scrollbar::-webkit-scrollbar-thumb,
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: linear-gradient(180deg, #818cf8 0%, #6366f1 100%);
+            border-radius: 3px;
+            transition: background 0.3s ease;
+        }
+        
+        .sidebar-scrollbar::-webkit-scrollbar-thumb:hover,
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(180deg, #a5b4fc 0%, #818cf8 100%);
+        }
+        
+        /* Firefox scrollbar */
+        .sidebar-scrollbar,
+        .custom-scrollbar {
+            scrollbar-width: thin;
+            scrollbar-color: #6366f1 rgba(30, 41, 59, 0.5);
+        }
+        
+        /* Light mode scrollbar adjustments */
+        body.light-mode .sidebar-scrollbar::-webkit-scrollbar-track,
+        body.light-mode .custom-scrollbar::-webkit-scrollbar-track {
+            background: rgba(203, 213, 225, 0.5);
+        }
+        
+        body.light-mode .sidebar-scrollbar,
+        body.light-mode .custom-scrollbar {
+            scrollbar-color: #6366f1 rgba(203, 213, 225, 0.5);
+        }
+
         @media print {
              body { background-color: white !important; color: black !important; overflow: visible !important; height: auto !important; }
              aside#sidebar, header, #sidebar-overlay, #mobile-menu-btn, #btn-calculate, #btn-export-png, #btn-export-svg, .scrollbar-thin::-webkit-scrollbar { display: none !important; }
@@ -149,7 +192,7 @@ $currentUser = Auth::user();
         </div>
 
         <!-- Scrollable settings -->
-        <div class="flex-1 overflow-y-auto p-4 space-y-6 scrollbar-thin scrollbar-thumb-slate-700">
+        <div class="flex-1 overflow-y-auto p-4 pr-2 space-y-6 sidebar-scrollbar">
             <!-- Input Method -->
             <div class="space-y-3">
                 <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Input Source</h3>
@@ -298,12 +341,12 @@ $currentUser = Auth::user();
                 ?>
                 <!-- Desktop Nav -->
                 <div class="hidden md:flex items-center bg-slate-800 rounded-lg p-1 border border-slate-700 overflow-x-auto scrollbar-hide">
-                    <a href="../../" class="px-2 md:px-3 py-1 text-[10px] md:text-xs font-bold rounded text-slate-400 hover:text-white hover:bg-slate-700 transition-all whitespace-nowrap"><i class="fa-solid fa-house mr-1"></i> Vdraw Home</a>
+                    <a href="../../" class="px-3 md:px-4 py-1.5 text-xs md:text-sm font-bold rounded text-slate-200 bg-slate-700/50 hover:text-white hover:bg-slate-600 transition-all whitespace-nowrap border border-slate-600/50"><i class="fa-solid fa-house mr-1"></i> Vdraw Home</a>
                     <?php foreach($apps as $app): 
                         $isActive = ($app['name'] === 'Stats'); 
                         $theme = AppHelper::getTheme($app['theme_color']);
-                        $activeClass = "px-2 md:px-3 py-1 text-[10px] md:text-xs font-bold rounded text-white " . $theme['nav_active'] . " shadow transition-all whitespace-nowrap";
-                        $inactiveClass = "px-2 md:px-3 py-1 text-[10px] md:text-xs font-bold rounded text-slate-400 hover:text-white hover:bg-slate-700 transition-all whitespace-nowrap";
+                        $activeClass = "px-3 md:px-4 py-1.5 text-xs md:text-sm font-bold rounded text-white " . $theme['nav_active'] . " shadow transition-all whitespace-nowrap border border-transparent";
+                        $inactiveClass = "px-3 md:px-4 py-1.5 text-xs md:text-sm font-bold rounded text-slate-200 bg-slate-700/50 hover:text-white hover:bg-slate-600 transition-all whitespace-nowrap border border-slate-600/50";
                     ?>
                     <a href="../<?php echo $app['name']; ?>/" class="<?php echo $isActive ? $activeClass : $inactiveClass; ?>"><?php echo htmlspecialchars($app['nav_title']); ?></a>
                     <?php endforeach; ?>
@@ -417,7 +460,7 @@ $currentUser = Auth::user();
                         <!-- Explanations Panel -->
                         <div class="glass-panel p-6 rounded-xl overflow-hidden flex flex-col max-h-[800px]">
                             <h3 class="text-sm font-semibold text-slate-300 mb-4 border-b border-slate-700 pb-2"><i class="fa-solid fa-graduation-cap text-brand-400 mr-2"></i>Step-by-Step</h3>
-                            <div id="explanation-container" class="overflow-y-auto pr-2 space-y-6"><p class="text-slate-500 text-sm italic">Run a calculation to see steps here.</p></div>
+                            <div id="explanation-container" class="overflow-y-auto pr-3 space-y-6 custom-scrollbar"><p class="text-slate-500 text-sm italic">Run a calculation to see steps here.</p></div>
                         </div>
                     </div>
                 </div>

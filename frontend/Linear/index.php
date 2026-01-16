@@ -151,6 +151,78 @@ $currentUser = Auth::user();
             background: #ffffff;
         }
 
+        /* Custom Scrollbar Styles for Sidebar */
+        .sidebar-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        .sidebar-scrollbar::-webkit-scrollbar-track {
+            background: rgba(30, 41, 59, 0.5);
+            border-radius: 3px;
+            margin: 4px 0;
+        }
+        
+        .sidebar-scrollbar::-webkit-scrollbar-thumb {
+            background: linear-gradient(180deg, #22c55e 0%, #16a34a 100%);
+            border-radius: 3px;
+            transition: background 0.3s ease;
+        }
+        
+        .sidebar-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(180deg, #4ade80 0%, #22c55e 100%);
+        }
+        
+        /* Firefox scrollbar */
+        .sidebar-scrollbar {
+            scrollbar-width: thin;
+            scrollbar-color: #22c55e rgba(30, 41, 59, 0.5);
+        }
+        
+        /* Light mode scrollbar adjustments */
+        body.light-mode .sidebar-scrollbar::-webkit-scrollbar-track {
+            background: rgba(203, 213, 225, 0.5);
+        }
+        
+        body.light-mode .sidebar-scrollbar {
+            scrollbar-color: #22c55e rgba(203, 213, 225, 0.5);
+        }
+        
+        /* Custom scrollbar class (alias for consistency) */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: rgba(30, 41, 59, 0.5);
+            border-radius: 3px;
+            margin: 4px 0;
+        }
+        
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: linear-gradient(180deg, #22c55e 0%, #16a34a 100%);
+            border-radius: 3px;
+            transition: background 0.3s ease;
+        }
+        
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(180deg, #4ade80 0%, #22c55e 100%);
+        }
+        
+        /* Firefox scrollbar for custom-scrollbar */
+        .custom-scrollbar {
+            scrollbar-width: thin;
+            scrollbar-color: #22c55e rgba(30, 41, 59, 0.5);
+        }
+        
+        /* Light mode for custom-scrollbar */
+        body.light-mode .custom-scrollbar::-webkit-scrollbar-track {
+            background: rgba(203, 213, 225, 0.5);
+        }
+        
+        body.light-mode .custom-scrollbar {
+            scrollbar-color: #22c55e rgba(203, 213, 225, 0.5);
+        }
+
         /* PRINT STYLES FOR PDF EXPORT */
         @media print {
             body {
@@ -316,7 +388,7 @@ $currentUser = Auth::user();
         </div>
 
         <!-- Scrollable settings -->
-        <div class="flex-1 overflow-y-auto p-4 space-y-6 scrollbar-thin scrollbar-thumb-slate-700">
+        <div class="flex-1 overflow-y-auto p-4 pr-2 space-y-6 sidebar-scrollbar">
 
             <!-- Input Method -->
             <div class="space-y-3">
@@ -496,12 +568,12 @@ $currentUser = Auth::user();
                 ?>
                 <!-- Desktop Nav -->
                 <div class="hidden md:flex items-center bg-slate-800 rounded-lg p-1 border border-slate-700 overflow-x-auto scrollbar-hide">
-                    <a href="../../" class="px-2 md:px-3 py-1 text-[10px] md:text-xs font-bold rounded text-slate-400 hover:text-white hover:bg-slate-700 transition-all whitespace-nowrap"><i class="fa-solid fa-house mr-1"></i> Vdraw Home</a>
+                    <a href="../../" class="px-3 md:px-4 py-1.5 text-xs md:text-sm font-bold rounded text-slate-200 bg-slate-700/50 hover:text-white hover:bg-slate-600 transition-all whitespace-nowrap border border-slate-600/50"><i class="fa-solid fa-house mr-1"></i> Vdraw Home</a>
                     <?php foreach($apps as $app): 
                         $isActive = ($app['name'] === 'Linear'); 
                         $theme = AppHelper::getTheme($app['theme_color']);
-                        $activeClass = "px-2 md:px-3 py-1 text-[10px] md:text-xs font-bold rounded text-white " . $theme['nav_active'] . " shadow transition-all whitespace-nowrap";
-                        $inactiveClass = "px-2 md:px-3 py-1 text-[10px] md:text-xs font-bold rounded text-slate-400 hover:text-white hover:bg-slate-700 transition-all whitespace-nowrap";
+                        $activeClass = "px-3 md:px-4 py-1.5 text-xs md:text-sm font-bold rounded text-white " . $theme['nav_active'] . " shadow transition-all whitespace-nowrap border border-transparent";
+                        $inactiveClass = "px-3 md:px-4 py-1.5 text-xs md:text-sm font-bold rounded text-slate-200 bg-slate-700/50 hover:text-white hover:bg-slate-600 transition-all whitespace-nowrap border border-slate-600/50";
                     ?>
                     <a href="../<?php echo $app['name']; ?>/" class="<?php echo $isActive ? $activeClass : $inactiveClass; ?>"><?php echo htmlspecialchars($app['nav_title']); ?></a>
                     <?php endforeach; ?>
@@ -516,14 +588,6 @@ $currentUser = Auth::user();
                         </option>
                         <?php endforeach; ?>
                     </select>
-                </div>
-
-                <!-- Animation Mode Toggle (Hidden on mobile) -->
-                <div class="hidden md:flex items-center bg-slate-800 rounded-lg p-1">
-                    <button id="mode-std"
-                        class="px-3 py-1 text-xs font-medium rounded text-white bg-slate-600 transition-all">Std</button>
-                    <button id="mode-adv"
-                        class="px-3 py-1 text-xs font-medium rounded text-slate-400 hover:text-white transition-all">Adv</button>
                 </div>
 
                 <!-- User Profile -->
@@ -687,7 +751,7 @@ $currentUser = Auth::user();
                             <h3 class="text-sm font-semibold text-slate-300 mb-4 border-b border-slate-700 pb-2">
                                 <i class="fa-solid fa-graduation-cap text-brand-400 mr-2"></i>Step-by-Step
                             </h3>
-                            <div id="explanation-container" class="overflow-y-auto pr-2 space-y-6">
+                            <div id="explanation-container" class="overflow-y-auto pr-3 space-y-6 custom-scrollbar">
                                 <p class="text-slate-500 text-sm italic">Run a calculation to see steps here.</p>
                             </div>
                         </div>
@@ -707,7 +771,7 @@ $currentUser = Auth::user();
                         <div class="mb-4 hidden" data-ad-placement="pdraw_sidebar_top"></div>
 
                         <!-- Scrollable Content -->
-                        <div class="flex-1 overflow-y-auto custom-scrollbar space-y-4 pr-1">
+                        <div class="flex-1 overflow-y-auto custom-scrollbar space-y-4 pr-3">
                             <div class="border-b border-slate-700 pb-2">
                                 <h3 class="text-sm font-bold text-green-400 uppercase tracking-wider">Data Structure
                                 </h3>
@@ -816,7 +880,7 @@ $currentUser = Auth::user();
                                     <h3 class="text-sm font-bold text-slate-300 uppercase tracking-wider">Diagram</h3>
                                     <div class="text-xs text-slate-500" id="pdraw-diag-label">Initial</div>
                                 </div>
-                                <div id="pdraw-diagram" class="flex-1 min-h-0 bg-slate-900/50 rounded border border-slate-700 overflow-y-auto p-3 flex flex-col items-center">
+                                <div id="pdraw-diagram" class="flex-1 min-h-0 bg-slate-900/50 rounded border border-slate-700 overflow-y-auto p-3 flex flex-col items-center custom-scrollbar">
                                     <p class="text-xs text-slate-600 italic text-center">Visual representation area</p>
                                 </div>
                             </div>

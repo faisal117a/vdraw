@@ -151,6 +151,51 @@ $currentUser = Auth::user();
             transition: all 0.3s ease;
         }
 
+        /* Custom Scrollbar Styles for Graph App */
+        .custom-scrollbar::-webkit-scrollbar,
+        .sidebar-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        .custom-scrollbar::-webkit-scrollbar-track,
+        .sidebar-scrollbar::-webkit-scrollbar-track {
+            background: rgba(30, 41, 59, 0.5);
+            border-radius: 3px;
+            margin: 4px 0;
+        }
+        
+        .custom-scrollbar::-webkit-scrollbar-thumb,
+        .sidebar-scrollbar::-webkit-scrollbar-thumb {
+            background: linear-gradient(180deg, #fbbf24 0%, #f59e0b 100%);
+            border-radius: 3px;
+            transition: background 0.3s ease;
+        }
+        
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover,
+        .sidebar-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(180deg, #fcd34d 0%, #fbbf24 100%);
+        }
+        
+        /* Firefox scrollbar */
+        .custom-scrollbar,
+        .sidebar-scrollbar {
+            scrollbar-width: thin;
+            scrollbar-color: #f59e0b rgba(30, 41, 59, 0.5);
+        }
+        
+        /* Light mode scrollbar adjustments */
+        body.light-mode .custom-scrollbar::-webkit-scrollbar-track,
+        body.light-mode .sidebar-scrollbar::-webkit-scrollbar-track {
+            background: rgba(203, 213, 225, 0.5);
+        }
+        
+        body.light-mode .custom-scrollbar,
+        body.light-mode .sidebar-scrollbar {
+            scrollbar-color: #f59e0b rgba(203, 213, 225, 0.5);
+        }
+
+        @media print {
+
         /* ... rest of style ... */
 
         /* Specific overrides for specific IDs to ensure light mode works */
@@ -508,12 +553,12 @@ $currentUser = Auth::user();
                 ?>
                 <!-- Desktop Nav -->
                 <div class="hidden md:flex items-center bg-slate-800 rounded-lg p-1 border border-slate-700 overflow-x-auto scrollbar-hide">
-                    <a href="../../" class="px-2 md:px-3 py-1 text-[10px] md:text-xs font-bold rounded text-slate-400 hover:text-white hover:bg-slate-700 transition-all whitespace-nowrap"><i class="fa-solid fa-house mr-1"></i> Vdraw Home</a>
+                    <a href="../../" class="px-3 md:px-4 py-1.5 text-xs md:text-sm font-bold rounded text-slate-200 bg-slate-700/50 hover:text-white hover:bg-slate-600 transition-all whitespace-nowrap border border-slate-600/50"><i class="fa-solid fa-house mr-1"></i> Vdraw Home</a>
                     <?php foreach($apps as $app): 
                         $isActive = ($app['name'] === 'Graph'); 
                         $theme = AppHelper::getTheme($app['theme_color']);
-                        $activeClass = "px-2 md:px-3 py-1 text-[10px] md:text-xs font-bold rounded text-white " . $theme['nav_active'] . " shadow transition-all whitespace-nowrap";
-                        $inactiveClass = "px-2 md:px-3 py-1 text-[10px] md:text-xs font-bold rounded text-slate-400 hover:text-white hover:bg-slate-700 transition-all whitespace-nowrap";
+                        $activeClass = "px-3 md:px-4 py-1.5 text-xs md:text-sm font-bold rounded text-white " . $theme['nav_active'] . " shadow transition-all whitespace-nowrap border border-transparent";
+                        $inactiveClass = "px-3 md:px-4 py-1.5 text-xs md:text-sm font-bold rounded text-slate-200 bg-slate-700/50 hover:text-white hover:bg-slate-600 transition-all whitespace-nowrap border border-slate-600/50";
                     ?>
                     <a href="../<?php echo $app['name']; ?>/" class="<?php echo $isActive ? $activeClass : $inactiveClass; ?>"><?php echo htmlspecialchars($app['nav_title']); ?></a>
                     <?php endforeach; ?>
@@ -528,14 +573,6 @@ $currentUser = Auth::user();
                         </option>
                         <?php endforeach; ?>
                     </select>
-                </div>
-
-                <!-- Animation Mode Toggle (Hidden on mobile) -->
-                <div class="hidden md:flex items-center bg-slate-800 rounded-lg p-1">
-                    <button id="mode-std"
-                        class="px-3 py-1 text-xs font-medium rounded text-white bg-slate-600 transition-all">Std</button>
-                    <button id="mode-adv"
-                        class="px-3 py-1 text-xs font-medium rounded text-slate-400 hover:text-white transition-all">Adv</button>
                 </div>
 
                 <!-- User Profile -->
@@ -819,7 +856,7 @@ $currentUser = Auth::user();
             <div id="tgdraw-dashboard" class="hidden transition-opacity duration-300 h-full flex flex-col">
                 <div class="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6 h-full overflow-y-auto lg:overflow-hidden">
                     <!-- Sidebar -->
-                    <div id="tgdraw-left-panel" class="lg:col-span-3 glass-panel rounded-xl flex flex-col h-[500px] lg:h-full bg-slate-900/80 border border-slate-700 order-2 lg:order-none min-h-[400px] p-4 overflow-y-auto custom-scrollbar">
+                    <div id="tgdraw-left-panel" class="lg:col-span-3 glass-panel rounded-xl flex flex-col space-y-4 h-auto lg:h-full overflow-y-auto sidebar-scrollbar order-2 lg:order-none min-h-[400px] p-4">
                         <h3 class="text-base font-bold text-amber-500 uppercase tracking-wider mb-1">TGDraw Lab</h3>
                         <p class="text-xs text-slate-500">Tree & Graph Visualizer</p>
                         <div class="p-4 bg-slate-800 rounded text-center text-slate-500 text-xs text-amber-500/50 mt-4">
@@ -840,7 +877,7 @@ $currentUser = Auth::user();
                         <div class="mb-2 hidden w-full max-w-[728px] mx-auto shrink-0" data-ad-placement="tgdraw_top"></div>
 
                         <div id="tgdraw-canvas"
-                            class="flex-1 min-h-0 bg-slate-900/50 rounded flex flex-col items-center justify-start border border-slate-800 overflow-y-auto p-4">
+                            class="flex-1 bg-slate-900/50 rounded flex items-center justify-center border border-slate-800 overflow-auto custom-scrollbar p-4">
                             <p class="text-slate-500 italic">Select a structure to begin.</p>
                         </div>
 

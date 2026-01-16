@@ -130,7 +130,7 @@ textarea {
     border: 1px solid var(--border-color);
     border-radius: var(--border-radius);
     color: var(--text-primary);
-    padding: 0.5rem;
+    padding: 0.75rem !important;
     font-family: inherit;
 }
 
@@ -862,4 +862,56 @@ header .hidden.md\:flex {
         right: 20px;
         bottom: 80px;
     }
+}
+
+/* Custom Scrollbar Styles for Sidebars and Playground */
+.custom-scrollbar::-webkit-scrollbar,
+#viz-canvas::-webkit-scrollbar,
+#code-playground::-webkit-scrollbar,
+.code-container::-webkit-scrollbar,
+#complexity-panel::-webkit-scrollbar,
+aside::-webkit-scrollbar {
+    width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track,
+#viz-canvas::-webkit-scrollbar-track,
+#code-playground::-webkit-scrollbar-track,
+.code-container::-webkit-scrollbar-track,
+#complexity-panel::-webkit-scrollbar-track,
+aside::-webkit-scrollbar-track {
+    background: rgba(30, 41, 59, 0.5);
+    border-radius: 3px;
+    margin: 4px 0;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb,
+#viz-canvas::-webkit-scrollbar-thumb,
+#code-playground::-webkit-scrollbar-thumb,
+.code-container::-webkit-scrollbar-thumb,
+#complexity-panel::-webkit-scrollbar-thumb,
+aside::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, #3b82f6 0%, #2563eb 100%);
+    border-radius: 3px;
+    transition: background 0.3s ease;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover,
+#viz-canvas::-webkit-scrollbar-thumb:hover,
+#code-playground::-webkit-scrollbar-thumb:hover,
+.code-container::-webkit-scrollbar-thumb:hover,
+#complexity-panel::-webkit-scrollbar-thumb:hover,
+aside::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, #60a5fa 0%, #3b82f6 100%);
+}
+
+/* Firefox scrollbar */
+.custom-scrollbar,
+#viz-canvas,
+#code-playground,
+.code-container,
+#complexity-panel,
+aside {
+    scrollbar-width: thin;
+    scrollbar-color: #3b82f6 rgba(30, 41, 59, 0.5);
 }

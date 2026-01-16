@@ -123,7 +123,7 @@ window.pyvizState = {
         "Double check your logic conditions. Is a > b ?",
         "Great start. Try adding a loop to iterate through data."
     ],
-    fontSize: 'text-base',
+    fontSize: 'text-lg',
     functionCallBuffer: []
 };
 
@@ -232,12 +232,12 @@ function renderPyFuncBuilder(container) {
     container.innerHTML = `
         <div class="space-y-4">
             <div class="bg-slate-800 p-3 rounded border border-slate-700 space-y-3">
-                <h4 class="text-xs font-bold text-yellow-500 uppercase"><i class="fa-solid fa-code mr-1"></i> Python Functions</h4>
+                <h4 class="text-sm font-bold text-yellow-500 uppercase"><i class="fa-solid fa-code mr-1"></i> Python Functions</h4>
 
                 <!-- Mode Selector -->
                 <div>
-                     <label class="text-[10px] text-slate-500 uppercase font-bold block mb-1">Mode</label>
-                     <select id="pv-func-mode" onchange="toggleFuncMode()" class="w-full bg-slate-900 border border-slate-600 rounded p-1.5 text-xs text-white">
+                     <label class="text-xs text-slate-500 uppercase font-bold block mb-1">Mode</label>
+                     <select id="pv-func-mode" onchange="toggleFuncMode()" class="w-full bg-slate-900 border border-slate-600 rounded p-1.5 text-sm text-white">
                         <option value="define">User-Defined Function (Def)</option>
                         <option value="builtin">Built-in Function</option>
                         <option value="call">Function Call (User)</option>
@@ -249,17 +249,17 @@ function renderPyFuncBuilder(container) {
                 <!-- 1. Define Function Mode -->
                 <div id="pv-func-define-ui" class="space-y-3">
                     <div>
-                        <label class="text-[10px] text-slate-500 uppercase font-bold block mb-1">Function Name</label>
-                        <input type="text" id="pv-func-def-name" class="w-full bg-slate-900 border border-slate-600 rounded p-1.5 text-xs text-white placeholder-slate-600" placeholder="e.g. calculate_sum">
+                        <label class="text-xs text-slate-500 uppercase font-bold block mb-1">Function Name</label>
+                        <input type="text" id="pv-func-def-name" class="w-full bg-slate-900 border border-slate-600 rounded p-1.5 text-sm text-white placeholder-slate-600" placeholder="e.g. calculate_sum">
                     </div>
 
                     <div>
-                        <label class="text-[10px] text-slate-500 uppercase font-bold block mb-1">Parameters</label>
+                        <label class="text-xs text-slate-500 uppercase font-bold block mb-1">Parameters</label>
                         <div id="pv-func-params" class="space-y-2 mb-2"></div>
-                        <button onclick="addFnParamInput()" class="px-2 py-1 bg-slate-700 hover:bg-slate-600 text-slate-300 text-[10px] rounded w-full"><i class="fa-solid fa-plus"></i> Add Parameter</button>
+                        <button onclick="addFnParamInput()" class="px-2 py-1 bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs rounded w-full"><i class="fa-solid fa-plus"></i> Add Parameter</button>
                     </div>
 
-                    <button onclick="createFnDef()" class="w-full py-2 bg-yellow-600 hover:bg-yellow-500 text-white text-xs font-bold rounded transition-colors">
+                    <button onclick="createFnDef()" class="w-full py-2 bg-yellow-600 hover:bg-yellow-500 text-white text-sm font-bold rounded transition-colors">
                         Define Function
                     </button>
                 </div>
@@ -268,8 +268,8 @@ function renderPyFuncBuilder(container) {
                 <div id="pv-func-builtin-ui" class="space-y-3 hidden">
                     <div class="grid grid-cols-2 gap-2">
                         <div>
-                            <label class="text-[10px] text-slate-500 uppercase font-bold block mb-1">Package</label>
-                            <select id="pv-bi-pkg" onchange="updateBuiltInFuncs()" class="w-full bg-slate-900 border border-slate-600 rounded p-1.5 text-xs text-white">
+                            <label class="text-xs text-slate-500 uppercase font-bold block mb-1">Package</label>
+                            <select id="pv-bi-pkg" onchange="updateBuiltInFuncs()" class="w-full bg-slate-900 border border-slate-600 rounded p-1.5 text-sm text-white">
                                 <option value="math">math</option>
                                 <option value="random">random</option>
                                 <option value="builtins">built-in</option>
@@ -277,8 +277,8 @@ function renderPyFuncBuilder(container) {
                             </select>
                         </div>
                          <div>
-                            <label class="text-[10px] text-slate-500 uppercase font-bold block mb-1">Function</label>
-                            <select id="pv-bi-func" onchange="updateBuiltInParams()" class="w-full bg-slate-900 border border-slate-600 rounded p-1.5 text-xs text-white">
+                            <label class="text-xs text-slate-500 uppercase font-bold block mb-1">Function</label>
+                            <select id="pv-bi-func" onchange="updateBuiltInParams()" class="w-full bg-slate-900 border border-slate-600 rounded p-1.5 text-sm text-white">
                                 <!-- Populated dynamically -->
                             </select>
                         </div>
@@ -289,7 +289,7 @@ function renderPyFuncBuilder(container) {
                         <!-- Inputs generated here -->
                      </div>
 
-                    <button onclick="createBuiltInCall()" class="w-full py-2 bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold rounded transition-colors">
+                    <button onclick="createBuiltInCall()" class="w-full py-2 bg-purple-600 hover:bg-purple-500 text-white text-sm font-bold rounded transition-colors">
                         Insert Built-in Call
                     </button>
                 </div>
@@ -297,20 +297,20 @@ function renderPyFuncBuilder(container) {
                 <!-- 3. Function Call Mode -->
                 <div id="pv-func-call-ui" class="space-y-3 hidden">
                     <div>
-                        <label class="text-[10px] text-slate-500 uppercase font-bold block mb-1">Select Function</label>
-                        <select id="pv-func-call-select" class="w-full bg-slate-900 border border-slate-600 rounded p-1.5 text-xs text-white font-mono">
+                        <label class="text-xs text-slate-500 uppercase font-bold block mb-1">Select Function</label>
+                        <select id="pv-func-call-select" class="w-full bg-slate-900 border border-slate-600 rounded p-1.5 text-sm text-white font-mono">
                             <option value="">(No functions found)</option>
                         </select>
-                        <p class="text-[9px] text-slate-500 mt-1 italic">Lists functions defined in your code starting with 'def'.</p>
+                        <p class="text-[10px] text-slate-500 mt-1 italic">Lists functions defined in your code starting with 'def'.</p>
                     </div>
 
                     <div>
-                        <label class="text-[10px] text-slate-500 uppercase font-bold block mb-1">Arguments</label>
+                        <label class="text-xs text-slate-500 uppercase font-bold block mb-1">Arguments</label>
                         <div id="pv-func-args" class="space-y-2 mb-2"></div>
-                        <button onclick="addFnCallArgInput()" class="px-2 py-1 bg-slate-700 hover:bg-slate-600 text-slate-300 text-[10px] rounded w-full"><i class="fa-solid fa-plus"></i> Add Argument</button>
+                        <button onclick="addFnCallArgInput()" class="px-2 py-1 bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs rounded w-full"><i class="fa-solid fa-plus"></i> Add Argument</button>
                     </div>
 
-                    <button onclick="createFnCall()" class="w-full py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded transition-colors">
+                    <button onclick="createFnCall()" class="w-full py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold rounded transition-colors">
                         Insert Function Call
                     </button>
                 </div>
@@ -318,18 +318,18 @@ function renderPyFuncBuilder(container) {
                 <!-- 4. Return Statement Mode -->
                 <div id="pv-func-return-ui" class="space-y-3 hidden">
                     <div>
-                         <label class="text-[10px] text-slate-500 uppercase font-bold block mb-1">Return Value / Expression</label>
-                        <input type="text" id="pv-return-val" class="w-full bg-slate-900 border border-slate-600 rounded p-1.5 text-xs text-white placeholder-slate-600" placeholder="e.g. 10, a + b, result">
+                         <label class="text-xs text-slate-500 uppercase font-bold block mb-1">Return Value / Expression</label>
+                        <input type="text" id="pv-return-val" class="w-full bg-slate-900 border border-slate-600 rounded p-1.5 text-sm text-white placeholder-slate-600" placeholder="e.g. 10, a + b, result">
                     </div>
-                    <button onclick="createReturnStmt()" class="w-full py-2 bg-green-600 hover:bg-green-500 text-white text-xs font-bold rounded transition-colors">
+                    <button onclick="createReturnStmt()" class="w-full py-2 bg-green-600 hover:bg-green-500 text-white text-sm font-bold rounded transition-colors">
                         Insert Return
                     </button>
                 </div>
 
                 <!-- 5. Main Function Mode -->
                 <div id="pv-func-main-ui" class="space-y-3 hidden">
-                    <p class="text-[10px] text-slate-400">Inserts a standard <code>def main():</code> block with entry point check.</p>
-                    <button onclick="createMainFunc()" class="w-full py-2 bg-pink-600 hover:bg-pink-500 text-white text-xs font-bold rounded transition-colors">
+                    <p class="text-xs text-slate-400">Inserts a standard <code>def main():</code> block with entry point check.</p>
+                    <button onclick="createMainFunc()" class="w-full py-2 bg-pink-600 hover:bg-pink-500 text-white text-sm font-bold rounded transition-colors">
                         Insert Main Function
                     </button>
                 </div>
@@ -601,9 +601,17 @@ window.addFnCallArgInput = function () {
 function loadToolbox(category) {
     // Tab Styling
     document.querySelectorAll('#pyviz-toolbox-cats button').forEach(b => {
-        b.className = (b.dataset.cat === category)
-            ? "px-2 py-1 text-[10px] font-bold rounded bg-blue-600 text-white shadow"
-            : "px-2 py-1 text-[10px] font-bold rounded bg-slate-700 text-slate-300 hover:text-white";
+        // Preserve special classes for My Programs button
+        const isMyPrograms = b.id === 'pyviz-btn-my-programs';
+        const baseClasses = isMyPrograms
+            ? "col-span-2 px-2 py-2 text-base font-semibold rounded text-center border border-slate-600/50"
+            : "px-2 py-2 text-base font-semibold rounded text-center";
+
+        if (b.dataset.cat === category) {
+            b.className = baseClasses + " bg-blue-600 text-white shadow";
+        } else {
+            b.className = baseClasses + " bg-slate-700 text-slate-300 hover:text-white";
+        }
     });
 
     pyvizDom.toolboxContent.innerHTML = '';
@@ -621,34 +629,34 @@ function renderVarBuilder(container) {
 
     container.innerHTML = `
         <div class="bg-slate-800 p-3 rounded border border-slate-700 space-y-3">
-            <h4 class="text-xs font-bold text-blue-400 uppercase">Create Variable</h4>
+            <h4 class="text-sm font-bold text-blue-400 uppercase">Create Variable</h4>
             
             <div>
-                <label class="text-[10px] text-slate-500 uppercase font-bold block mb-1">Name</label>
-                <input type="text" id="pv-var-name" class="w-full bg-slate-900 border border-slate-600 rounded p-1.5 text-xs text-white placeholder-slate-600 focus:border-blue-500 focus:outline-none" placeholder="e.g. score">
+                <label class="text-xs text-slate-500 uppercase font-bold block mb-1">Name</label>
+                <input type="text" id="pv-var-name" class="w-full bg-slate-900 border border-slate-600 rounded p-1.5 text-sm text-white placeholder-slate-600 focus:border-blue-500 focus:outline-none" placeholder="e.g. score">
             </div>
 
             <div>
-                <label class="text-[10px] text-slate-500 uppercase font-bold block mb-1">Value (Manual)</label>
-                <input type="text" id="pv-var-val" class="w-full bg-slate-900 border border-slate-600 rounded p-1.5 text-xs text-white placeholder-slate-600 focus:border-blue-500 focus:outline-none" placeholder="e.g. 10">
+                <label class="text-xs text-slate-500 uppercase font-bold block mb-1">Value (Manual)</label>
+                <input type="text" id="pv-var-val" class="w-full bg-slate-900 border border-slate-600 rounded p-1.5 text-sm text-white placeholder-slate-600 focus:border-blue-500 focus:outline-none" placeholder="e.g. 10">
             </div>
             
             <!-- Generated Calls Dropdown -->
             <div>
-                <label class="text-[10px] text-slate-500 uppercase font-bold block mb-1">OR Generated Call</label>
-                <select id="pv-var-buffer-select" class="w-full bg-slate-900 border border-slate-600 rounded p-1.5 text-xs text-white font-mono">
+                <label class="text-xs text-slate-500 uppercase font-bold block mb-1">OR Generated Call</label>
+                <select id="pv-var-buffer-select" class="w-full bg-slate-900 border border-slate-600 rounded p-1.5 text-sm text-white font-mono">
                     <option value="">-- Select Generated Call --</option>
                     ${bufferOpts}
                 </select>
             </div>
 
-            <button onclick="createVariable()" class="w-full py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded transition-colors">
+            <button onclick="createVariable()" class="w-full py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold rounded transition-colors">
                 <i class="fa-solid fa-plus mr-1"></i> Set Variable
             </button>
         </div>
 
         <div class="mt-4">
-             <h4 class="text-xs font-bold text-slate-500 uppercase mb-2">Existing Variables</h4>
+             <h4 class="text-sm font-bold text-slate-500 uppercase mb-2">Existing Variables</h4>
              <div id="pv-active-vars" class="space-y-1">
                 <!-- Populated dynamically -->
              </div>
@@ -768,63 +776,63 @@ function renderFuncBuilder(container) {
         <div class="space-y-4">
             <!-- Print Builder -->
             <div class="bg-slate-800 p-3 rounded border border-slate-700 space-y-3">
-                <h4 class="text-xs font-bold text-slate-300 uppercase"><i class="fa-solid fa-print mr-1"></i> Print Statement</h4>
+                <h4 class="text-sm font-bold text-slate-300 uppercase"><i class="fa-solid fa-print mr-1"></i> Print Statement</h4>
                 
                 <div id="pv-print-args" class="space-y-2">
                     <div class="flex gap-1">
-                        <input type="text" class="print-arg flex-1 bg-slate-900 border border-slate-600 rounded p-1.5 text-xs text-white placeholder-slate-600" placeholder="Arg 1 (e.g. 'Result:', x)">
+                        <input type="text" class="print-arg flex-1 bg-slate-900 border border-slate-600 rounded p-1.5 text-sm text-white placeholder-slate-600" placeholder="Arg 1 (e.g. 'Result:', x)">
                     </div>
                 </div>
                 
                 <div class="space-y-2">
                      <div>
-                        <label class="text-[10px] text-slate-500 uppercase font-bold block mb-1">Add Generated Call (Optional)</label>
-                        <select id="pv-print-buffer-select" class="w-full bg-slate-900 border border-slate-600 rounded p-1.5 text-xs text-white font-mono">
+                        <label class="text-xs text-slate-500 uppercase font-bold block mb-1">Add Generated Call (Optional)</label>
+                        <select id="pv-print-buffer-select" class="w-full bg-slate-900 border border-slate-600 rounded p-1.5 text-sm text-white font-mono">
                             <option value="">-- Select Generated Call --</option>
                             ${bufferOpts}
                         </select>
                     </div>
 
                     <div class="flex gap-2">
-                         <button onclick="addPrintArgInput()" class="w-full px-2 py-1 bg-slate-700 hover:bg-slate-600 text-slate-300 text-[10px] rounded"><i class="fa-solid fa-plus"></i> Add Arg (Text or Selected Call)</button>
+                         <button onclick="addPrintArgInput()" class="w-full px-2 py-1 bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs rounded"><i class="fa-solid fa-plus"></i> Add Arg (Text or Selected Call)</button>
                     </div>
                 </div>
 
                  <div class="flex items-center gap-2 mt-2">
                     <input type="checkbox" id="pv-print-end" class="accent-blue-500 h-3 w-3">
-                    <label for="pv-print-end" class="text-xs text-slate-400">Custom End</label>
-                    <input type="text" id="pv-print-end-val" class="w-12 bg-slate-900 border border-slate-600 rounded p-1 text-xs text-white" value='" "'>
+                    <label for="pv-print-end" class="text-sm text-slate-400">Custom End</label>
+                    <input type="text" id="pv-print-end-val" class="w-12 bg-slate-900 border border-slate-600 rounded p-1 text-sm text-white" value='" "'>
                 </div>
 
-                <button onclick="createPrint()" class="w-full py-2 bg-slate-600 hover:bg-slate-500 text-white text-xs font-bold rounded transition-colors">
+                <button onclick="createPrint()" class="w-full py-2 bg-slate-600 hover:bg-slate-500 text-white text-sm font-bold rounded transition-colors">
                     Insert Print()
                 </button>
             </div>
 
             <!-- Input Builder -->
             <div class="bg-slate-800 p-3 rounded border border-slate-700 space-y-3">
-                <h4 class="text-xs font-bold text-slate-300 uppercase"><i class="fa-regular fa-keyboard mr-1"></i> Input Statement</h4>
+                <h4 class="text-sm font-bold text-slate-300 uppercase"><i class="fa-regular fa-keyboard mr-1"></i> Input Statement</h4>
                 
                 <div>
-                     <label class="text-[10px] text-slate-500 uppercase font-bold block mb-1">Target Variable</label>
-                    <input type="text" id="pv-input-var" class="w-full bg-slate-900 border border-slate-600 rounded p-1.5 text-xs text-white placeholder-slate-600" placeholder="e.g. user_age">
+                     <label class="text-xs text-slate-500 uppercase font-bold block mb-1">Target Variable</label>
+                    <input type="text" id="pv-input-var" class="w-full bg-slate-900 border border-slate-600 rounded p-1.5 text-sm text-white placeholder-slate-600" placeholder="e.g. user_age">
                 </div>
                 
                 <div>
-                     <label class="text-[10px] text-slate-500 uppercase font-bold block mb-1">Prompt Message</label>
-                    <input type="text" id="pv-input-prompt" class="w-full bg-slate-900 border border-slate-600 rounded p-1.5 text-xs text-white placeholder-slate-600" placeholder="e.g. Enter your age">
+                     <label class="text-xs text-slate-500 uppercase font-bold block mb-1">Prompt Message</label>
+                    <input type="text" id="pv-input-prompt" class="w-full bg-slate-900 border border-slate-600 rounded p-1.5 text-sm text-white placeholder-slate-600" placeholder="e.g. Enter your age">
                 </div>
 
                  <div>
-                     <label class="text-[10px] text-slate-500 uppercase font-bold block mb-1">Type Cast</label>
-                     <select id="pv-input-type" class="w-full bg-slate-900 border border-slate-600 rounded p-1.5 text-xs text-white">
+                     <label class="text-xs text-slate-500 uppercase font-bold block mb-1">Type Cast</label>
+                     <select id="pv-input-type" class="w-full bg-slate-900 border border-slate-600 rounded p-1.5 text-sm text-white">
                         <option value="str">String (Default)</option>
                         <option value="int">Integer (int())</option>
                         <option value="float">Float (float())</option>
                      </select>
                 </div>
 
-                <button onclick="createInput()" class="w-full py-2 bg-slate-600 hover:bg-slate-500 text-white text-xs font-bold rounded transition-colors">
+                <button onclick="createInput()" class="w-full py-2 bg-slate-600 hover:bg-slate-500 text-white text-sm font-bold rounded transition-colors">
                     Insert Input()
                 </button>
             </div>
@@ -898,11 +906,11 @@ function renderImportBuilder(container) {
     container.innerHTML = `
         <div class="space-y-4">
             <div class="bg-slate-800 p-3 rounded border border-slate-700 space-y-3">
-                <h4 class="text-xs font-bold text-slate-300 uppercase"><i class="fa-solid fa-file-import mr-1"></i> Import Module</h4>
+                <h4 class="text-sm font-bold text-slate-300 uppercase"><i class="fa-solid fa-file-import mr-1"></i> Import Module</h4>
                 
                 <div>
-                     <label class="text-[10px] text-slate-500 uppercase font-bold block mb-1">Standard Library</label>
-                     <select id="pv-import-std" class="w-full bg-slate-900 border border-slate-600 rounded p-1.5 text-xs text-white">
+                     <label class="text-xs text-slate-500 uppercase font-bold block mb-1">Standard Library</label>
+                     <select id="pv-import-std" class="w-full bg-slate-900 border border-slate-600 rounded p-1.5 text-sm text-white">
                         <option value="math">math</option>
                         <option value="random">random</option>
                         <option value="datetime">datetime</option>
@@ -911,22 +919,22 @@ function renderImportBuilder(container) {
                      </select>
                 </div>
 
-                <button onclick="createImport('std')" class="w-full py-2 bg-slate-600 hover:bg-slate-500 text-white text-xs font-bold rounded transition-colors">
+                <button onclick="createImport('std')" class="w-full py-2 bg-slate-600 hover:bg-slate-500 text-white text-sm font-bold rounded transition-colors">
                     Import Standard Lib
                 </button>
                 
                 <hr class="border-slate-700">
 
                 <div>
-                     <label class="text-[10px] text-slate-500 uppercase font-bold block mb-1">Third-Party (Visual Only)</label>
-                     <select id="pv-import-ext" class="w-full bg-slate-900 border border-slate-600 rounded p-1.5 text-xs text-white">
+                     <label class="text-xs text-slate-500 uppercase font-bold block mb-1">Third-Party (Visual Only)</label>
+                     <select id="pv-import-ext" class="w-full bg-slate-900 border border-slate-600 rounded p-1.5 text-sm text-white">
                         <option value="numpy">numpy as np</option>
                         <option value="pandas">pandas as pd</option>
                         <option value="matplotlib.pyplot">matplotlib.pyplot as plt</option>
                      </select>
                 </div>
 
-                <button onclick="createImport('ext')" class="w-full py-2 bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold rounded transition-colors">
+                <button onclick="createImport('ext')" class="w-full py-2 bg-purple-600 hover:bg-purple-500 text-white text-sm font-bold rounded transition-colors">
                     Import External Lib
                 </button>
             </div>
@@ -1172,7 +1180,7 @@ function renderPyViz() {
     area.innerHTML = '';
 
     // Font size state validation
-    if (!pyvizState.fontSize) pyvizState.fontSize = 'text-base';
+    if (!pyvizState.fontSize) pyvizState.fontSize = 'text-lg';
 
     const keywords = new Set(['def', 'class', 'if', 'else', 'elif', 'for', 'while', 'return', 'import', 'from', 'as', 'break', 'continue', 'pass', 'and', 'or', 'not', 'in', 'is']);
     const builtins = new Set(['print', 'input', 'len', 'range', 'int', 'str', 'float', 'list', 'dict', 'set', 'tuple', 'deque']);
@@ -2147,7 +2155,7 @@ function updateStats() {
 
 function changeFontSize(delta) {
     const sizes = ['text-xs', 'text-sm', 'text-base', 'text-lg', 'text-xl', 'text-2xl', 'text-3xl', 'text-4xl'];
-    let currentIdx = sizes.indexOf(pyvizState.fontSize || 'text-base');
+    let currentIdx = sizes.indexOf(pyvizState.fontSize || 'text-lg');
     let newIdx = Math.max(0, Math.min(sizes.length - 1, currentIdx + delta));
     pyvizState.fontSize = sizes[newIdx];
     renderPyViz();

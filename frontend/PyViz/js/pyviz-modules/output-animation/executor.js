@@ -66,9 +66,12 @@ export class Executor {
                         window.updateDryRunTable(prev_lineno, locals);
                     }
 
+                    // Store current locals globally for runtime inspection
+                    window.pyvizRuntimeLocals = locals || {};
+
                     // Determine highlighting strategy.
                     // Assuming `highlightCallback` is provided by index.js which knows about the editor.
-                    if (highlightCallback) highlightCallback(lineno);
+                    if (highlightCallback) highlightCallback(lineno, locals);
                 },
                 onPrint: (text) => {
                     this.outputPanel.appendLine(text);

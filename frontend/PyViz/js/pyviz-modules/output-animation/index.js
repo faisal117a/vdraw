@@ -50,6 +50,7 @@ class OutputAnimationModule {
             select.id = "pyviz-speed-select";
             select.className = "bg-slate-900 border border-slate-600 rounded text-[10px] text-white p-1 focus:outline-none focus:border-blue-500";
             select.innerHTML = `
+                <option value="10">Very Fast (0s)</option>
                 <option value="500">Fast (0.5s)</option>
                 <option value="1000" selected>Normal (1s)</option>
                 <option value="2000">Slow (2s)</option>
@@ -124,7 +125,7 @@ class OutputAnimationModule {
         toast.className = 'fixed bottom-4 right-4 bg-slate-800 text-white p-3 rounded shadow-lg border border-slate-600 z-50 flex items-center gap-2 transition-all duration-300 transform translate-y-0 opacity-100';
         toast.innerHTML = `
             <i class="fa-solid fa-circle-notch fa-spin text-orange-400"></i>
-            <span class="animate-pulse text-xs font-bold text-orange-200">Python Runtime Downloadin.g..</span>
+            <span class="animate-pulse text-xs font-bold text-orange-200">Python Runtime Downloading...</span>
         `;
         document.body.appendChild(toast);
     }
@@ -227,12 +228,16 @@ class OutputAnimationModule {
         }
     }
 
-    highlightLine(lineno) {
+    highlightLine(lineno, locals = {}) {
         // lineno is 1-based from Python trace
         const index = lineno - 1;
         const codeArea = document.getElementById('pyviz-code-area');
 
         if (!codeArea) return;
+
+        // Store current runtime state for hover inspection
+        this.currentLocals = locals;
+        this.currentLineno = lineno;
 
         // Remove previous highlight
         if (this._lastHighlight) {

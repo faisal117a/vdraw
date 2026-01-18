@@ -20,6 +20,8 @@ $currentUser = Auth::user();
 
     <!-- Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Focus Magnifier Styles -->
+    <link rel="stylesheet" href="js/focus-magnifier/focus-magnifier.css">
 
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -509,6 +511,8 @@ $currentUser = Auth::user();
     <script src="js/backend-mock.js"></script>
     <script src="js/charts.js"></script>
     <script src="../js/tracking.js"></script>
+    <!-- Focus Magnifier Feature -->
+    <script src="js/focus-magnifier/focus-magnifier.js"></script>
     <script>
         // start tracking Stats api code
         if(window.initTracking) {

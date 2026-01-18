@@ -44,13 +44,13 @@ if ($myLimit <= 0) {
     $limits = ['student' => 20, 'teacher' => 100, 'teacher_verified' => 500];
     $stmt = DB::query("SELECT setting_key, setting_value FROM app_settings WHERE setting_key LIKE 'limit_daily_%'");
     if ($stmt && ($res = $stmt->get_result())) {
-        while($row = $res->fetch_assoc()) {
+        while ($row = $res->fetch_assoc()) {
             $key = str_replace('limit_daily_', '', $row['setting_key']);
             $val = (int)$row['setting_value'];
             if ($val > 0) $limits[$key] = $val;
         }
     }
-    
+
     $myLimit = $limits['student'];
     if (($user['role'] ?? 'student') === 'teacher') {
         $isVerified = isset($user['teacher_verified']) && $user['teacher_verified'];
@@ -84,6 +84,7 @@ if ($stmt) {
 ?>
 <!DOCTYPE html>
 <html lang="en" class="dark">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -96,25 +97,62 @@ if ($stmt) {
             darkMode: 'class',
             theme: {
                 extend: {
-                    fontFamily: { sans: ['Outfit', 'sans-serif'], },
+                    fontFamily: {
+                        sans: ['Outfit', 'sans-serif'],
+                    },
                     colors: {
-                        brand: { 50: '#eff6ff', 100: '#dbeafe', 400: '#60a5fa', 500: '#3b82f6', 600: '#2563eb', 900: '#1e3a8a', }
+                        brand: {
+                            50: '#eff6ff',
+                            100: '#dbeafe',
+                            400: '#60a5fa',
+                            500: '#3b82f6',
+                            600: '#2563eb',
+                            900: '#1e3a8a',
+                        }
                     }
                 }
             }
         }
     </script>
     <style>
-        :root { --bg-color: #0f172a; --text-color: #e2e8f0; }
-        body { font-family: 'Outfit', sans-serif; background-color: var(--bg-color); color: var(--text-color); }
-        .glass-panel { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.05); }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
-        .animate-fade-in { animation: fadeIn 0.3s ease-out forwards; }
+        :root {
+            --bg-color: #0f172a;
+            --text-color: #e2e8f0;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+        }
+
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .animate-fade-in {
+            animation: fadeIn 0.3s ease-out forwards;
+        }
     </style>
 </head>
+
 <body class="h-screen flex overflow-hidden bg-slate-950">
 
-    <?php if(isset($_GET['msg'])): 
+    <?php if (isset($_GET['msg'])):
         $msg = $_GET['msg'];
         $isError = stripos($msg, 'error') !== false || stripos($msg, 'fail') !== false || stripos($msg, 'invalid') !== false;
         $bgClass = $isError ? 'bg-red-500 border-red-600' : 'bg-green-500 border-green-600';
@@ -131,7 +169,7 @@ if ($stmt) {
             }
             setTimeout(() => {
                 const el = document.getElementById('toast-msg');
-                if(el) {
+                if (el) {
                     el.style.transition = 'opacity 0.5s';
                     el.style.opacity = '0';
                     setTimeout(() => el.remove(), 500);
@@ -177,39 +215,45 @@ if ($stmt) {
                         <div class="text-sm font-bold text-white"><?php echo htmlspecialchars($user['email']); ?></div>
                         <div class="text-xs text-slate-500 uppercase"><?php echo htmlspecialchars($user['role']); ?></div>
                     </div>
+
+                    <form action="delete_account.php" method="POST" onsubmit="return confirm('CRITICAL WARNING:\n\nAre you ABSOLUTELY SURE you want to delete your account?\n\nThis action cannot be undone.\n\nAll your data will be permanently removed.');">
+                        <button type="submit" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-400 hover:text-red-400 text-xs font-medium py-2 px-3 rounded transition shadow-sm" title="Delete My Account">
+                            <i class="fa-solid fa-trash mr-1"></i> Delete
+                        </button>
+                    </form>
                 </div>
             </header>
         </div>
 
         <!-- Dashboard Content Stack -->
         <div class="max-w-7xl mx-auto space-y-8">
-            
+
             <!-- Stats Cards Grid -->
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                
+
                 <!-- Card 1: Daily Quota -->
                 <div class="glass-panel p-6 rounded-xl">
                     <div class="text-slate-400 text-sm mb-1">Daily Quota Usage</div>
                     <div class="text-3xl font-bold text-white mb-2 flex items-baseline gap-2">
-                        <?php 
-                            $normUsed = min($dailyUsed, $myLimit);
-                            $rewUsed = max(0, $dailyUsed - $myLimit);
+                        <?php
+                        $normUsed = min($dailyUsed, $myLimit);
+                        $rewUsed = max(0, $dailyUsed - $myLimit);
                         ?>
-                        <?php echo $normUsed; ?> 
-                        <span class="text-lg text-slate-500 font-normal">/ 
+                        <?php echo $normUsed; ?>
+                        <span class="text-lg text-slate-500 font-normal">/
                             <?php echo $myLimit; ?>
-                            <?php if(!empty($user['reward_credits']) && $user['reward_credits'] > 0): ?>
-                            <span class="text-brand-400 text-base" title="Reward Balance">+<?php echo $user['reward_credits']; ?> Balance</span>
+                            <?php if (!empty($user['reward_credits']) && $user['reward_credits'] > 0): ?>
+                                <span class="text-brand-400 text-base" title="Reward Balance">+<?php echo $user['reward_credits']; ?> Balance</span>
                             <?php endif; ?>
                         </span>
                     </div>
-                    <?php if($rewUsed > 0): ?>
+                    <?php if ($rewUsed > 0): ?>
                         <div class="text-xs text-green-400 font-bold mb-2"><i class="fa-solid fa-gift mr-1"></i> +<?php echo $rewUsed; ?> Reward Used Today</div>
                     <?php endif; ?>
                     <div class="w-full bg-slate-700 h-2 rounded-full overflow-hidden">
-                        <?php 
-                            $totalAvail = $myLimit + ($user['reward_credits']??0);
-                            $pct = ($totalAvail > 0) ? ($dailyUsed / $totalAvail) * 100 : 0;
+                        <?php
+                        $totalAvail = $myLimit + ($user['reward_credits'] ?? 0);
+                        $pct = ($totalAvail > 0) ? ($dailyUsed / $totalAvail) * 100 : 0;
                         ?>
                         <div class="bg-brand-500 h-full" style="width: <?php echo min(100, $pct); ?>%"></div>
                     </div>
@@ -217,7 +261,7 @@ if ($stmt) {
 
                 <!-- Card 2: Status/Upgrade -->
                 <div class="glass-panel p-6 rounded-xl">
-                    <?php if(($user['role'] ?? 'student') === 'student'): ?>
+                    <?php if (($user['role'] ?? 'student') === 'student'): ?>
                         <div class="text-slate-400 text-sm mb-1">Account Type</div>
                         <div class="text-2xl font-bold text-white">Student</div>
                         <form action="update_profile.php" method="POST" onsubmit="return confirm('Upgrade to Teacher account to unlock verification?');">
@@ -230,10 +274,10 @@ if ($stmt) {
                             <?php echo $teacherStatus; ?>
                         </div>
                         <?php if ($teacherStatus === 'Not Verified' || $teacherStatus === 'Rejected' || $teacherStatus === 'Unverified'): ?>
-                            <?php if(!empty($user['email_verified_at'])): ?>
-                            <button onclick="openVerificationModal()" class="mt-3 text-xs px-3 py-1 bg-brand-600 rounded text-white hover:bg-brand-500">Apply Now</button>
+                            <?php if (!empty($user['email_verified_at'])): ?>
+                                <button onclick="openVerificationModal()" class="mt-3 text-xs px-3 py-1 bg-brand-600 rounded text-white hover:bg-brand-500">Apply Now</button>
                             <?php else: ?>
-                            <button disabled class="mt-3 text-xs px-3 py-1 bg-slate-800 border border-slate-700 rounded text-slate-500 cursor-not-allowed opacity-75">Apply Now (Verify Email First)</button>
+                                <button disabled class="mt-3 text-xs px-3 py-1 bg-slate-800 border border-slate-700 rounded text-slate-500 cursor-not-allowed opacity-75">Apply Now (Verify Email First)</button>
                             <?php endif; ?>
                         <?php endif; ?>
                     <?php endif; ?>
@@ -246,7 +290,7 @@ if ($stmt) {
                         <?php echo $user['verified'] ? 'Email Verified' : 'Email Unverified'; ?>
                     </div>
                     <?php if (!$user['verified']): ?>
-                    <div class="text-xs text-red-400 mt-1"><i class="fa-solid fa-triangle-exclamation"></i> Restricted Access</div>
+                        <div class="text-xs text-red-400 mt-1"><i class="fa-solid fa-triangle-exclamation"></i> Restricted Access</div>
                     <?php endif; ?>
                 </div>
 
@@ -273,23 +317,25 @@ if ($stmt) {
                 </div>
                 <div class="overflow-x-auto">
                     <table class="w-full text-left text-sm text-slate-400">
-                            <thead class="bg-slate-800/50 text-slate-200 uppercase text-xs sticky top-0">
-                                <tr>
-                                    <th class="px-3 py-2">Event</th>
-                                    <th class="px-3 py-2">Details</th>
-                                    <th class="px-3 py-2">Time</th>
-                                </tr>
-                            </thead>
+                        <thead class="bg-slate-800/50 text-slate-200 uppercase text-xs sticky top-0">
+                            <tr>
+                                <th class="px-3 py-2">Event</th>
+                                <th class="px-3 py-2">Details</th>
+                                <th class="px-3 py-2">Time</th>
+                            </tr>
+                        </thead>
                         <tbody class="divide-y divide-slate-800">
-                            <?php foreach($logs as $log): ?>
+                            <?php foreach ($logs as $log): ?>
                                 <tr class="hover:bg-slate-800/30">
                                     <td class="px-3 py-2 font-medium text-white whitespace-nowrap"><?php echo htmlspecialchars($log['title']); ?></td>
                                     <td class="px-3 py-2 text-xs min-w-[150px]"><?php echo htmlspecialchars($log['details']); ?></td>
                                     <td class="px-3 py-2 text-[10px] whitespace-nowrap"><?php echo date('m-d H:i', strtotime($log['created_at'])); ?></td>
                                 </tr>
                             <?php endforeach; ?>
-                            <?php if(empty($logs)): ?>
-                            <tr><td colspan="3" class="px-6 py-4 text-center italic text-slate-600">No recent activity.</td></tr>
+                            <?php if (empty($logs)): ?>
+                                <tr>
+                                    <td colspan="3" class="px-6 py-4 text-center italic text-slate-600">No recent activity.</td>
+                                </tr>
                             <?php endif; ?>
                         </tbody>
                     </table>
@@ -300,17 +346,17 @@ if ($stmt) {
 
 
     </main>
-    
+
     <!-- Verification Modal -->
     <div id="verify-modal" class="fixed inset-0 bg-black/60 z-50 hidden backdrop-blur-sm flex items-center justify-center">
         <div class="bg-slate-900 border border-slate-700 rounded-xl p-6 w-full max-w-md shadow-2xl relative">
             <button onclick="document.getElementById('verify-modal').classList.add('hidden')" class="absolute top-4 right-4 text-slate-500 hover:text-white transition">
                 <i class="fa-solid fa-xmark"></i>
             </button>
-            
+
             <h3 class="text-xl font-bold text-white mb-2">Teacher Verification</h3>
             <p class="text-slate-400 text-sm mb-6">Upload your Faculty ID Card or Employment Letter to verify your teacher status and unlock higher limits.</p>
-            
+
             <form id="verify-form" onsubmit="submitVerification(event)" class="space-y-4">
                 <div class="border-2 border-dashed border-slate-700 rounded-lg p-6 flex flex-col items-center justify-center hover:border-brand-500 transition-colors cursor-pointer relative">
                     <input type="file" name="id_document" id="id_document" class="absolute inset-0 opacity-0 cursor-pointer" accept=".pdf,.jpg,.jpeg,.png" required onchange="updateFileName(this)">
@@ -319,14 +365,14 @@ if ($stmt) {
                     <p class="text-xs text-slate-500">(PDF, JPG, PNG - Max 3MB)</p>
                     <p id="file-name" class="text-xs text-brand-400 mt-2 font-mono hidden"></p>
                 </div>
-                
+
                 <button type="submit" class="w-full bg-brand-600 hover:bg-brand-500 text-white font-bold py-2 rounded transition shadow-lg shadow-brand-500/20">
                     Submit for Review
                 </button>
             </form>
         </div>
     </div>
-    
+
     <!-- Redeem Modal -->
     <div id="redeem-modal" class="fixed inset-0 bg-black/60 z-50 hidden backdrop-blur-sm flex items-center justify-center">
         <div class="bg-slate-900 border border-slate-700 rounded-xl p-6 w-full max-w-sm shadow-2xl relative">
@@ -335,7 +381,7 @@ if ($stmt) {
             </button>
             <h3 class="text-xl font-bold text-white mb-2"><i class="fa-solid fa-gift text-amber-500 mr-2"></i> Redeem Credits</h3>
             <p class="text-slate-400 text-sm mb-6">Convert your activity points into extra AI usage credits.</p>
-            
+
             <div class="bg-slate-800/50 p-3 rounded mb-4 text-center">
                 <div class="text-xs text-slate-500 uppercase font-bold">Current Balance</div>
                 <div class="text-2xl font-bold text-amber-400"><?php echo number_format($pointsBalance); ?> Pts</div>
@@ -345,7 +391,7 @@ if ($stmt) {
                 <div>
                     <label class="block text-xs font-bold text-slate-400 mb-1">Credits to Buy (20 Pts/Credit)</label>
                     <div class="flex items-center space-x-2">
-                        <input type="number" id="redeem-qty" name="credits" min="1" value="1" required 
+                        <input type="number" id="redeem-qty" name="credits" min="1" value="1" required
                             class="w-full bg-slate-950 border border-slate-600 rounded p-2 text-white placeholder-slate-600 text-center font-bold"
                             oninput="updateRedeemCost()">
                         <span class="text-white font-bold">=</span>
@@ -390,10 +436,13 @@ if ($stmt) {
         async function logout() {
             const formData = new FormData();
             formData.append('action', 'logout');
-            await fetch('../../auth/api.php', { method: 'POST', body: formData });
+            await fetch('../../auth/api.php', {
+                method: 'POST',
+                body: formData
+            });
             window.location.href = '../../login.php';
         }
-        
+
         function openVerificationModal() {
             document.getElementById('verify-modal').classList.remove('hidden');
         }
@@ -420,11 +469,14 @@ if ($stmt) {
             btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Uploading...';
 
             const formData = new FormData(e.target);
-            
+
             try {
-                const res = await fetch('upload_verification.php', { method: 'POST', body: formData });
+                const res = await fetch('upload_verification.php', {
+                    method: 'POST',
+                    body: formData
+                });
                 const data = await res.json();
-                
+
                 if (data.status === 'success') {
                     alert(data.message);
                     location.reload();
@@ -440,6 +492,7 @@ if ($stmt) {
                 btn.innerHTML = originalText;
             }
         }
+
         function openRedeemModal() {
             document.getElementById('redeem-qty').value = 1;
             updateRedeemCost();
@@ -453,7 +506,7 @@ if ($stmt) {
             document.getElementById('redeem-cost').innerText = cost;
             const balance = <?php echo $pointsBalance; ?>;
             const btn = document.getElementById('redeem-btn');
-            
+
             if (cost > balance) {
                 btn.disabled = true;
                 btn.classList.add('opacity-50', 'cursor-not-allowed');
@@ -472,13 +525,16 @@ if ($stmt) {
             const originalText = btn.innerHTML;
             btn.disabled = true;
             btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Processing...';
-            
+
             const formData = new FormData(e.target);
-            
+
             try {
-                const res = await fetch('redeem_points.php', { method: 'POST', body: formData });
+                const res = await fetch('redeem_points.php', {
+                    method: 'POST',
+                    body: formData
+                });
                 const data = await res.json();
-                
+
                 if (data.success) {
                     alert('Redemption Successful!');
                     location.reload();
@@ -505,4 +561,5 @@ if ($stmt) {
         }
     </script>
 </body>
+
 </html>

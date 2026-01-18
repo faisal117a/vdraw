@@ -86,6 +86,8 @@ let currentStructure = "stack";
 let currentImpl = "list";
 let lastSimulationResult = null;
 let pdrawDom = {};
+let pdrawFontSize = 'text-xl';
+let pdrawDiagFontSize = 'text-xl';
 
 // --- Initialization ---
 function init() {
@@ -110,6 +112,9 @@ function init() {
         divDiagram: document.getElementById('pdraw-diagram'),
         lblDiag: document.getElementById('pdraw-diag-label')
     };
+
+    if (pdrawDom.divOutput) pdrawDom.divOutput.classList.add(pdrawFontSize);
+    if (pdrawDom.divDiagram) pdrawDom.divDiagram.classList.add(pdrawDiagFontSize);
 
     // Explicit global exposure for inline handlers
     window.switchPhase = switchPhase;
@@ -468,7 +473,7 @@ function renderSimulation(result) {
     html += `
         <div class="mb-4 step-card cursor-pointer hover:border-green-500/50 border border-slate-700 rounded p-4 bg-slate-800/50 transition-colors" onclick="showDiagram(-1)">
             <h4 class="text-xs font-bold text-slate-500 uppercase mb-2">Initial State</h4>
-            <div class="font-mono text-sm text-slate-300">
+            <div class="font-mono font-semibold text-slate-300">
                 ${initial.print}
             </div>
         </div>
@@ -481,17 +486,17 @@ function renderSimulation(result) {
         html += `
             <div class="mb-4 p-4 rounded-lg border ${errorClass} transition-all hover:bg-slate-800 cursor-pointer step-card" onclick="showDiagram(${idx})">
                 <div class="flex justify-between items-start mb-2">
-                    <span class="font-bold text-green-400 text-sm font-mono">${step.index}. ${step.operation}</span>
+                    <span class="font-bold text-green-400 font-mono text-base">${step.index}. ${step.operation}</span>
                     <span class="text-xs bg-slate-900 px-2 py-1 rounded text-slate-400 border border-slate-700">
                         ${step.complexity}
                     </span>
                 </div>
                 
-                <div class="font-mono text-sm text-white mb-2 p-2 bg-slate-900 rounded border border-slate-700/50">
+                <div class="font-mono font-semibold text-white mb-2 p-2 bg-slate-900 rounded border border-slate-700/50">
                     ${step.print_output}
                 </div>
                 
-                <div class="text-xs text-slate-400">
+                <div class="text-sm text-slate-400 tracking-wide">
                     <i class="fa-solid fa-info-circle mr-1 text-blue-400"></i> ${step.explanation}
                 </div>
                 ${step.error_msg ? `<div class="text-xs text-red-400 mt-1 font-bold">Error: ${step.error_msg}</div>` : ''}
@@ -560,7 +565,7 @@ function renderVisual(state) {
             // Render items - TOP of stack is first (index 0)
             items.slice().reverse().forEach((item, i) => {
                 const box = document.createElement('div');
-                box.className = 'w-24 h-10 bg-green-900/40 border border-green-500 text-green-100 flex items-center justify-center rounded shadow font-mono text-sm relative shrink-0 transition-all';
+                box.className = 'px-4 py-2 min-w-[6rem] bg-green-900/40 border border-green-500 text-green-100 flex items-center justify-center rounded shadow font-mono font-semibold transition-all relative shrink-0';
                 box.innerText = typeof item === 'string' ? `'${item}'` : item;
 
                 if (i === 0) {
@@ -581,7 +586,7 @@ function renderVisual(state) {
         } else {
             items.forEach((item, i) => {
                 const box = document.createElement('div');
-                box.className = 'w-24 h-10 bg-blue-900/40 border border-blue-500 text-blue-100 flex items-center justify-center rounded shadow font-mono text-sm relative shrink-0 transition-all';
+                box.className = 'px-4 py-2 min-w-[6rem] bg-blue-900/40 border border-blue-500 text-blue-100 flex items-center justify-center rounded shadow font-mono font-semibold transition-all relative shrink-0';
                 box.innerText = typeof item === 'string' ? `'${item}'` : item;
 
                 if (i === 0) {
@@ -614,7 +619,7 @@ function renderVisual(state) {
 
             items.forEach((item, i) => {
                 const box = document.createElement('div');
-                box.className = 'px-3 py-2 bg-purple-900/30 border border-purple-500/50 text-purple-100 flex flex-col items-center justify-center rounded-full font-mono text-sm shadow relative';
+                box.className = 'px-4 py-2 bg-purple-900/30 border border-purple-500/50 text-purple-100 flex flex-col items-center justify-center rounded-full font-mono font-semibold shadow relative';
 
                 const idxLbl = document.createElement('span');
                 idxLbl.className = 'text-[8px] text-purple-400/70 mb-1';
@@ -646,7 +651,7 @@ function renderVisual(state) {
         } else {
             items.forEach((item, i) => {
                 const box = document.createElement('div');
-                box.className = 'w-12 h-12 bg-slate-800 border border-slate-600 text-slate-200 flex flex-col items-center justify-center rounded font-mono text-sm shadow relative';
+                box.className = 'w-16 h-16 bg-slate-800 border border-slate-600 text-slate-200 flex flex-col items-center justify-center rounded font-mono font-semibold shadow relative';
 
                 const idxLbl = document.createElement('span');
                 idxLbl.className = 'absolute top-0 left-1 text-[8px] text-slate-500';
@@ -665,3 +670,29 @@ function renderVisual(state) {
     container.appendChild(content);
     pdrawDom.divDiagram.appendChild(container);
 }
+
+function changePdrawFontSize(delta) {
+    const sizes = ['text-xs', 'text-sm', 'text-base', 'text-lg', 'text-xl', 'text-2xl', 'text-3xl'];
+    let currentIdx = sizes.indexOf(pdrawFontSize);
+    if (currentIdx === -1) currentIdx = 4; // Default text-xl
+
+    let newIdx = Math.max(0, Math.min(sizes.length - 1, currentIdx + delta));
+    const newSize = sizes[newIdx];
+
+    if (pdrawDom.divOutput) {
+        pdrawDom.divOutput.classList.remove(pdrawFontSize);
+        pdrawDom.divOutput.classList.add(newSize);
+    }
+
+    // Also update Diagram container
+    if (pdrawDom.divDiagram) {
+        // We use the same size for diagram for simplicity, or we could map them
+        pdrawDom.divDiagram.classList.remove(pdrawFontSize);
+        pdrawDom.divDiagram.classList.add(newSize);
+    }
+
+    pdrawFontSize = newSize;
+    pdrawDiagFontSize = newSize; // Sync them
+}
+
+window.changePdrawFontSize = changePdrawFontSize;

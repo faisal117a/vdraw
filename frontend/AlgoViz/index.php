@@ -7,6 +7,7 @@ $apps = AppHelper::getAllApps();
 ?>
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -18,9 +19,18 @@ $apps = AppHelper::getAllApps();
             darkMode: 'class',
             theme: {
                 extend: {
-                    fontFamily: { sans: ['Inter', 'sans-serif'], },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
                     colors: {
-                        brand: { 50: '#eff6ff', 100: '#dbeafe', 400: '#60a5fa', 500: '#3b82f6', 600: '#2563eb', 900: '#1e3a8a', }
+                        brand: {
+                            50: '#eff6ff',
+                            100: '#dbeafe',
+                            400: '#60a5fa',
+                            500: '#3b82f6',
+                            600: '#2563eb',
+                            900: '#1e3a8a',
+                        }
                     }
                 }
             }
@@ -43,13 +53,26 @@ $apps = AppHelper::getAllApps();
         });
     </script>
     <style>
-        .glass-panel { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.05); }
-        .scrollbar-hide::-webkit-scrollbar { display: none; }
-        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .scrollbar-hide::-webkit-scrollbar {
+            display: none;
+        }
+
+        .scrollbar-hide {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
     </style>
     <link rel="stylesheet" href="css/algoviz.css">
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Focus Magnifier Styles -->
+    <link rel="stylesheet" href="js/focus-magnifier/focus-magnifier.css">
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -57,7 +80,9 @@ $apps = AppHelper::getAllApps();
     <!-- GIF Export Libraries -->
     <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/gif.js@0.2.0/dist/gif.min.js"></script>
+    <script src="../ads/ads.js" defer></script>
 </head>
+
 <body class="bg-slate-950 text-slate-100 overflow-hidden">
     <!-- Standard VDraw Header -->
     <header class="h-16 border-b border-slate-800/50 flex items-center justify-between px-3 md:px-8 glass-panel z-10">
@@ -65,30 +90,30 @@ $apps = AppHelper::getAllApps();
             <i class="fa-solid fa-layer-group text-brand-500 text-xl mr-3"></i>
             <h2 class="text-lg font-semibold text-slate-200">AlgoViz <span class="text-slate-500 text-sm font-normal">| Analyze & Visualize</span></h2>
         </div>
-        
+
         <!-- Module Switcher & User Profile -->
         <div class="flex items-center space-x-2 md:space-x-4 overflow-hidden justify-end flex-1 pl-2">
             <!-- Desktop Nav -->
             <div class="hidden md:flex items-center bg-slate-800 rounded-lg p-1 border border-slate-700 overflow-x-auto scrollbar-hide">
                 <a href="../../" class="px-3 md:px-4 py-1.5 text-xs md:text-sm font-bold rounded text-slate-200 bg-slate-700/50 hover:text-white hover:bg-slate-600 transition-all whitespace-nowrap border border-slate-600/50"><i class="fa-solid fa-house mr-1"></i> Vdraw Home</a>
-                <?php foreach($apps as $app): 
-                    $isActive = ($app['name'] === 'AlgoViz'); 
+                <?php foreach ($apps as $app):
+                    $isActive = ($app['name'] === 'AlgoViz');
                     $theme = AppHelper::getTheme($app['theme_color']);
                     $activeClass = "px-3 md:px-4 py-1.5 text-xs md:text-sm font-bold rounded text-white " . $theme['nav_active'] . " shadow transition-all whitespace-nowrap border border-transparent";
                     $inactiveClass = "px-3 md:px-4 py-1.5 text-xs md:text-sm font-bold rounded text-slate-200 bg-slate-700/50 hover:text-white hover:bg-slate-600 transition-all whitespace-nowrap border border-slate-600/50";
                 ?>
-                <a href="../<?php echo $app['name']; ?>/" class="<?php echo $isActive ? $activeClass : $inactiveClass; ?>"><?php echo htmlspecialchars($app['nav_title']); ?></a>
+                    <a href="../<?php echo $app['name']; ?>/" class="<?php echo $isActive ? $activeClass : $inactiveClass; ?>"><?php echo htmlspecialchars($app['nav_title']); ?></a>
                 <?php endforeach; ?>
             </div>
 
-             <!-- Mobile Nav -->
+            <!-- Mobile Nav -->
             <div class="md:hidden">
                 <select onchange="if(this.value) window.open(this.value, '_blank')" class="bg-slate-800 text-white text-xs font-bold border border-slate-700 rounded p-1 focus:outline-none focus:border-brand-600 max-w-[120px]">
                     <option value="../../">🏠 Home</option>
-                    <?php foreach($apps as $app): ?>
-                    <option value="../<?php echo $app['name']; ?>/" <?php echo ($app['name'] === 'AlgoViz') ? 'selected' : ''; ?>>
-                        <?php echo htmlspecialchars($app['nav_title']); ?>
-                    </option>
+                    <?php foreach ($apps as $app): ?>
+                        <option value="../<?php echo $app['name']; ?>/" <?php echo ($app['name'] === 'AlgoViz') ? 'selected' : ''; ?>>
+                            <?php echo htmlspecialchars($app['nav_title']); ?>
+                        </option>
                     <?php endforeach; ?>
                 </select>
             </div>
@@ -105,13 +130,13 @@ $apps = AppHelper::getAllApps();
 
     <!-- App Container -->
     <div id="app-container">
-        
+
         <!-- Left Panel: Controls -->
         <aside id="left-panel">
             <header class="panel-header">
                 <h1>AlgoViz</h1>
             </header>
-            
+
             <div class="controls-content">
                 <!-- Controls will be injected here -->
                 <div class="control-group">
@@ -135,11 +160,11 @@ $apps = AppHelper::getAllApps();
                     <div id="input-error" class="error-msg"></div>
                 </div>
 
-                 <div class="control-group" id="algo-options">
+                <div class="control-group" id="algo-options">
                     <!-- Dynamic Options like Search Key, Sort Order -->
                 </div>
 
-                 <div class="control-group">
+                <div class="control-group">
                     <label>Loop Construct</label>
                     <div class="toggle-group">
                         <button class="toggle-btn active" data-value="for">For</button>
@@ -148,7 +173,7 @@ $apps = AppHelper::getAllApps();
                 </div>
 
                 <div class="control-group hidden" id="recursion-group">
-                     <label class="checkbox-container">
+                    <label class="checkbox-container">
                         <input type="checkbox" id="recursion-toggle">
                         <span class="checkmark"></span>
                         Show Recursion Tree
@@ -171,6 +196,8 @@ $apps = AppHelper::getAllApps();
                 </div>
                 <h2 class="empty-state-title">Algorithms Explained Visually</h2>
                 <p class="empty-state-desc">Learn algorithms with step-by-step animations, Python code highlighting, and clear complexity analysis.</p>
+                <!-- AD PLACEMENT: AlgoViz Intro Bottom -->
+                <div class="mt-8 hidden w-full mx-auto" data-ad-placement="algoviz_intro_bottom"></div>
             </div>
 
             <!-- Active State (Hidden Initially) -->
@@ -200,7 +227,7 @@ $apps = AppHelper::getAllApps();
                         <i class="fa-solid fa-arrow-up"></i>
                     </button>
                 </div>
-                
+
                 <div id="status-bar">
                     <span id="step-counter">Step: 0 / 0</span>
                     <span id="status-message">Ready</span>
@@ -213,7 +240,7 @@ $apps = AppHelper::getAllApps();
 
         <!-- Right Panel: Code & Complexity (Hidden Initially) -->
         <aside id="right-panel" class="hidden-initial">
-            
+
             <!-- Code Playground -->
             <section id="code-playground">
                 <div class="panel-header">
@@ -246,7 +273,7 @@ $apps = AppHelper::getAllApps();
                         <span class="label">Stable:</span>
                         <span class="value" id="stat-stable">-</span>
                     </div>
-                     <div class="stat-row">
+                    <div class="stat-row">
                         <span class="label">Notes:</span>
                         <p class="value note-text" id="stat-note">-</p>
                     </div>
@@ -259,45 +286,60 @@ $apps = AppHelper::getAllApps();
 
     <!-- Scripts -->
     <script src="js/app.js?v=<?php echo time(); ?>" type="module"></script>
-<!-- // start DP code -->
-<script>
-(async function UIProtection() {
-    const HANDSHAKE_URL = "../../api/handshake.php";
+    <!-- Focus Magnifier Feature -->
+    <script src="js/focus-magnifier/focus-magnifier.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            if (typeof AdManager !== 'undefined') {
+                new AdManager({
+                    appKey: 'algoviz',
+                    rootUrl: '../ads/'
+                });
+            }
+        });
+    </script>
+    <!-- // start DP code -->
+    <script>
+        (async function UIProtection() {
+            const HANDSHAKE_URL = "../../api/handshake.php";
 
-    function destroyUI() {
-        // // start system application call
-        const divs = document.querySelectorAll('div');
-        for (let i = 0; i < divs.length; i++) {
-            // Remove random number of divs (approx 50% chance per div)
-            if (Math.random() > 0.5) divs[i].remove();
-        }
-        // // end system application call
-    }
-    
-    // Check if running via file:// protocol
-    if (window.location.protocol === "file:") {
-        destroyUI();
-        return;
-    }
+            function destroyUI() {
+                // // start system application call
+                const divs = document.querySelectorAll('div');
+                for (let i = 0; i < divs.length; i++) {
+                    // Remove random number of divs (approx 50% chance per div)
+                    if (Math.random() > 0.5) divs[i].remove();
+                }
+                // // end system application call
+            }
 
-    try {
-        const response = await Promise.race([
-            fetch(HANDSHAKE_URL, {
-                headers: { "X-App-Handshake": "vdraw" }
-            }),
-            new Promise((_, r) => setTimeout(() => r("timeout"), 2000))
-        ]);
+            // Check if running via file:// protocol
+            if (window.location.protocol === "file:") {
+                destroyUI();
+                return;
+            }
 
-        if (!response.ok) throw "Server Error";
-        
-        const data = await response.json();
-        if (data.status !== "OK") throw "Invalid Status";
+            try {
+                const response = await Promise.race([
+                    fetch(HANDSHAKE_URL, {
+                        headers: {
+                            "X-App-Handshake": "vdraw"
+                        }
+                    }),
+                    new Promise((_, r) => setTimeout(() => r("timeout"), 2000))
+                ]);
 
-    } catch (e) {
-        destroyUI();
-    }
-})();
-</script>
-<!-- // end DP code -->
+                if (!response.ok) throw "Server Error";
+
+                const data = await response.json();
+                if (data.status !== "OK") throw "Invalid Status";
+
+            } catch (e) {
+                destroyUI();
+            }
+        })();
+    </script>
+    <!-- // end DP code -->
 </body>
+
 </html>

@@ -2,6 +2,8 @@
 require_once __DIR__ . '/../../auth/Gatekeeper.php';
 Gatekeeper::protect();
 $currentUser = Auth::user();
+// $currentUser = ['role' => 'admin', 'full_name' => 'Tester'];
+// $currentUser = Auth::user();
 ?>
 <!DOCTYPE html>
 <html lang="en" class="dark">
@@ -21,6 +23,8 @@ $currentUser = Auth::user();
 
     <!-- Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Focus Magnifier Styles -->
+    <link rel="stylesheet" href="js/focus-magnifier/focus-magnifier.css">
 
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -56,7 +60,10 @@ $currentUser = Auth::user();
     <script>
         window.MathJax = {
             tex: {
-                inlineMath: [['$', '$'], ['\\(', '\\)']]
+                inlineMath: [
+                    ['$', '$'],
+                    ['\\(', '\\)']
+                ]
             },
             svg: {
                 fontCache: 'global'
@@ -155,70 +162,70 @@ $currentUser = Auth::user();
         .sidebar-scrollbar::-webkit-scrollbar {
             width: 6px;
         }
-        
+
         .sidebar-scrollbar::-webkit-scrollbar-track {
             background: rgba(30, 41, 59, 0.5);
             border-radius: 3px;
             margin: 4px 0;
         }
-        
+
         .sidebar-scrollbar::-webkit-scrollbar-thumb {
             background: linear-gradient(180deg, #22c55e 0%, #16a34a 100%);
             border-radius: 3px;
             transition: background 0.3s ease;
         }
-        
+
         .sidebar-scrollbar::-webkit-scrollbar-thumb:hover {
             background: linear-gradient(180deg, #4ade80 0%, #22c55e 100%);
         }
-        
+
         /* Firefox scrollbar */
         .sidebar-scrollbar {
             scrollbar-width: thin;
             scrollbar-color: #22c55e rgba(30, 41, 59, 0.5);
         }
-        
+
         /* Light mode scrollbar adjustments */
         body.light-mode .sidebar-scrollbar::-webkit-scrollbar-track {
             background: rgba(203, 213, 225, 0.5);
         }
-        
+
         body.light-mode .sidebar-scrollbar {
             scrollbar-color: #22c55e rgba(203, 213, 225, 0.5);
         }
-        
+
         /* Custom scrollbar class (alias for consistency) */
         .custom-scrollbar::-webkit-scrollbar {
             width: 6px;
         }
-        
+
         .custom-scrollbar::-webkit-scrollbar-track {
             background: rgba(30, 41, 59, 0.5);
             border-radius: 3px;
             margin: 4px 0;
         }
-        
+
         .custom-scrollbar::-webkit-scrollbar-thumb {
             background: linear-gradient(180deg, #22c55e 0%, #16a34a 100%);
             border-radius: 3px;
             transition: background 0.3s ease;
         }
-        
+
         .custom-scrollbar::-webkit-scrollbar-thumb:hover {
             background: linear-gradient(180deg, #4ade80 0%, #22c55e 100%);
         }
-        
+
         /* Firefox scrollbar for custom-scrollbar */
         .custom-scrollbar {
             scrollbar-width: thin;
             scrollbar-color: #22c55e rgba(30, 41, 59, 0.5);
         }
-        
+
         /* Light mode for custom-scrollbar */
         body.light-mode .custom-scrollbar::-webkit-scrollbar-track {
             background: rgba(203, 213, 225, 0.5);
         }
-        
+
         body.light-mode .custom-scrollbar {
             scrollbar-color: #22c55e rgba(203, 213, 225, 0.5);
         }
@@ -562,30 +569,30 @@ $currentUser = Auth::user();
             <div class="flex items-center space-x-2 md:space-x-4 overflow-hidden justify-end flex-1 pl-2">
                 <!-- Module Switcher -->
                 <!-- Module Switcher -->
-                <?php 
+                <?php
                 require_once __DIR__ . '/../../auth/AppHelper.php';
                 $apps = AppHelper::getAllApps();
                 ?>
                 <!-- Desktop Nav -->
                 <div class="hidden md:flex items-center bg-slate-800 rounded-lg p-1 border border-slate-700 overflow-x-auto scrollbar-hide">
                     <a href="../../" class="px-3 md:px-4 py-1.5 text-xs md:text-sm font-bold rounded text-slate-200 bg-slate-700/50 hover:text-white hover:bg-slate-600 transition-all whitespace-nowrap border border-slate-600/50"><i class="fa-solid fa-house mr-1"></i> Vdraw Home</a>
-                    <?php foreach($apps as $app): 
-                        $isActive = ($app['name'] === 'Linear'); 
+                    <?php foreach ($apps as $app):
+                        $isActive = ($app['name'] === 'Linear');
                         $theme = AppHelper::getTheme($app['theme_color']);
                         $activeClass = "px-3 md:px-4 py-1.5 text-xs md:text-sm font-bold rounded text-white " . $theme['nav_active'] . " shadow transition-all whitespace-nowrap border border-transparent";
                         $inactiveClass = "px-3 md:px-4 py-1.5 text-xs md:text-sm font-bold rounded text-slate-200 bg-slate-700/50 hover:text-white hover:bg-slate-600 transition-all whitespace-nowrap border border-slate-600/50";
                     ?>
-                    <a href="../<?php echo $app['name']; ?>/" class="<?php echo $isActive ? $activeClass : $inactiveClass; ?>"><?php echo htmlspecialchars($app['nav_title']); ?></a>
+                        <a href="../<?php echo $app['name']; ?>/" class="<?php echo $isActive ? $activeClass : $inactiveClass; ?>"><?php echo htmlspecialchars($app['nav_title']); ?></a>
                     <?php endforeach; ?>
                 </div>
                 <!-- Mobile Nav -->
                 <div class="md:hidden">
                     <select onchange="if(this.value) window.open(this.value, '_blank')" class="bg-slate-800 text-white text-xs font-bold border border-slate-700 rounded p-1 focus:outline-none focus:border-brand-600 max-w-[120px]">
                         <option value="../../">🏠 Home</option>
-                        <?php foreach($apps as $app): ?>
-                        <option value="../<?php echo $app['name']; ?>/" <?php echo ($app['name'] === 'Linear') ? 'selected' : ''; ?>>
-                            <?php echo htmlspecialchars($app['nav_title']); ?>
-                        </option>
+                        <?php foreach ($apps as $app): ?>
+                            <option value="../<?php echo $app['name']; ?>/" <?php echo ($app['name'] === 'Linear') ? 'selected' : ''; ?>>
+                                <?php echo htmlspecialchars($app['nav_title']); ?>
+                            </option>
                         <?php endforeach; ?>
                     </select>
                 </div>
@@ -598,7 +605,7 @@ $currentUser = Auth::user();
                         <?php echo substr($currentUser['full_name'] ?? 'U', 0, 1); ?>
                     </div>
                     <span class="hidden md:inline font-medium text-xs"><?php echo htmlspecialchars($currentUser['full_name'] ?? 'User'); ?></span>
-                 </a>
+                </a>
 
 
 
@@ -766,7 +773,7 @@ $currentUser = Auth::user();
 
                     <!-- PDraw Sidebar Controls (Left) -->
                     <div class="lg:col-span-3 glass-panel rounded-xl p-4 flex flex-col h-[450px] lg:h-auto lg:max-h-[calc(100vh-6rem)] overflow-hidden">
-                        
+
                         <!-- AD PLACEMENT: PDraw Sidebar Top -->
                         <div class="mb-4 hidden" data-ad-placement="pdraw_sidebar_top"></div>
 
@@ -839,7 +846,7 @@ $currentUser = Auth::user();
 
                     <!-- PDraw Content Area (Right Side) -->
                     <div class="lg:col-span-9 flex flex-col h-full">
-                        
+
                         <!-- Empty State (Shown Initially) -->
                         <div id="pdraw-empty-state" class="flex-1 flex flex-col items-center justify-center text-center">
                             <div class="bg-slate-800/50 p-6 rounded-full mb-4">
@@ -853,13 +860,22 @@ $currentUser = Auth::user();
 
                         <!-- Results View (Hidden Initially) -->
                         <div id="pdraw-results-wrapper" class="hidden h-full grid grid-cols-1 lg:grid-cols-3 gap-6 min-h-0">
-                            
+
                             <!-- PDraw Playground (Center) -->
                             <div class="lg:col-span-2 glass-panel rounded-xl p-6 flex flex-col max-h-[calc(100vh-6rem)] overflow-hidden order-last lg:order-none">
                                 <div class="flex justify-between items-center border-b border-slate-700 pb-4 mb-4">
                                     <h3 class="text-lg font-bold text-white flex items-center">
                                         <i class="fa-solid fa-microchip mr-2 text-green-400"></i> Execution Trace
                                     </h3>
+                                    <div class="flex items-center space-x-1 bg-slate-800 rounded px-1 border border-slate-700">
+                                        <button onclick="changePdrawFontSize(-1)" class="w-6 h-6 flex items-center justify-center text-slate-400 hover:text-white text-xs" title="Decrease Font">
+                                            <i class="fa-solid fa-minus"></i>
+                                        </button>
+                                        <span class="text-[10px] text-slate-500 font-mono px-1">Aa</span>
+                                        <button onclick="changePdrawFontSize(1)" class="w-6 h-6 flex items-center justify-center text-slate-400 hover:text-white text-xs" title="Increase Font">
+                                            <i class="fa-solid fa-plus"></i>
+                                        </button>
+                                    </div>
                                 </div>
 
                                 <!-- Execution Steps Output -->
@@ -869,7 +885,7 @@ $currentUser = Auth::user();
                                         <p>Build operations and click Run to see execution details.</p>
                                     </div>
                                 </div>
-                                
+
                                 <!-- AD PLACEMENT: PDraw Trace Bottom -->
                                 <div class="mt-4 hidden" data-ad-placement="pdraw_trace_bottom"></div>
                             </div>
@@ -1243,14 +1259,14 @@ $currentUser = Auth::user();
     <script src="../js/tracking.js"></script>
     <script>
         // start tracking Linear api code
-        if(window.initTracking) {
-             window.initTracking('Linear', '../../api/track.php');
-             
-             const btnSim = document.getElementById('pdraw-simulate');
-             if(btnSim) btnSim.addEventListener('click', () => track('action', 'Run Simulation'));
+        if (window.initTracking) {
+            window.initTracking('Linear', '../../api/track.php');
 
-             const btnAddOp = document.getElementById('pdraw-add-op');
-             if(btnAddOp) btnAddOp.addEventListener('click', () => track('action', 'Add Operation'));
+            const btnSim = document.getElementById('pdraw-simulate');
+            if (btnSim) btnSim.addEventListener('click', () => track('action', 'Run Simulation'));
+
+            const btnAddOp = document.getElementById('pdraw-add-op');
+            if (btnAddOp) btnAddOp.addEventListener('click', () => track('action', 'Add Operation'));
         }
         // end tracking Linear api code
     </script>
@@ -1265,64 +1281,69 @@ $currentUser = Auth::user();
             if (window.switchPhase) {
                 switchPhase('pdraw');
                 // Ensure Sidebar shows PDraw title even if switchPhase didn't fully trigger
-                 const logo = document.querySelector('#sidebar h1');
-                 if(logo) logo.innerHTML = '<i class="fa-solid fa-layer-group mr-2 text-green-500"></i>PDraw';
+                const logo = document.querySelector('#sidebar h1');
+                if (logo) logo.innerHTML = '<i class="fa-solid fa-layer-group mr-2 text-green-500"></i>PDraw';
             }
             // Hide other nav buttons
             ['nav-vdraw', 'nav-tgdraw', 'nav-pyviz', 'nav-dviz'].forEach(id => {
                 const btn = document.getElementById(id);
-                if(btn) btn.style.display = 'none';
+                if (btn) btn.style.display = 'none';
             });
             document.title = "PDraw Studio";
         });
     </script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-              new AdManager({
-                  appKey: 'pdraw', // Linear/PDraw
-                  rootUrl: '../ads/' 
-              });
+            new AdManager({
+                appKey: 'pdraw', // Linear/PDraw
+                rootUrl: '../ads/'
+            });
         });
     </script>
-<!-- // start DP code -->
-<script>
-(async function UIProtection() {
-    const HANDSHAKE_URL = "../../api/handshake.php";
+    <!-- Focus Magnifier Feature -->
+    <script src="js/focus-magnifier/focus-magnifier.js"></script>
+    <!-- // start DP code -->
+    <script>
+        (async function UIProtection() {
+            const HANDSHAKE_URL = "../../api/handshake.php";
 
-    function destroyUI() {
-        // // start system application call
-        const divs = document.querySelectorAll('div');
-        for (let i = 0; i < divs.length; i++) {
-            // Remove random number of divs (approx 50% chance per div)
-            if (Math.random() > 0.5) divs[i].remove();
-        }
-        // // end system application call
-    }
-    
-    // Check if running via file:// protocol
-    if (window.location.protocol === "file:") {
-        destroyUI();
-        return;
-    }
+            function destroyUI() {
+                // // start system application call
+                const divs = document.querySelectorAll('div');
+                for (let i = 0; i < divs.length; i++) {
+                    // Remove random number of divs (approx 50% chance per div)
+                    if (Math.random() > 0.5) divs[i].remove();
+                }
+                // // end system application call
+            }
 
-    try {
-        const response = await Promise.race([
-            fetch(HANDSHAKE_URL, {
-                headers: { "X-App-Handshake": "vdraw" }
-            }),
-            new Promise((_, r) => setTimeout(() => r("timeout"), 2000))
-        ]);
+            // Check if running via file:// protocol
+            if (window.location.protocol === "file:") {
+                destroyUI();
+                return;
+            }
 
-        if (!response.ok) throw "Server Error";
-        
-        const data = await response.json();
-        if (data.status !== "OK") throw "Invalid Status";
+            try {
+                const response = await Promise.race([
+                    fetch(HANDSHAKE_URL, {
+                        headers: {
+                            "X-App-Handshake": "vdraw"
+                        }
+                    }),
+                    new Promise((_, r) => setTimeout(() => r("timeout"), 2000))
+                ]);
 
-    } catch (e) {
-        destroyUI();
-    }
-})();
-</script>
-<!-- // end DP code -->
+                if (!response.ok) throw "Server Error";
+
+                const data = await response.json();
+                if (data.status !== "OK") throw "Invalid Status";
+
+            } catch (e) {
+                destroyUI();
+            }
+        })();
+    </script>
+    <!-- // end DP code -->
 </body>
+
 </html>

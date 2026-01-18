@@ -180,6 +180,202 @@ window.initPyViz = function () {
 };
 
 
+// --- Code Wrap Toggle ---
+window.toggleCodeWrap = function () {
+    const codeArea = document.getElementById('pyviz-code-area');
+    const checkbox = document.getElementById('pv-wrap-toggle');
+    if (!codeArea) return;
+
+    // Feature: Wrap Toggle should NOT affect Edit Mode
+    if (typeof pyvizState !== 'undefined' && pyvizState.isEditorMode) return;
+
+    if (checkbox && checkbox.checked) {
+        codeArea.style.whiteSpace = 'pre-wrap';
+        codeArea.style.overflowX = 'hidden';
+        codeArea.style.wordBreak = 'break-word';
+        // Apply to all child line divs
+        Array.from(codeArea.children).forEach(line => {
+            line.style.whiteSpace = 'pre-wrap';
+            line.style.wordBreak = 'break-word';
+            const content = line.querySelector('.flex-1');
+            if (content) {
+                content.style.whiteSpace = 'pre-wrap';
+                content.style.wordBreak = 'break-word';
+            }
+        });
+    } else {
+        codeArea.style.whiteSpace = 'pre';
+        codeArea.style.overflowX = 'auto';
+        codeArea.style.wordBreak = 'normal';
+        // Reset child line divs
+        Array.from(codeArea.children).forEach(line => {
+            line.style.whiteSpace = 'pre';
+            line.style.wordBreak = 'normal';
+            const content = line.querySelector('.flex-1');
+            if (content) {
+                content.style.whiteSpace = 'pre';
+                content.style.wordBreak = 'normal';
+            }
+        });
+    }
+};
+
+// --- Runtime Value Inspector (Hover Popup) ---
+const RuntimeInspector = {
+    tooltip: null,
+    isEditorMode: false,
+
+    init() {
+        // Create tooltip element
+        this.tooltip = document.createElement('div');
+        this.tooltip.className = 'runtime-tooltip hidden';
+        document.body.appendChild(this.tooltip);
+
+        // Add hover listeners to code area
+        const codeArea = document.getElementById('pyviz-code-area');
+        if (codeArea) {
+            codeArea.addEventListener('mouseover', this.handleHover.bind(this));
+            codeArea.addEventListener('mouseout', this.hideTooltip.bind(this));
+            codeArea.addEventListener('mousemove', this.moveTooltip.bind(this));
+        }
+    },
+
+    handleHover(e) {
+        // Don't show in edit mode
+        if (this.isEditorMode || pyvizState.isEditorMode) return;
+
+        // Get runtime locals
+        const locals = window.pyvizRuntimeLocals || {};
+        if (!locals || Object.keys(locals).length === 0) return;
+
+        // Check if hovering over a variable name
+        const target = e.target;
+
+        let varName = '';
+
+        // Strategy 1: Highlighted Span (if present)
+        if (target && target.tagName === 'SPAN' && target.className.includes('variable')) {
+            varName = target.textContent.trim();
+        }
+        // Strategy 2: Text Node detection (Robust fallback for unhighlighted code)
+        else {
+            // Use caretPositionFromPoint (standard) or caretRangeFromPoint (webkit)
+            let range;
+            if (document.caretPositionFromPoint) {
+                const pos = document.caretPositionFromPoint(e.clientX, e.clientY);
+                if (pos) {
+                    range = document.createRange();
+                    range.setStart(pos.offsetNode, pos.offset);
+                    range.collapse(true);
+                }
+            } else if (document.caretRangeFromPoint) {
+                range = document.caretRangeFromPoint(e.clientX, e.clientY);
+            }
+
+            if (range && range.startContainer.nodeType === Node.TEXT_NODE) {
+                // Get the word under cursor
+                const text = range.startContainer.textContent;
+                const offset = range.startOffset;
+
+                // Find boundaries of the word
+                let start = offset;
+                while (start > 0 && /[\w]/.test(text[start - 1])) start--;
+                let end = offset;
+                while (end < text.length && /[\w]/.test(text[end])) end++;
+
+                // Verify cursor is strictly INSIDE the word (not just adjacent spaces)
+                if (start < end && offset >= start && offset <= end) {
+                    varName = text.substring(start, end);
+                }
+            }
+        }
+
+        if (!varName) {
+            this.hideTooltip();
+            return;
+        }
+
+        // Filter out non-variables (keywords, numbers, delimiters)
+        if (!isNaN(parseInt(varName))) return; // Ignore numbers
+        const keywords = new Set(['def', 'class', 'if', 'else', 'elif', 'for', 'while', 'return', 'import', 'from', 'as', 'break', 'continue', 'pass', 'and', 'or', 'not', 'in', 'is', 'try', 'except', 'finally', 'print', 'input', 'list', 'dict', 'set', 'tuple', 'int', 'str', 'float', 'bool']);
+        if (keywords.has(varName)) return;
+
+        // Check if variable exists in runtime locals
+        if (locals.hasOwnProperty(varName)) {
+            // Need to pass coordinates because target might be the whole line DIV
+            this.showTooltip(varName, locals[varName], this.getType(locals[varName]), e);
+        } else {
+            this.hideTooltip();
+        }
+    },
+
+    showTooltip(name, value, type, e) {
+        if (!this.tooltip) return;
+
+        // Truncate long values
+        let displayValue = String(value);
+        if (displayValue.length > 50) {
+            displayValue = displayValue.substring(0, 47) + '...';
+        }
+
+        this.tooltip.innerHTML = `
+            <div class="text-xl font-bold mb-2"><span class="text-blue-300">${name}</span> <span class="text-white">=</span> <span class="text-green-400">${displayValue}</span></div>
+            <div class="text-base font-semibold text-slate-300">Type: <span class="text-yellow-300">${type}</span></div>
+        `;
+
+        this.tooltip.classList.remove('hidden');
+        this.moveTooltip(e);
+    },
+
+    moveTooltip(e) {
+        if (!this.tooltip || this.tooltip.classList.contains('hidden')) return;
+
+        // Position near cursor
+        const x = e.pageX + 15;
+        const y = e.pageY + 15;
+
+        // Keep within viewport
+        const rect = this.tooltip.getBoundingClientRect();
+        const maxX = window.innerWidth - rect.width - 20;
+        const maxY = window.innerHeight - rect.height - 20;
+
+        this.tooltip.style.left = Math.min(x, maxX) + 'px';
+        this.tooltip.style.top = Math.min(y, maxY) + 'px';
+    },
+
+    hideTooltip() {
+        if (this.tooltip) {
+            this.tooltip.classList.add('hidden');
+        }
+    },
+
+    getType(value) {
+        if (value === null || value === undefined) return 'NoneType';
+        if (typeof value === 'number') {
+            return Number.isInteger(value) ? 'int' : 'float';
+        }
+        if (typeof value === 'string') {
+            if (value.startsWith('[')) return 'list';
+            if (value.startsWith('{')) return 'dict';
+            if (value.startsWith('(')) return 'tuple';
+            return 'str';
+        }
+        if (typeof value === 'boolean') return 'bool';
+        return typeof value;
+    },
+
+    setEditorMode(isEditor) {
+        this.isEditorMode = isEditor;
+        if (isEditor) this.hideTooltip();
+    }
+};
+
+// Initialize RuntimeInspector after DOM load
+window.addEventListener('load', () => {
+    setTimeout(() => RuntimeInspector.init(), 1500);
+});
+
+window.RuntimeInspector = RuntimeInspector;
 
 // --- Toolbox Logic ---
 
@@ -1109,7 +1305,7 @@ function addLine(item) {
     // Insert at index
     pyvizState.lines.splice(insertIdx, 0, newLine);
 
-    logAction(`Added ${item.label || 'Code Line'}`);
+    logAction(`Added ${item.label || 'Code Line'}`, { code: item.code, type: item.type });
     renderPyViz();
     updateStats();
 }
@@ -1168,11 +1364,14 @@ function clearPyViz() {
 
 function renderPyViz() {
     const area = pyvizDom.codeArea;
+
+    // Store scroll position before clearing
+    pyvizState.prevScrollTop = area.scrollTop;
     if (pyvizState.lines.length === 0) {
         area.innerHTML = `
             <div class="text-slate-600 italic text-center mt-20 select-none pointer-events-none">
                 <i class="fa-brands fa-python text-4xl mb-4 opacity-20"></i><br>
-                Drag and drop or click blocks to build your Python code.
+                Click blocks to build your Python code.
             </div>`;
         return;
     }
@@ -1190,12 +1389,30 @@ function renderPyViz() {
         // Dynamic class for selection
         const isSelected = pyvizState.selectedLineId === line.id;
         const bgClass = isSelected ? 'bg-slate-800 border-l-2 border-yellow-500' : 'hover:bg-slate-900/50';
-        row.className = `flex items-center group ${bgClass} py-1 -mx-2 px-2 rounded ${pyvizState.fontSize} cursor-pointer transition-colors`;
+        // ADDED min-w-full w-fit to ensure selection spans full width even if content is short
+        row.className = `flex items-center group ${bgClass} py-1 -mx-2 px-2 rounded ${pyvizState.fontSize} cursor-pointer transition-colors min-w-full w-fit`;
 
         row.onclick = () => {
             if (pyvizState.selectedLineId === line.id) pyvizState.selectedLineId = null; // Toggle off
             else pyvizState.selectedLineId = line.id; // Toggle on
             renderPyViz(); // Re-render to show selection
+        };
+
+        // Double-click for inline editing (Feature 6)
+        row.ondblclick = (e) => {
+            e.stopPropagation();
+            // Don't allow editing during execution
+            if (window.PyVizOutputAnimation && window.PyVizOutputAnimation.executor && window.PyVizOutputAnimation.executor.isExecuting) {
+                return;
+            }
+            // Don't open if already in full edit mode
+            if (pyvizState.isEditorMode) return;
+
+            if (typeof openInlineEditor === 'function') {
+                openInlineEditor(line, idx, row);
+            } else if (typeof window.openInlineEditor === 'function') {
+                window.openInlineEditor(line, idx, row);
+            }
         };
 
         const num = document.createElement('span');
@@ -1305,7 +1522,23 @@ function renderPyViz() {
         area.appendChild(row);
     });
 
-    area.scrollTop = area.scrollHeight;
+    // Intelligent Scroll Behavior
+    // If line count increased (new line added), scroll to bottom.
+    // Otherwise (selection, edit, etc.), preserve scroll position.
+    if (pyvizState.lines.length > (pyvizState.prevLineCount || 0)) {
+        area.scrollTop = area.scrollHeight;
+    } else if (typeof pyvizState.prevScrollTop !== 'undefined') {
+        area.scrollTop = pyvizState.prevScrollTop;
+    }
+
+    // Update previous state
+    pyvizState.prevLineCount = pyvizState.lines.length;
+
+    // Re-apply wrap state if checkbox is checked
+    const wrapCheckbox = document.getElementById('pv-wrap-toggle');
+    if (wrapCheckbox && wrapCheckbox.checked) {
+        window.toggleCodeWrap();
+    }
 }
 
 function escapeHtml(text) {
@@ -2161,15 +2394,360 @@ function changeFontSize(delta) {
     renderPyViz();
 }
 
-function logAction(msg) {
+function logAction(msg, context = {}) {
     if (!pyvizDom.logList) return;
+
+    // Get line number from pyvizState
+    const lineNum = pyvizState.lines.length;
+
+    // Generate educational message based on context
+    let educationalMsg = generateEducationalMessage(msg, context);
+
     const li = document.createElement('li');
-    li.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+    li.className = 'py-1 border-b border-slate-800/50 text-xs';
+    li.innerHTML = `
+        <span class="text-blue-400 font-bold mr-1">L${lineNum}</span>
+        <span class="text-slate-600 text-[10px]">${new Date().toLocaleTimeString()}</span>
+        <span class="text-slate-300 ml-2">${educationalMsg}</span>
+    `;
+
     if (pyvizDom.logList.firstChild) {
         pyvizDom.logList.insertBefore(li, pyvizDom.logList.firstChild);
     } else {
         pyvizDom.logList.appendChild(li);
     }
+
+    // Limit log entries to prevent memory bloat
+    while (pyvizDom.logList.children.length > 100) {
+        pyvizDom.logList.removeChild(pyvizDom.logList.lastChild);
+    }
+}
+
+function generateEducationalMessage(action, context) {
+    const code = (context.code || '').trim();
+    const type = context.type || '';
+
+    if (!code) return `✏️ ${action}`;
+
+    // === DATA STRUCTURES ===
+
+    // Stack operations
+    if (code.includes('.push(') || code.includes('.append(')) {
+        const match = code.match(/(\w+)\.(push|append)\((.+)\)/);
+        if (match) {
+            return `📥 <b>Stack/List Push</b>: Added element <code>${match[3]}</code> to <code>${match[1]}</code>`;
+        }
+    }
+
+    if (code.includes('.pop(')) {
+        const match = code.match(/(\w+)\.pop\(\)/);
+        if (match) {
+            return `📤 <b>Stack/List Pop</b>: Removed top element from <code>${match[1]}</code>`;
+        }
+    }
+
+    // Queue operations
+    if (code.includes('deque(')) {
+        const match = code.match(/(\w+)\s*=\s*deque\((.+)?\)/);
+        if (match) {
+            return `📋 <b>Queue Created</b>: Initialized queue <code>${match[1]}</code> using deque`;
+        }
+    }
+
+    if (code.includes('.popleft(')) {
+        const match = code.match(/(\w+)\.popleft\(\)/);
+        if (match) {
+            return `📤 <b>Queue Dequeue</b>: Removed front element from <code>${match[1]}</code>`;
+        }
+    }
+
+    if (code.includes('.appendleft(')) {
+        const match = code.match(/(\w+)\.appendleft\((.+)\)/);
+        if (match) {
+            return `📥 <b>Queue Insert Front</b>: Added <code>${match[2]}</code> to front of <code>${match[1]}</code>`;
+        }
+    }
+
+    // List creation
+    if (code.match(/^\w+\s*=\s*\[/)) {
+        const match = code.match(/^(\w+)\s*=\s*\[(.*)?\]/);
+        if (match) {
+            const items = match[2] ? match[2].split(',').length : 0;
+            return `📋 <b>List Created</b>: <code>${match[1]}</code> initialized with ${items} element(s)`;
+        }
+    }
+
+    // Tuple creation
+    if (code.match(/^\w+\s*=\s*\(/)) {
+        const match = code.match(/^(\w+)\s*=\s*\((.*)?\)/);
+        if (match) {
+            const items = match[2] ? match[2].split(',').length : 0;
+            return `🔒 <b>Tuple Created</b>: <code>${match[1]}</code> initialized with ${items} immutable element(s)`;
+        }
+    }
+
+    // Dictionary creation
+    if (code.match(/^\w+\s*=\s*\{/)) {
+        const match = code.match(/^(\w+)\s*=\s*\{(.*)?\}/);
+        if (match) {
+            return `📖 <b>Dictionary Created</b>: <code>${match[1]}</code> initialized with key-value pairs`;
+        }
+    }
+
+    // Set creation
+    if (code.includes('set(')) {
+        const match = code.match(/(\w+)\s*=\s*set\(/);
+        if (match) {
+            return `🔢 <b>Set Created</b>: <code>${match[1]}</code> initialized (unique elements only)`;
+        }
+    }
+
+    // === FUNCTIONS ===
+
+    // User-defined function definition
+    if (code.startsWith('def ')) {
+        const match = code.match(/^def\s+(\w+)\s*\(([^)]*)\)/);
+        if (match) {
+            const funcName = match[1];
+            const params = match[2] ? match[2].split(',').map(p => p.trim()).filter(p => p) : [];
+            if (params.length > 0) {
+                return `🔧 <b>Function Defined</b>: <code>${funcName}(${params.join(', ')})</code> - reusable code block with ${params.length} parameter(s)`;
+            }
+            return `🔧 <b>Function Defined</b>: <code>${funcName}()</code> - reusable code block (no parameters)`;
+        }
+    }
+
+    // Built-in function calls (Check this AFTER print/input to avoid false matches)
+    // defined below
+
+    // User function call (matches functionName() pattern)
+    if (code.match(/^(\w+)\(.*\)$/) && !code.startsWith('print(') && !code.startsWith('input(')) {
+        const match = code.match(/^(\w+)\(/);
+        if (match) {
+            return `📞 <b>Function Call</b>: Executed <code>${match[1]}()</code>`;
+        }
+    }
+
+    // Return statement
+    if (code.startsWith('return')) {
+        const val = code.replace('return', '').trim();
+        if (val) {
+            return `↩️ <b>Return Statement</b>: Function returns <code>${val}</code>`;
+        }
+        return `↩️ <b>Return Statement</b>: Function returns (no value)`;
+    }
+
+    // === INPUT/OUTPUT ===
+
+    // Print statement
+    if (code.startsWith('print(')) {
+        const content = code.match(/print\((.+)\)/);
+        if (content) {
+            return `🖨️ <b>Print Output</b>: Displays <code>${content[1].substring(0, 30)}${content[1].length > 30 ? '...' : ''}</code>`;
+        }
+        return `🖨️ <b>Print Output</b>: Displays output to console`;
+    }
+
+    // Input statement
+    if (code.includes('input(')) {
+        const match = code.match(/(\w+)\s*=.*input\((.+)?\)/);
+        if (match) {
+            return `⌨️ <b>User Input</b>: Stores user input in <code>${match[1]}</code>`;
+        }
+        return `⌨️ <b>User Input</b>: Waits for user to enter data`;
+    }
+
+    // Built-in function calls (Moved here and improved regex)
+    const builtinFuncs = ['len', 'range', 'int', 'str', 'float', 'bool', 'type', 'abs', 'sum', 'min', 'max', 'sorted', 'reversed', 'enumerate', 'zip', 'map', 'filter', 'open'];
+    for (const fn of builtinFuncs) {
+        // Use word boundary to avoid partial matches (e.g. matching 'int' inside 'print')
+        const regex = new RegExp(`\\b${fn}\\(`);
+        if (regex.test(code)) {
+            return `⚙️ <b>Built-in Function</b>: Called <code>${fn}()</code>`;
+        }
+    }
+
+    // === CONTROL FLOW ===
+
+    // For loop
+    if (code.startsWith('for ')) {
+        const match = code.match(/^for\s+(\w+)\s+in\s+(.+):/);
+        if (match) {
+            return `🔄 <b>For Loop</b>: Iterates <code>${match[1]}</code> over <code>${match[2]}</code>`;
+        }
+    }
+
+    // While loop
+    if (code.startsWith('while ')) {
+        const cond = code.replace('while ', '').replace(':', '').trim();
+        return `🔄 <b>While Loop</b>: Repeats while <code>${cond}</code>`;
+    }
+
+    // If statement
+    if (code.startsWith('if ')) {
+        const cond = code.replace('if ', '').replace(':', '').trim();
+        return `❓ <b>If Condition</b>: Checks if <code>${cond}</code>`;
+    }
+
+    // Elif statement
+    if (code.startsWith('elif ')) {
+        const cond = code.replace('elif ', '').replace(':', '').trim();
+        return `❓ <b>Elif Condition</b>: Checks alternative <code>${cond}</code>`;
+    }
+
+    // Else statement
+    if (code.startsWith('else:')) {
+        return `❓ <b>Else Block</b>: Executes when all conditions are false`;
+    }
+
+    // Break/Continue
+    if (code === 'break') {
+        return `⏹️ <b>Break</b>: Exits the current loop immediately`;
+    }
+    if (code === 'continue') {
+        return `⏭️ <b>Continue</b>: Skips to next loop iteration`;
+    }
+    if (code === 'pass') {
+        return `⏸️ <b>Pass</b>: Placeholder (does nothing)`;
+    }
+
+    // === IMPORTS ===
+
+    if (code.startsWith('import ')) {
+        const mod = code.replace('import ', '').split(' as ')[0].trim();
+        return `📚 <b>Import</b>: Loaded library <code>${mod}</code>`;
+    }
+
+    if (code.startsWith('from ')) {
+        const match = code.match(/from\s+(\w+)\s+import\s+(.+)/);
+        if (match) {
+            return `📚 <b>Import From</b>: Loaded <code>${match[2]}</code> from <code>${match[1]}</code>`;
+        }
+    }
+
+    // === COMMENTS ===
+
+    if (code.startsWith('#')) {
+        return `💬 <b>Comment</b>: ${code.substring(1, 40).trim()}${code.length > 40 ? '...' : ''}`;
+    }
+
+    if (code.includes('"""') || code.includes("'''")) {
+        return `💬 <b>Docstring/Multi-line Comment</b>: Documentation added`;
+    }
+
+    // === VARIABLES ===
+
+    // Variable with type conversion
+    if (code.match(/^\w+\s*=\s*(int|str|float|bool)\(/)) {
+        const match = code.match(/^(\w+)\s*=\s*(int|str|float|bool)\((.+)\)/);
+        if (match) {
+            return `📦 <b>Variable (Type Cast)</b>: <code>${match[1]}</code> = ${match[2]}(${match[3]})`;
+        }
+    }
+
+    // Simple variable assignment
+    if (code.match(/^\w+\s*=\s*.+/)) {
+        const match = code.match(/^(\w+)\s*=\s*(.+)$/);
+        if (match) {
+            const varName = match[1];
+            const value = match[2].trim();
+
+            // Number
+            if (!isNaN(parseFloat(value)) && isFinite(value)) {
+                return `📦 <b>Variable</b>: <code>${varName}</code> = ${value} (number)`;
+            }
+            // String
+            if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+                return `📦 <b>Variable</b>: <code>${varName}</code> = ${value.substring(0, 20)}${value.length > 20 ? '...' : ''} (string)`;
+            }
+            // Boolean
+            if (value === 'True' || value === 'False') {
+                return `📦 <b>Variable</b>: <code>${varName}</code> = ${value} (boolean)`;
+            }
+            // None
+            if (value === 'None') {
+                return `📦 <b>Variable</b>: <code>${varName}</code> = None (null value)`;
+            }
+            // Expression/other
+            return `📦 <b>Variable</b>: <code>${varName}</code> = <code>${value.substring(0, 30)}${value.length > 30 ? '...' : ''}</code>`;
+        }
+    }
+
+    // === CLASS ===
+
+    if (code.startsWith('class ')) {
+        const match = code.match(/^class\s+(\w+)/);
+        if (match) {
+            return `🏗️ <b>Class Defined</b>: <code>${match[1]}</code> - blueprint for objects`;
+        }
+    }
+
+    // === TRY/EXCEPT ===
+
+    if (code.startsWith('try:')) {
+        return `🛡️ <b>Try Block</b>: Error handling started`;
+    }
+    if (code.startsWith('except')) {
+        return `🛡️ <b>Except Block</b>: Catches and handles errors`;
+    }
+    if (code.startsWith('finally:')) {
+        return `🛡️ <b>Finally Block</b>: Always executes (cleanup)`;
+    }
+    if (code.startsWith('raise')) {
+        return `⚠️ <b>Raise</b>: Throws an exception`;
+    }
+
+    // === DEFAULT - Try to detect method calls ===
+
+    // Method call patterns: obj.method()
+    const methodMatch = code.match(/(\w+)\.(\w+)\(([^)]*)\)/);
+    if (methodMatch) {
+        const objName = methodMatch[1];
+        const methodName = methodMatch[2];
+        const args = methodMatch[3];
+
+        // Common method messages
+        const methodMessages = {
+            'put': `📥 <b>put() method</b>: Added ${args || 'value'} to <code>${objName}</code>`,
+            'get': `📤 <b>get() method</b>: Retrieved value from <code>${objName}</code>`,
+            'insert': `📥 <b>insert() method</b>: Inserted at position in <code>${objName}</code>`,
+            'remove': `📤 <b>remove() method</b>: Removed ${args || 'item'} from <code>${objName}</code>`,
+            'clear': `🗑️ <b>clear() method</b>: Emptied <code>${objName}</code>`,
+            'sort': `📊 <b>sort() method</b>: Sorted <code>${objName}</code>`,
+            'reverse': `🔄 <b>reverse() method</b>: Reversed <code>${objName}</code>`,
+            'extend': `📥 <b>extend() method</b>: Added multiple items to <code>${objName}</code>`,
+            'update': `🔄 <b>update() method</b>: Updated <code>${objName}</code>`,
+            'add': `📥 <b>add() method</b>: Added ${args || 'item'} to <code>${objName}</code>`,
+            'discard': `📤 <b>discard() method</b>: Removed ${args || 'item'} from <code>${objName}</code>`,
+            'copy': `📋 <b>copy() method</b>: Created copy of <code>${objName}</code>`,
+            'keys': `🔑 <b>keys() method</b>: Got keys from <code>${objName}</code>`,
+            'values': `📦 <b>values() method</b>: Got values from <code>${objName}</code>`,
+            'items': `📋 <b>items() method</b>: Got key-value pairs from <code>${objName}</code>`,
+            'find': `🔍 <b>find() method</b>: Searched in <code>${objName}</code>`,
+            'index': `🔍 <b>index() method</b>: Found position in <code>${objName}</code>`,
+            'count': `🔢 <b>count() method</b>: Counted occurrences in <code>${objName}</code>`,
+            'join': `🔗 <b>join() method</b>: Joined elements of <code>${objName}</code>`,
+            'split': `✂️ <b>split() method</b>: Split string into parts`,
+            'strip': `✂️ <b>strip() method</b>: Removed whitespace from string`,
+            'lower': `🔡 <b>lower() method</b>: Converted to lowercase`,
+            'upper': `🔠 <b>upper() method</b>: Converted to uppercase`,
+            'replace': `🔄 <b>replace() method</b>: Replaced text in string`,
+            'format': `📝 <b>format() method</b>: Formatted string`,
+            'read': `📖 <b>read() method</b>: Read from file <code>${objName}</code>`,
+            'write': `📝 <b>write() method</b>: Wrote to file <code>${objName}</code>`,
+            'close': `🚪 <b>close() method</b>: Closed <code>${objName}</code>`,
+        };
+
+        if (methodMessages[methodName]) {
+            return methodMessages[methodName];
+        }
+
+        // Generic method call
+        return `⚙️ <b>${methodName}() method</b>: Called on <code>${objName}</code>`;
+    }
+
+    // If nothing matched, give a simple statement added message
+    return `✏️ <b>Statement Added</b>`;
 }
 
 
@@ -2687,18 +3265,66 @@ window.toggleEditorMode = function () {
         // Switch TO Editor Mode
         pyvizState.isEditorMode = true;
 
+        // Notify RuntimeInspector
+        if (window.RuntimeInspector) window.RuntimeInspector.setEditorMode(true);
+
         // Convert blocks to text
         const codeText = pyvizState.lines.map(l => '    '.repeat(l.indent) + l.code).join('\n');
 
+        // Reset any wrap-related styles on the container before replacing content
+        area.style.whiteSpace = '';
+        area.style.overflowX = '';
+        area.style.wordBreak = '';
+
+        // Simple styled textarea (no overlay - simpler and more reliable)
         area.innerHTML = `
             <textarea id="pv-editor-textarea" spellcheck="false" 
-                class="w-full h-full bg-slate-950 text-slate-300 font-mono text-sm p-4 outline-none resize-none border-none"
+                class="w-full h-full bg-slate-950 text-slate-200 font-mono text-lg p-4 outline-none resize-none border-none leading-relaxed"
+                style="caret-color: #60a5fa; tab-size: 4;"
                 placeholder="Type Python code here...">${codeText}</textarea>
         `;
 
+        const textarea = document.getElementById('pv-editor-textarea');
+
+        // Auto-indentation on Enter
+        textarea.onkeydown = (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                const start = textarea.selectionStart;
+                const end = textarea.selectionEnd;
+                const value = textarea.value;
+
+                // Get current line
+                const beforeCursor = value.substring(0, start);
+                const lines = beforeCursor.split('\n');
+                const currentLine = lines[lines.length - 1];
+
+                // Calculate indent
+                const leadingSpaces = currentLine.match(/^(\s*)/)[1];
+                let newIndent = leadingSpaces;
+
+                // If line ends with ':', add 4 more spaces
+                if (currentLine.trim().endsWith(':')) {
+                    newIndent += '    ';
+                }
+
+                // Insert newline + indent
+                const newValue = value.substring(0, start) + '\n' + newIndent + value.substring(end);
+                textarea.value = newValue;
+                textarea.selectionStart = textarea.selectionEnd = start + 1 + newIndent.length;
+            }
+            // Tab key for indentation
+            else if (e.key === 'Tab') {
+                e.preventDefault();
+                const start = textarea.selectionStart;
+                const newValue = textarea.value.substring(0, start) + '    ' + textarea.value.substring(start);
+                textarea.value = newValue;
+                textarea.selectionStart = textarea.selectionEnd = start + 4;
+            }
+        };
+
         // UI Update
         btn.classList.add('bg-yellow-500/20', 'text-yellow-300');
-        icon.className = "fa-solid fa-code pointer-events-none"; // Show 'code' or 'blocks' icon? Code is active. Show 'blocks' to switch back.
         icon.className = "fa-solid fa-cubes pointer-events-none"; // Switch to blocks icon
         showToast("Editor Mode Active", "info");
 
@@ -2731,8 +3357,206 @@ window.toggleEditorMode = function () {
         btn.classList.remove('bg-yellow-500/20', 'text-yellow-300');
         icon.className = "fa-solid fa-pen-to-square pointer-events-none";
         showToast("Code Refined & Synced", "success");
+
+        // Notify RuntimeInspector
+        if (window.RuntimeInspector) window.RuntimeInspector.setEditorMode(false);
     }
 }
+
+// --- Inline Line Editor (Feature 6) ---
+function openInlineEditor(line, idx, rowElement) {
+    const originalCode = line.code;
+    const indentStr = '    '.repeat(line.indent);
+
+    // Create input element
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.value = originalCode;
+    input.className = 'inline-editor-input flex-1 bg-slate-800 text-slate-100 font-mono px-2 py-1 rounded border-2 border-blue-500 outline-none';
+    input.style.fontSize = 'inherit';
+
+    // Create wrapper that maintains layout
+    const wrapper = document.createElement('div');
+    wrapper.className = 'flex items-center w-full gap-2';
+    wrapper.innerHTML = `
+        <span class="text-slate-600 text-xs w-8 select-none text-right shrink-0">${idx + 1}</span>
+        <span class="text-slate-500 font-mono whitespace-pre shrink-0">${indentStr}</span>
+    `;
+    wrapper.appendChild(input);
+
+    // Add helper text
+    const helper = document.createElement('div');
+    helper.className = 'text-[10px] text-slate-500 shrink-0 whitespace-nowrap';
+    helper.innerHTML = '<span class="text-green-400">Enter</span>=Save <span class="text-red-400">Esc</span>=Cancel';
+    wrapper.appendChild(helper);
+
+    // Replace row content
+    rowElement.innerHTML = '';
+    rowElement.appendChild(wrapper);
+    rowElement.classList.add('bg-slate-800', 'ring-2', 'ring-blue-500/50');
+
+    // Focus input
+    input.focus();
+    input.select();
+
+    // Handle keydown
+    input.onkeydown = (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            // Save changes
+            const newCode = input.value.trim();
+            if (newCode !== originalCode) {
+                line.code = newCode;
+                line.timestamp = new Date();
+
+                // Determine type from code
+                if (newCode.match(/^\w+\s*=/)) line.type = 'var';
+                else if (newCode.startsWith('print(')) line.type = 'func';
+                else if (newCode.startsWith('def ')) line.type = 'logic';
+                else if (newCode.startsWith('for ') || newCode.startsWith('while ')) line.type = 'logic';
+                else if (newCode.startsWith('if ') || newCode.startsWith('elif ') || newCode.startsWith('else:')) line.type = 'logic';
+
+                logAction('Edited line', { code: newCode, type: line.type });
+            }
+            renderPyViz();
+            updateStats();
+        } else if (e.key === 'Escape') {
+            // Cancel edit
+            renderPyViz();
+        }
+    };
+
+    // Also close on blur (clicking outside)
+    input.onblur = () => {
+        // Small delay to allow Enter to process first
+        setTimeout(() => {
+            if (document.activeElement !== input) {
+                renderPyViz();
+            }
+        }, 100);
+    };
+}
+
+// --- Syntax Highlighting for Editor Mode (Feature 3) ---
+function highlightLineForEditor(line) {
+    if (!line.trim()) return line; // Empty line
+
+    const keywords = ['def', 'class', 'if', 'else', 'elif', 'for', 'while', 'return', 'import', 'from', 'as', 'break', 'continue', 'pass', 'and', 'or', 'not', 'in', 'is', 'try', 'except', 'finally', 'raise', 'with', 'lambda', 'yield', 'global', 'nonlocal', 'assert', 'del'];
+    const builtins = ['print', 'input', 'len', 'range', 'int', 'str', 'float', 'list', 'dict', 'set', 'tuple', 'bool', 'type', 'open', 'file', 'abs', 'sum', 'min', 'max', 'sorted', 'enumerate', 'zip', 'map', 'filter'];
+    const special = ['True', 'False', 'None', 'self'];
+
+    // Escape HTML first
+    let escaped = line
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+
+    // Highlight strings (simple approach - handles basic cases)
+    escaped = escaped.replace(/("""[\s\S]*?"""|'''[\s\S]*?'''|"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')/g,
+        '<span style="color: #22c55e;">$1</span>');
+
+    // Highlight comments
+    escaped = escaped.replace(/(#.*)$/, '<span style="color: #64748b; font-style: italic;">$1</span>');
+
+    // Highlight keywords
+    keywords.forEach(kw => {
+        const regex = new RegExp(`\\b(${kw})\\b`, 'g');
+        escaped = escaped.replace(regex, '<span style="color: #f472b6;">$1</span>');
+    });
+
+    // Highlight builtins
+    builtins.forEach(bi => {
+        const regex = new RegExp(`\\b(${bi})\\b`, 'g');
+        escaped = escaped.replace(regex, '<span style="color: #60a5fa;">$1</span>');
+    });
+
+    // Highlight special values
+    special.forEach(sp => {
+        const regex = new RegExp(`\\b(${sp})\\b`, 'g');
+        escaped = escaped.replace(regex, '<span style="color: #fb923c;">$1</span>');
+    });
+
+    // Highlight numbers
+    escaped = escaped.replace(/\b(\d+\.?\d*)\b/g, '<span style="color: #a78bfa;">$1</span>');
+
+    return escaped;
+}
+
+// --- Inline Line Editor (Feature 6) ---
+window.openInlineEditor = function (line, idx, rowElement) {
+    // Create inline editor overlay
+    const originalContent = rowElement.innerHTML;
+    const originalCode = line.code;
+    const indentStr = '    '.repeat(line.indent);
+
+    // Create input element
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.value = originalCode;
+    input.className = 'inline-editor-input w-full bg-slate-800 text-slate-100 font-mono px-2 py-1 rounded border-2 border-blue-500 outline-none';
+    input.style.fontSize = 'inherit';
+
+    // Create wrapper that maintains layout
+    const wrapper = document.createElement('div');
+    wrapper.className = 'flex items-center w-full';
+    wrapper.innerHTML = `
+        <span class="text-slate-600 text-xs w-8 select-none text-right mr-4 shrink-0">${idx + 1}</span>
+        <span class="text-slate-600 font-mono whitespace-pre">${indentStr}</span>
+    `;
+    wrapper.appendChild(input);
+
+    // Add helper text
+    const helper = document.createElement('div');
+    helper.className = 'text-[10px] text-slate-500 ml-2 shrink-0';
+    helper.innerHTML = '<span class="text-green-400">Enter</span> Save | <span class="text-red-400">Esc</span> Cancel';
+    wrapper.appendChild(helper);
+
+    // Replace row content
+    rowElement.innerHTML = '';
+    rowElement.appendChild(wrapper);
+    rowElement.classList.add('bg-slate-800', 'ring-2', 'ring-blue-500/50');
+
+    // Focus input
+    input.focus();
+    input.select();
+
+    // Handle keydown
+    input.onkeydown = (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            // Save changes
+            const newCode = input.value.trim();
+            if (newCode !== originalCode) {
+                line.code = newCode;
+                line.timestamp = new Date();
+
+                // Determine type from code
+                if (newCode.match(/^\w+\s*=/)) line.type = 'var';
+                else if (newCode.startsWith('print(')) line.type = 'func';
+                else if (newCode.startsWith('def ')) line.type = 'logic';
+                else if (newCode.startsWith('for ') || newCode.startsWith('while ')) line.type = 'logic';
+                else if (newCode.startsWith('if ') || newCode.startsWith('elif ') || newCode.startsWith('else:')) line.type = 'logic';
+
+                logAction('Edited line', { code: newCode, type: line.type });
+            }
+            renderPyViz();
+            updateStats();
+        } else if (e.key === 'Escape') {
+            // Cancel edit
+            renderPyViz();
+        }
+    };
+
+    // Also close on blur (clicking outside)
+    input.onblur = () => {
+        // Small delay to allow Enter to process first
+        setTimeout(() => {
+            if (document.activeElement !== input) {
+                renderPyViz();
+            }
+        }, 100);
+    };
+};
 
 function parseAndRefineCode(raw) {
     const lines = raw.split('\n');

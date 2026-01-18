@@ -50,12 +50,22 @@ $currentUser = Auth::user();
                     },
                     keyframes: {
                         float: {
-                            '0%, 100%': { transform: 'translateY(0)' },
-                            '50%': { transform: 'translateY(-10px)' },
+                            '0%, 100%': {
+                                transform: 'translateY(0)'
+                            },
+                            '50%': {
+                                transform: 'translateY(-10px)'
+                            },
                         },
                         fadeInUp: {
-                            '0%': { opacity: '0', transform: 'translateY(20px)' },
-                            '100%': { opacity: '1', transform: 'translateY(0)' },
+                            '0%': {
+                                opacity: '0',
+                                transform: 'translateY(20px)'
+                            },
+                            '100%': {
+                                opacity: '1',
+                                transform: 'translateY(0)'
+                            },
                         }
                     }
                 }
@@ -148,21 +158,28 @@ $currentUser = Auth::user();
                 <i class="fa-solid fa-code text-brand-400 group-hover:rotate-12 transition-transform"></i>
             </button>
 
+            <!-- Change Log Button (dynamically shown if entries exist) -->
+            <button id="changelog-btn" onclick="toggleModal('changelog-modal')"
+                class="hidden md:hidden items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white border border-green-500/50 transition-all group mr-2 shadow-lg shadow-green-500/20">
+                <i class="fa-solid fa-clock-rotate-left group-hover:-rotate-12 transition-transform"></i>
+                <span class="text-sm font-medium" id="changelog-btn-text">What's New</span>
+            </button>
+
             <?php if ($currentUser): ?>
-                 <!-- User Profile -->
-                 <?php $dashboardLink = ($currentUser['role'] === 'admin') ? 'admin/dashboard/' : 'user/dashboard/'; ?>
-                 <a href="<?php echo $dashboardLink; ?>" class="flex items-center gap-2 px-4 py-2 rounded-full bg-slate-800/50 hover:bg-slate-700 border border-slate-700 transition-all group">
+                <!-- User Profile -->
+                <?php $dashboardLink = ($currentUser['role'] === 'admin') ? 'admin/dashboard/' : 'user/dashboard/'; ?>
+                <a href="<?php echo $dashboardLink; ?>" class="flex items-center gap-2 px-4 py-2 rounded-full bg-slate-800/50 hover:bg-slate-700 border border-slate-700 transition-all group">
                     <div class="w-6 h-6 rounded-full bg-brand-600 flex items-center justify-center font-bold text-white text-xs shadow-md">
                         <?php echo substr($currentUser['full_name'] ?? 'U', 0, 1); ?>
                     </div>
                     <span class="text-sm font-medium text-slate-300 group-hover:text-white max-w-[100px] truncate hidden sm:inline"><?php echo htmlspecialchars($currentUser['full_name']); ?></span>
-                 </a>
+                </a>
             <?php else: ?>
-                 <!-- Login Button -->
-                 <a href="login.php?redirect=<?php echo urlencode('index.php'); ?>" 
+                <!-- Login Button -->
+                <a href="login.php?redirect=<?php echo urlencode('index.php'); ?>"
                     class="flex items-center gap-2 px-5 py-2 rounded-full bg-brand-600 hover:bg-brand-500 text-white text-sm font-bold shadow-lg shadow-brand-500/20 transition-all transform hover:scale-105">
                     <i class="fa-solid fa-right-to-bracket"></i> Login / Signup
-                 </a>
+                </a>
             <?php endif; ?>
         </div>
     </header>
@@ -172,7 +189,7 @@ $currentUser = Auth::user();
     <script>
         // start tracking Home api code
         document.addEventListener('DOMContentLoaded', () => {
-             if(window.initTracking) window.initTracking('Home', 'api/track.php');
+            if (window.initTracking) window.initTracking('Home', 'api/track.php');
         });
         // end tracking Home api code
     </script>
@@ -201,13 +218,13 @@ $currentUser = Auth::user();
 
         <!-- Video Section -->
         <!-- Video Section (Lazy Load) -->
-        <div class="w-full max-w-3xl mx-auto mb-16 rounded-2xl overflow-hidden shadow-2xl border border-slate-700/50 animate-fade-in-up md:h-[400px] relative bg-slate-900 group cursor-pointer" 
-             style="animation-delay: 0.2s;"
-             onclick="playVDrawVideo(this)">
-            
+        <div class="w-full max-w-3xl mx-auto mb-16 rounded-2xl overflow-hidden shadow-2xl border border-slate-700/50 animate-fade-in-up md:h-[400px] relative bg-slate-900 group cursor-pointer"
+            style="animation-delay: 0.2s;"
+            onclick="playVDrawVideo(this)">
+
             <!-- Cover Image -->
             <img src="images/pyviz.png" alt="VDraw Demo" class="w-full h-full object-cover opacity-80 group-hover:opacity-60 transition-opacity duration-300">
-            
+
             <!-- Play Button Overlay -->
             <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
                 <div class="w-20 h-20 rounded-full bg-brand-600/90 text-white flex items-center justify-center text-4xl shadow-lg group-hover:scale-110 transition-transform duration-300 pl-2">
@@ -234,7 +251,7 @@ $currentUser = Auth::user();
                 video.classList.remove('hidden');
                 video.playbackRate = 1.15; // Set speed
                 video.play();
-                
+
                 // Remove onclick handler so clicking controls doesn't re-trigger
                 container.onclick = null;
                 container.classList.remove('cursor-pointer');
@@ -262,70 +279,70 @@ $currentUser = Auth::user();
                  Or maybe just above the Second Row to be safe.
                  Let's place it ABOVE the Second Row (PyViz/DViz). 
             -->
-            
 
-            
+
+
             <!-- First Row (3 items) -->
             <!-- Dynamic Apps Grid -->
             <!-- Dynamic Apps Grid -->
             <div class="flex flex-wrap justify-center gap-8 mb-8">
-                <?php 
+                <?php
                 require_once 'auth/AppHelper.php';
                 $apps = AppHelper::getAllApps();
                 $adInserted = false;
 
-                foreach($apps as $index => $app): 
+                foreach ($apps as $index => $app):
                     $theme = AppHelper::getTheme($app['theme_color'] ?? 'blue');
-                    $url = "frontend/" . $app['name'] . "/"; 
+                    $url = "frontend/" . $app['name'] . "/";
                     // Dynamic image name: lowercase app name + .png
                     $imgFile = strtolower($app['name']) . '.png';
                     // Check if the image file exists
                     $imgPath = 'images/' . $imgFile;
                     $imgExists = file_exists($imgPath);
                 ?>
-                <a href="<?php echo $url; ?>" target="_blank" class="w-full max-w-sm group">
-                    <div class="glass-card h-full p-8 rounded-3xl relative overflow-hidden flex flex-col items-center text-center animate-fade-in-up"
-                        style="animation-delay: <?php echo ($index * 0.1); ?>s;">
-                        <div
-                            class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r <?php echo $theme['gradient']; ?> transform origin-left scale-x-0 group-hover:scale-x-100 transition-transform duration-500">
-                        </div>
-                        
-                        <?php if($imgExists): ?>
-                            <div class="w-full mb-6 relative group-hover:-translate-y-2 transition-transform duration-500">
-                                <img src="images/<?php echo $imgFile; ?>" 
-                                     alt="<?php echo htmlspecialchars($app['home_title']); ?>" 
-                                     class="w-full h-40 object-cover rounded-2xl shadow-lg border border-slate-700/50">
-                                <div class="absolute -bottom-4 left-1/2 transform -translate-x-1/2 w-12 h-12 rounded-xl <?php echo $theme['icon_bg']; ?> <?php echo $theme['icon_text']; ?> flex items-center justify-center shadow-lg backdrop-blur-md border border-slate-700/50">
+                    <a href="<?php echo $url; ?>" target="_blank" class="w-full max-w-sm group">
+                        <div class="glass-card h-full p-8 rounded-3xl relative overflow-hidden flex flex-col items-center text-center animate-fade-in-up"
+                            style="animation-delay: <?php echo ($index * 0.1); ?>s;">
+                            <div
+                                class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r <?php echo $theme['gradient']; ?> transform origin-left scale-x-0 group-hover:scale-x-100 transition-transform duration-500">
+                            </div>
+
+                            <?php if ($imgExists): ?>
+                                <div class="w-full mb-6 relative group-hover:-translate-y-2 transition-transform duration-500">
+                                    <img src="images/<?php echo $imgFile; ?>"
+                                        alt="<?php echo htmlspecialchars($app['home_title']); ?>"
+                                        class="w-full h-40 object-cover rounded-2xl shadow-lg border border-slate-700/50">
+                                    <div class="absolute -bottom-4 left-1/2 transform -translate-x-1/2 w-12 h-12 rounded-xl <?php echo $theme['icon_bg']; ?> <?php echo $theme['icon_text']; ?> flex items-center justify-center shadow-lg backdrop-blur-md border border-slate-700/50">
+                                        <i class="<?php echo $app['icon_class']; ?>"></i>
+                                    </div>
+                                </div>
+                                <div class="mt-4"></div>
+                            <?php else: ?>
+                                <div
+                                    class="w-16 h-16 rounded-2xl <?php echo $theme['icon_bg']; ?> <?php echo $theme['icon_text']; ?> flex items-center justify-center mb-6 text-3xl group-hover:scale-110 group-hover:text-white <?php echo $theme['icon_hover']; ?> transition-all duration-300 icon-glow">
                                     <i class="<?php echo $app['icon_class']; ?>"></i>
                                 </div>
-                            </div>
-                            <div class="mt-4"></div>
-                        <?php else: ?>
+                            <?php endif; ?>
+
+                            <h3 class="text-2xl font-bold text-white mb-4"><?php echo htmlspecialchars($app['home_title']); ?></h3>
+                            <p class="text-slate-400 leading-relaxed text-sm"><?php echo htmlspecialchars($app['home_description']); ?></p>
                             <div
-                                class="w-16 h-16 rounded-2xl <?php echo $theme['icon_bg']; ?> <?php echo $theme['icon_text']; ?> flex items-center justify-center mb-6 text-3xl group-hover:scale-110 group-hover:text-white <?php echo $theme['icon_hover']; ?> transition-all duration-300 icon-glow">
-                                <i class="<?php echo $app['icon_class']; ?>"></i>
+                                class="mt-auto pt-6 opacity-0 group-hover:opacity-100 transition-opacity transform translate-y-2 group-hover:translate-y-0">
+                                <span class="<?php echo $theme['link_text']; ?> text-sm font-bold flex items-center justify-center gap-2">Launch
+                                    App <i class="fa-solid fa-arrow-right"></i></span>
                             </div>
-                        <?php endif; ?>
-
-                        <h3 class="text-2xl font-bold text-white mb-4"><?php echo htmlspecialchars($app['home_title']); ?></h3>
-                        <p class="text-slate-400 leading-relaxed text-sm"><?php echo htmlspecialchars($app['home_description']); ?></p>
-                        <div
-                            class="mt-auto pt-6 opacity-0 group-hover:opacity-100 transition-opacity transform translate-y-2 group-hover:translate-y-0">
-                            <span class="<?php echo $theme['link_text']; ?> text-sm font-bold flex items-center justify-center gap-2">Launch
-                                App <i class="fa-solid fa-arrow-right"></i></span>
                         </div>
-                    </div>
-                </a>
+                    </a>
 
-                <?php 
-                // Insert Ad after 4th item (index 3) or similar logic if needed
-                if ($index === 3): 
-                ?>
-                 <!-- AD PLACEMENT: Interstitial -->
-                <div class="glass-card w-full max-w-sm p-4 rounded-3xl relative overflow-hidden flex flex-col items-center justify-center text-center hidden" data-ad-placement="home_between_sections">
-                    <!-- Ad content will be injected here -->
-                </div>
-                <?php endif; ?>
+                    <?php
+                    // Insert Ad after 4th item (index 3) or similar logic if needed
+                    if ($index === 3):
+                    ?>
+                        <!-- AD PLACEMENT: Interstitial -->
+                        <div class="glass-card w-full max-w-sm p-4 rounded-3xl relative overflow-hidden flex flex-col items-center justify-center text-center hidden" data-ad-placement="home_between_sections">
+                            <!-- Ad content will be injected here -->
+                        </div>
+                    <?php endif; ?>
 
                 <?php endforeach; ?>
             </div>
@@ -344,6 +361,8 @@ $currentUser = Auth::user();
                 <span>Powered by <a href="https://webworldcenter.com" target="_blank" class="text-brand-400 hover:text-brand-300 font-medium">Web World Center</a></span>
                 <span class="w-1 h-1 rounded-full bg-slate-700"></span>
                 <button onclick="toggleModal('terms-modal')" class="text-slate-500 hover:text-white transition-colors">Terms of Use</button>
+                <span class="w-1 h-1 rounded-full bg-slate-700"></span>
+                <button onclick="toggleModal('privacy-modal')" class="text-slate-500 hover:text-white transition-colors">Privacy Policy</button>
             </p>
         </div>
     </footer>
@@ -364,7 +383,7 @@ $currentUser = Auth::user();
         <!-- Modal Content -->
         <div class="relative w-full max-w-lg bg-[#0f172a] border border-slate-700 rounded-2xl shadow-2xl transform scale-95 opacity-0 transition-all duration-300 overflow-hidden"
             id="modal-content">
-            
+
             <!-- Close Button -->
             <button onclick="toggleModal('about-modal')"
                 class="absolute top-4 right-4 text-slate-400 hover:text-white transition-colors z-10">
@@ -375,27 +394,27 @@ $currentUser = Auth::user();
                 <div class="flex flex-col md:flex-row gap-6 items-center md:items-start">
                     <!-- Image -->
                     <div class="w-20 h-20 md:w-24 md:h-24 shrink-0 rounded-2xl overflow-hidden border-2 border-slate-700 shadow-lg bg-slate-800">
-                         <img src="frontend/images/me.png" alt="Faisal Hassan" class="w-full h-full object-cover">
+                        <img src="frontend/images/me.png" alt="Faisal Hassan" class="w-full h-full object-cover">
                     </div>
 
                     <!-- Info -->
                     <div class="text-center md:text-left pt-1">
                         <h3 class="text-2xl font-bold text-white mb-1">Faisal Hassan</h3>
                         <p class="text-brand-400 text-xs font-medium italic mb-4">a geek, a teacher, a developer</p>
-                        
-                        <a href="mailto:faisal@vdraw.cc" class="inline-flex items-center gap-2 text-slate-400 hover:text-white text-sm transition-colors group">
+
+                        <a href="mailto:hello@vdraw.cc" class="inline-flex items-center gap-2 text-slate-400 hover:text-white text-sm transition-colors group">
                             <i class="fa-regular fa-envelope group-hover:text-brand-400 transition-colors"></i>
-                            <span>faisal@vdraw.cc</span>
+                            <span>hello@vdraw.cc</span>
                         </a>
                     </div>
                 </div>
 
                 <!-- Quote -->
                 <div class="mt-8 bg-slate-800/50 rounded-xl p-5 relative border border-slate-700/50">
-                     <i class="fa-solid fa-quote-left text-brand-500/20 text-3xl absolute -top-2 -left-2"></i>
-                     <p class="text-slate-300 text-sm leading-relaxed italic relative z-10">
+                    <i class="fa-solid fa-quote-left text-brand-500/20 text-3xl absolute -top-2 -left-2"></i>
+                    <p class="text-slate-300 text-sm leading-relaxed italic relative z-10">
                         "I developed this suite to bridge the gap between abstract concepts and visual understanding. As a teacher myself, I felt the need for tools that bring modern education to life, contributing to a brighter future for students and educators alike."
-                     </p>
+                    </p>
                 </div>
             </div>
         </div>
@@ -408,7 +427,7 @@ $currentUser = Auth::user();
 
         <!-- Modal Content -->
         <div class="relative w-full max-w-4xl h-[90vh] bg-[#0f172a] border border-slate-700 rounded-2xl shadow-2xl section-terms transform scale-95 opacity-0 transition-all duration-300 overflow-hidden flex flex-col" id="modal-content">
-            
+
             <!-- Header -->
             <div class="p-6 border-b border-slate-800 flex justify-between items-center bg-[#0f172a] z-10 shrink-0">
                 <h2 class="text-2xl font-bold text-white">Terms and Conditions</h2>
@@ -419,7 +438,7 @@ $currentUser = Auth::user();
 
             <!-- Scrollable Body -->
             <div class="p-8 overflow-y-auto custom-scrollbar text-slate-300 space-y-6 text-sm md:text-base leading-relaxed">
-                
+
                 <p class="italic text-slate-500 text-xs">Effective Date: Jan 2026</p>
 
                 <p>These Terms and Conditions ("<strong>Terms</strong>") govern your access to and use of the VDraw website, web applications, and related services (collectively, the "<strong>Service</strong>"). By accessing, browsing, signing up, logging in, or otherwise using the Service, you confirm that you have read, understood, and agree to be bound by these Terms.</p>
@@ -447,7 +466,7 @@ $currentUser = Auth::user();
 
                 <h3 class="text-xl font-bold text-white">4. Educational Use Only (Non-Commercial)</h3>
                 <p>The Service is provided <strong>for educational purposes only</strong>.</p>
-                
+
                 <h4 class="text-lg font-bold text-brand-400 mt-2">4.1 Permitted Use</h4>
                 <ul class="list-disc pl-5 space-y-2">
                     <li>Personal learning</li>
@@ -571,17 +590,114 @@ $currentUser = Auth::user();
                 <h3 class="text-xl font-bold text-white">20. Contact</h3>
                 <p class="flex items-center gap-2">
                     <i class="fa-regular fa-envelope text-brand-400"></i>
-                    <a href="mailto:faisal@vdraw.cc" class="text-white hover:underline">faisal@vdraw.cc</a>
+                    <a href="mailto:hello@vdraw.cc" class="text-white hover:underline">hello@vdraw.cc</a>
                 </p>
 
                 <h3 class="text-xl font-bold text-white">21. Entire Agreement</h3>
                 <p>These Terms form the entire agreement between you and us regarding the Service and supersede any prior agreements.</p>
 
             </div>
-            
+
             <!-- Footer Actions -->
             <div class="p-6 border-t border-slate-800 bg-[#0f172a] shrink-0 text-right">
                 <button onclick="toggleModal('terms-modal')" class="px-6 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded font-bold transition-colors">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Privacy Policy Modal -->
+    <div id="privacy-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4">
+        <!-- Backdrop -->
+        <div class="absolute inset-0 bg-black/90 backdrop-blur-md transition-opacity opacity-0" id="modal-backdrop" onclick="toggleModal('privacy-modal')"></div>
+
+        <!-- Modal Content -->
+        <div class="relative w-full max-w-4xl h-[90vh] bg-[#0f172a] border border-slate-700 rounded-2xl shadow-2xl section-privacy transform scale-95 opacity-0 transition-all duration-300 overflow-hidden flex flex-col" id="modal-content">
+
+            <!-- Header -->
+            <div class="p-6 border-b border-slate-800 flex justify-between items-center bg-[#0f172a] z-10 shrink-0">
+                <h2 class="text-2xl font-bold text-white">Privacy Policy</h2>
+                <button onclick="toggleModal('privacy-modal')" class="text-slate-400 hover:text-white transition-colors bg-slate-800 p-2 rounded-full w-8 h-8 flex items-center justify-center">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <!-- Scrollable Body -->
+            <div class="p-8 overflow-y-auto custom-scrollbar text-slate-300 space-y-6 text-sm md:text-base leading-relaxed">
+
+                <p class="italic text-slate-500 text-xs">Effective Date: Jan 2026</p>
+
+                <p>At VDraw ("<strong>we</strong>", "<strong>our</strong>", or "<strong>us</strong>"), we respect your privacy and are committed to protecting the personal information you share with us. This Privacy Policy explains how we collect, use, and safeguard your information when you use our website and educational tools (collectively, the "<strong>Service</strong>").</p>
+
+                <hr class="border-slate-800">
+
+                <h3 class="text-xl font-bold text-white">1. Information We Collect</h3>
+                <p>We collect information to provide and improve our educational services.</p>
+
+                <h4 class="text-lg font-bold text-brand-400 mt-2">1.1 Information You Provide</h4>
+                <ul class="list-disc pl-5 space-y-2">
+                    <li><strong>Account Information:</strong> When you sign up, we collect your name, email address, and password.</li>
+                    <li><strong>User Content:</strong> Any code, text, or inputs you submit to our playgrounds or tools.</li>
+                    <li><strong>Communications:</strong> If you contact us for support or feedback, we collect the details of that communication.</li>
+                </ul>
+
+                <h4 class="text-lg font-bold text-brand-400 mt-2">1.2 Automatically Collected Information</h4>
+                <ul class="list-disc pl-5 space-y-2">
+                    <li><strong>Usage Data:</strong> We track how you interact with the Service, such as pages visited, features used, and time spent.</li>
+                    <li><strong>Device Information:</strong> We collect information about the device and browser you use to access the Service, including IP address and browser type.</li>
+                    <li><strong>Cookies:</strong> We use cookies to maintain your session and preferences.</li>
+                </ul>
+
+                <h3 class="text-xl font-bold text-white">2. How We Use Your Information</h3>
+                <p>We use the collected information for the following purposes:</p>
+                <ul class="list-disc pl-5 space-y-2">
+                    <li>To provide, maintain, and improve the Service.</li>
+                    <li>To personalize your learning experience.</li>
+                    <li>To communicate with you about updates, features, and security alerts.</li>
+                    <li>To monitor and analyze trends and usage to enhance functionality.</li>
+                    <li>To protect the security and integrity of our platform.</li>
+                </ul>
+
+                <h3 class="text-xl font-bold text-white">3. Data Sharing and Disclosure</h3>
+                <p>We do not sell your personal information. We may share your information in the following circumstances:</p>
+                <ul class="list-disc pl-5 space-y-2">
+                    <li><strong>Service Providers:</strong> With trusted third-party vendors who assist us in operating the Service (e.g., hosting, analytics, email delivery).</li>
+                    <li><strong>Legal Requirements:</strong> If required by law or to protect our rights, property, or safety.</li>
+                    <li><strong>With Your Consent:</strong> We may share information with your explicit permission.</li>
+                </ul>
+
+                <h3 class="text-xl font-bold text-white">4. Data Security</h3>
+                <p>We implement appropriate technical and organizational measures to protect your personal information against unauthorized access, alteration, disclosure, or destruction. However, no internet transmission is completely secure, and we cannot guarantee absolute security.</p>
+
+                <h3 class="text-xl font-bold text-white">5. Your Rights</h3>
+                <p>Depending on your location, you may have rights regarding your personal information, including:</p>
+                <ul class="list-disc pl-5 space-y-2">
+                    <li><strong>Access:</strong> The right to request a copy of the information we hold about you.</li>
+                    <li><strong>Correction:</strong> The right to request correction of inaccurate information.</li>
+                    <li><strong>Deletion:</strong> The right to request deletion of your account and personal data.</li>
+                </ul>
+                <p>To exercise these rights, please contact us at <a href="mailto:hello@vdraw.cc" class="text-brand-400 hover:underline">hello@vdraw.cc</a>.</p>
+
+                <h3 class="text-xl font-bold text-white">6. Third-Party Links</h3>
+                <p>Our Service may contain links to third-party websites. We are not responsible for the privacy practices or content of those sites. We encourage you to review their privacy policies.</p>
+
+                <h3 class="text-xl font-bold text-white">7. Children's Privacy</h3>
+                <p>Our Service is intended for educational use. If you are under the age of majority in your jurisdiction, you should use the Service with the guidance of a parent or guardian.</p>
+
+                <h3 class="text-xl font-bold text-white">8. Changes to This Policy</h3>
+                <p>We may update this Privacy Policy from time to time. We will notify you of any significant changes by posting the new policy on this page with a new effective date.</p>
+
+                <h3 class="text-xl font-bold text-white">9. Contact Us</h3>
+                <p>If you have any questions about this Privacy Policy, please contact us at:</p>
+                <p class="flex items-center gap-2">
+                    <i class="fa-regular fa-envelope text-brand-400"></i>
+                    <a href="mailto:hello@vdraw.cc" class="text-white hover:underline">hello@vdraw.cc</a>
+                </p>
+
+            </div>
+
+            <!-- Footer Actions -->
+            <div class="p-6 border-t border-slate-800 bg-[#0f172a] shrink-0 text-right">
+                <button onclick="toggleModal('privacy-modal')" class="px-6 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded font-bold transition-colors">Close</button>
             </div>
         </div>
     </div>
@@ -618,9 +734,228 @@ $currentUser = Auth::user();
         document.addEventListener('DOMContentLoaded', () => {
             new AdManager({
                 appKey: 'vdraw', // Assuming Home is generalized as 'vdraw' or 'home'
-                rootUrl: 'frontend/ads/' 
+                rootUrl: 'frontend/ads/'
             });
+
+            // Check for Change Log entries and show button if any exist
+            checkChangeLogEntries();
         });
+
+        async function checkChangeLogEntries() {
+            try {
+                const res = await fetch('api/changelog.php?action=check');
+                const data = await res.json();
+                if (data.status === 'success' && data.visible) {
+                    const btn = document.getElementById('changelog-btn');
+                    btn.classList.remove('md:hidden');
+                    btn.classList.add('md:flex');
+                    document.getElementById('changelog-btn-text').innerText = data.button_title || "What's New";
+                }
+            } catch (e) {
+                console.log('Changelog check failed:', e);
+            }
+        }
+
+        let changeLogOffset = 0;
+        const CHANGELOG_LIMIT = 10;
+
+        async function loadChangeLogModal(append = false) {
+            const container = document.getElementById('changelog-content');
+
+            if (!append) {
+                changeLogOffset = 0;
+                container.innerHTML = '<div class="flex justify-center py-8"><i class="fa-solid fa-spinner fa-spin text-brand-400 text-xl"></i></div>';
+            }
+
+            try {
+                const res = await fetch(`api/changelog.php?action=list&limit=${CHANGELOG_LIMIT}&offset=${changeLogOffset}`);
+                const data = await res.json();
+
+                if (data.status === 'success' && data.logs.length > 0) {
+                    let html = '';
+
+                    if (!append) {
+                        html = '<div id="changelog-list" class="space-y-4">';
+                    }
+
+                    data.logs.forEach((log, idx) => {
+                        const typeIcon = getTypeIcon(log.change_type);
+                        const typeColor = getTypeColor(log.change_type);
+                        const appBadges = log.app_names.length ? log.app_names.map(a =>
+                            `<span class="px-1.5 py-0.5 rounded-full bg-slate-700 text-slate-300 text-[9px]">${a}</span>`
+                        ).join(' ') : '';
+
+                        html += `
+                        <div class="relative pl-6 border-l-2 ${typeColor.border}">
+                            <div class="absolute left-[-7px] top-0 w-3 h-3 rounded-full ${typeColor.bg} flex items-center justify-center">
+                                ${typeIcon}
+                            </div>
+                            <div class="bg-slate-800/50 rounded-lg p-3 border border-slate-700/50 hover:border-slate-600 transition-colors">
+                                <div class="flex flex-wrap items-center justify-between gap-1 mb-1">
+                                    <div class="flex items-center gap-1.5">
+                                        <span class="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase ${typeColor.badge}">
+                                            ${formatType(log.change_type)}
+                                        </span>
+                                        ${log.version_tag ? `<span class="text-[9px] text-slate-500">${log.version_tag}</span>` : ''}
+                                    </div>
+                                    <span class="text-[10px] text-slate-500">${formatDate(log.created_date)}</span>
+                                </div>
+                                <h4 class="text-white font-semibold text-sm mb-1">${log.title}</h4>
+                                <p class="text-slate-400 text-xs leading-relaxed mb-2">${log.description}</p>
+                                ${appBadges ? `<div class="flex flex-wrap gap-1">${appBadges}</div>` : ''}
+                            </div>
+                        </div>`;
+                    });
+
+                    if (!append) {
+                        html += '</div>';
+
+                        // Add load more button if there are more entries
+                        if (data.has_more) {
+                            html += `<div class="text-center mt-4" id="load-more-container">
+                                <button onclick="loadMoreChangeLogs()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium rounded-lg border border-slate-700 transition-colors">
+                                    <i class="fa-solid fa-chevron-down mr-1"></i> Load More
+                                </button>
+                            </div>`;
+                        }
+
+                        container.innerHTML = html;
+                    } else {
+                        // Append to existing list
+                        const list = document.getElementById('changelog-list');
+                        list.insertAdjacentHTML('beforeend', html);
+
+                        // Update or remove load more button
+                        const loadMoreContainer = document.getElementById('load-more-container');
+                        if (loadMoreContainer) {
+                            if (data.has_more) {
+                                loadMoreContainer.innerHTML = `
+                                    <button onclick="loadMoreChangeLogs()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium rounded-lg border border-slate-700 transition-colors">
+                                        <i class="fa-solid fa-chevron-down mr-1"></i> Load More
+                                    </button>`;
+                            } else {
+                                loadMoreContainer.innerHTML = '<span class="text-slate-600 text-xs italic">No more entries</span>';
+                            }
+                        }
+                    }
+
+                    changeLogOffset += data.logs.length;
+                } else if (!append) {
+                    container.innerHTML = '<div class="text-center py-8 text-slate-500 italic text-sm">No updates available.</div>';
+                }
+            } catch (e) {
+                if (!append) {
+                    container.innerHTML = '<div class="text-center py-8 text-red-400 text-sm">Failed to load change log.</div>';
+                }
+            }
+        }
+
+        function loadMoreChangeLogs() {
+            const btn = document.querySelector('#load-more-container button');
+            if (btn) {
+                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Loading...';
+                btn.disabled = true;
+            }
+            loadChangeLogModal(true);
+        }
+
+        function isRecentEntry(dateStr) {
+            const entryDate = new Date(dateStr);
+            const now = new Date();
+            const diffDays = (now - entryDate) / (1000 * 60 * 60 * 24);
+            return diffDays <= 7;
+        }
+
+        function formatDate(dateStr) {
+            const d = new Date(dateStr);
+            return d.toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric'
+            });
+        }
+
+        function formatType(t) {
+            if (t === 'new_feature') return 'New Feature';
+            if (t === 'bug_fix') return 'Bug Fix';
+            return 'Improvement';
+        }
+
+        function getTypeIcon(t) {
+            if (t === 'new_feature') return '<i class="fa-solid fa-star text-[8px] text-green-200"></i>';
+            if (t === 'bug_fix') return '<i class="fa-solid fa-bug text-[8px] text-red-200"></i>';
+            return '<i class="fa-solid fa-bolt text-[8px] text-blue-200"></i>';
+        }
+
+        function getTypeColor(t) {
+            if (t === 'new_feature') return {
+                border: 'border-green-500',
+                bg: 'bg-green-500',
+                badge: 'bg-green-900 text-green-300'
+            };
+            if (t === 'bug_fix') return {
+                border: 'border-red-500',
+                bg: 'bg-red-500',
+                badge: 'bg-red-900 text-red-300'
+            };
+            return {
+                border: 'border-blue-500',
+                bg: 'bg-blue-500',
+                badge: 'bg-blue-900 text-blue-300'
+            };
+        }
+    </script>
+
+    <!-- Change Log Modal -->
+    <div id="changelog-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4">
+        <!-- Backdrop -->
+        <div class="absolute inset-0 bg-black/90 backdrop-blur-md transition-opacity opacity-0" id="modal-backdrop" onclick="toggleModal('changelog-modal')"></div>
+
+        <!-- Modal Content -->
+        <div class="relative w-full max-w-4xl h-[90vh] bg-[#0f172a] border border-slate-700 rounded-2xl shadow-2xl transform scale-95 opacity-0 transition-all duration-300 overflow-hidden flex flex-col" id="modal-content">
+
+            <!-- Header -->
+            <div class="p-6 border-b border-slate-800 flex justify-between items-center bg-gradient-to-r from-[#0f172a] to-slate-800 z-10 shrink-0">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center shadow-lg">
+                        <i class="fa-solid fa-clock-rotate-left text-white"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-xl font-bold text-white">What's New</h2>
+                        <p class="text-xs text-slate-400">Latest updates and improvements</p>
+                    </div>
+                </div>
+                <button onclick="toggleModal('changelog-modal')" class="text-slate-400 hover:text-white transition-colors bg-slate-800 p-2 rounded-full w-8 h-8 flex items-center justify-center">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <!-- Scrollable Body -->
+            <div id="changelog-content" class="p-6 overflow-y-auto custom-scrollbar flex-1">
+                <div class="flex justify-center py-8"><i class="fa-solid fa-spinner fa-spin text-brand-400 text-2xl"></i></div>
+            </div>
+
+            <!-- Footer -->
+            <div class="p-4 border-t border-slate-800 bg-[#0f172a] shrink-0 text-center">
+                <button onclick="toggleModal('changelog-modal')" class="px-8 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-bold transition-colors">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Override toggleModal to trigger changelog loading
+        const originalToggleModal = window.toggleModal;
+        window.toggleModal = function(modalId) {
+            if (modalId === 'changelog-modal') {
+                const modal = document.getElementById(modalId);
+                if (modal.classList.contains('hidden')) {
+                    loadChangeLogModal();
+                }
+            }
+            originalToggleModal(modalId);
+        };
     </script>
 </body>
+
+
 </html>

@@ -24,6 +24,8 @@ $editorEnabled = true;
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="icon" href="../../images/favicon.png" type="image/png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Focus Magnifier Styles -->
+    <link rel="stylesheet" href="js/focus-magnifier/focus-magnifier.css">
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -56,6 +58,29 @@ $editorEnabled = true;
         
         @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
         .animate-slide-up { animation: slideUp 0.3s ease-out forwards; }
+
+        /* Runtime Value Popup Tooltip */
+        .runtime-tooltip {
+            position: absolute;
+            z-index: 1000;
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(59, 130, 246, 0.5);
+            border-radius: 10px;
+            padding: 12px 16px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 14px;
+            color: #e2e8f0;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+            pointer-events: none;
+            animation: tooltipFade 0.15s ease-out;
+            min-width: 200px;
+            max-width: 400px;
+        }
+        .runtime-tooltip .var-name { color: #60a5fa; font-weight: 700; font-size: 16px; }
+        .runtime-tooltip .var-value { color: #22c55e; font-size: 14px; }
+        .runtime-tooltip .var-type { color: #94a3b8; font-size: 12px; display: block; margin-top: 6px; }
+        @keyframes tooltipFade { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
     </style>
     <script src="../ads/ads.js" defer></script>
     <?php
@@ -191,6 +216,12 @@ $editorEnabled = true;
                                 <button onclick="changeFontSize(1)" class="w-5 h-5 flex items-center justify-center text-slate-400 hover:text-white text-xs" title="Increase Font"><i class="fa-solid fa-plus"></i></button>
                             </div>
 
+                            <!-- Wrap Toggle -->
+                            <label class="flex items-center bg-slate-800 rounded px-2 py-1 border border-slate-700 cursor-pointer">
+                                <input type="checkbox" id="pv-wrap-toggle" onchange="toggleCodeWrap()" class="mr-1 accent-blue-500">
+                                <span class="text-[10px] text-slate-400">Wrap</span>
+                            </label>
+
                             <!-- Action Buttons -->
                             <button id="pyviz-btn-clear" onclick="clearPyViz()" title="Clear Code" class="flex items-center justify-center text-xs text-red-500 hover:text-red-400 font-bold border border-red-900/30 rounded px-2 py-1 transition-all"><i class="fa-solid fa-trash pointer-events-none"></i></button>
                             <button id="pyviz-btn-mic" onclick="toggleVoiceRecording()" class="flex items-center justify-center text-xs text-slate-400 hover:text-white border border-slate-700/50 rounded px-2 py-1 transition-all" title="Voice to Code (<?php echo $maxSeconds; ?>s)">
@@ -205,7 +236,7 @@ $editorEnabled = true;
                     </div>
 
                     <!-- Code Construction Area -->
-                    <div id="pyviz-code-area" class="flex-1 bg-slate-950 p-6 overflow-y-auto custom-scrollbar font-mono text-slate-300 leading-relaxed shadow-inner min-h-0" style="font-size: 18px;">
+                    <div id="pyviz-code-area" class="flex-1 bg-slate-950 p-4 overflow-y-auto custom-scrollbar font-mono text-slate-300 leading-relaxed shadow-inner min-h-0" style="font-size: 18px;">
                         <!-- Code Lines will be injected here -->
                         <div class="text-slate-600 italic text-center mt-20 select-none pointer-events-none">
                             Explore Python concepts with step-by-step explanations and visual output.
@@ -280,6 +311,8 @@ $editorEnabled = true;
         // Auth handled server-side now
     </script>
     <script src="../js/tracking.js"></script>
+    <!-- Focus Magnifier Feature -->
+    <script src="js/focus-magnifier/focus-magnifier.js?v=<?php echo time(); ?>"></script>
     <script>
         // start tracking PyViz api code
         if(window.initTracking) window.initTracking('PyViz', '../../api/track.php');

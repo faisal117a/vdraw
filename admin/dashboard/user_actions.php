@@ -54,23 +54,23 @@ try {
             // Find user by email
             $userQ = DB::query("SELECT id, email_verified_at FROM users WHERE email = ?", [$email], "s");
             $userRes = $userQ->get_result();
-            
+
             if ($userRes->num_rows === 0) {
                 echo json_encode(['status' => 'error', 'message' => 'User not found']);
                 break;
             }
-            
+
             $user = $userRes->fetch_assoc();
-            
+
             if (!is_null($user['email_verified_at'])) {
                 echo json_encode(['status' => 'error', 'message' => 'Email is already verified']);
                 break;
             }
-            
+
             // Generate new verification code
             $code = rand(100000, 999999);
             DB::query("INSERT INTO user_email_verifications (user_id, code6, expires_at, created_at) VALUES (?, ?, DATE_ADD(NOW(), INTERVAL 30 MINUTE), NOW())", [$user['id'], $code], "is");
-            
+
             // Send Email
             try {
                 require_once __DIR__ . '/../../auth/MailService.php';
@@ -93,18 +93,18 @@ try {
 
             // Verify and promote
             DB::query("UPDATE users SET teacher_verified = 1, role = 'teacher' WHERE email = ?", [$email], "s");
-            
+
             // Update request
             DB::query("UPDATE teacher_verification_requests SET status = 'approved', updated_at = NOW() WHERE user_id = ? AND status = 'pending'", [$check['id']], "i");
-            
+
             echo json_encode(['status' => 'success', 'message' => "Teacher $email verified manually."]);
             break;
 
         case 'unverify_teacher':
             // Delete request so user sees "Unverified" and can apply again
             $res = DB::query("SELECT id FROM users WHERE email = ?", [$email], "s")->get_result();
-            if($r = $res->fetch_assoc()) {
-                 DB::query("DELETE FROM teacher_verification_requests WHERE user_id = ?", [$r['id']], "i");
+            if ($r = $res->fetch_assoc()) {
+                DB::query("DELETE FROM teacher_verification_requests WHERE user_id = ?", [$r['id']], "i");
             }
             DB::query("UPDATE users SET teacher_verified = 0 WHERE email = ?", [$email], "s");
             echo json_encode(['status' => 'success', 'message' => "Teacher $email status set to Unverified (Request Cleared)."]);
@@ -112,14 +112,14 @@ try {
 
         case 'get_logs':
             $uid = $_POST['user_id'] ?? 0;
-            if(!$uid) throw new Exception("User ID required");
-            
+            if (!$uid) throw new Exception("User ID required");
+
 
             // Select actual ip_address, country
             $stmt = DB::query("SELECT title as activity_type, details as description, created_at, ip_address, country FROM user_activity_log WHERE user_id = ? ORDER BY created_at DESC LIMIT 50", [$uid], "i");
-            if($stmt && $res=$stmt->get_result()) {
-                while($r=$res->fetch_assoc()) {
-                    if($r['ip_address'] === '::1' || $r['ip_address'] === '127.0.0.1') $r['ip_address'] = 'Localhost';
+            if ($stmt && $res = $stmt->get_result()) {
+                while ($r = $res->fetch_assoc()) {
+                    if ($r['ip_address'] === '::1' || $r['ip_address'] === '127.0.0.1') $r['ip_address'] = 'Localhost';
                     $logs[] = $r;
                 }
             }
@@ -137,119 +137,135 @@ try {
                         created_at 
                        FROM speech_token_cost_log WHERE user_id = ? ORDER BY created_at DESC LIMIT 50";
             $stmt2 = DB::query($usageQ, [$uid], "i");
-            if($stmt2 && $res2=$stmt2->get_result()) {
-                while($r=$res2->fetch_assoc()) $usage[] = $r;
+            if ($stmt2 && $res2 = $stmt2->get_result()) {
+                while ($r = $res2->fetch_assoc()) $usage[] = $r;
             }
 
-            echo json_encode(['status'=>'success', 'logs'=>$logs, 'usage'=>$usage]);
+            echo json_encode(['status' => 'success', 'logs' => $logs, 'usage' => $usage]);
             break;
 
         case 'add_reward':
             $uid = $_POST['user_id'] ?? 0;
             $amount = (int)($_POST['amount'] ?? 0);
-            if(!$uid) { echo json_encode(['status'=>'error','message'=>'User ID missing']); exit; }
-            if($amount <= 0) { echo json_encode(['status'=>'error','message'=>'Amount must be positive']); exit; }
-            
+            if (!$uid) {
+                echo json_encode(['status' => 'error', 'message' => 'User ID missing']);
+                exit;
+            }
+            if ($amount <= 0) {
+                echo json_encode(['status' => 'error', 'message' => 'Amount must be positive']);
+                exit;
+            }
+
             DB::query("UPDATE users SET reward_credits = COALESCE(reward_credits,0) + ? WHERE id = ?", [$amount, $uid], "ii");
-            echo json_encode(['status'=>'success', 'message'=>"Added $amount credits successfully."]);
+            echo json_encode(['status' => 'success', 'message' => "Added $amount credits successfully."]);
             break;
 
         case 'edit_user':
             $uid = $_POST['user_id'] ?? 0;
             $role = $_POST['role'] ?? '';
             $pass = $_POST['password'] ?? '';
-            
-            if(!$uid) throw new Exception("User ID required");
-            if(!$role) throw new Exception("Role required");
 
-            if($pass) {
-                 $hash = password_hash($pass, PASSWORD_DEFAULT);
-                 DB::query("UPDATE users SET role = ?, password = ? WHERE id = ?", [$role, $hash, $uid], "ssi");
+            if (!$uid) throw new Exception("User ID required");
+            if (!$role) throw new Exception("Role required");
+
+            if ($pass) {
+                $hash = password_hash($pass, PASSWORD_DEFAULT);
+                DB::query("UPDATE users SET role = ?, password = ? WHERE id = ?", [$role, $hash, $uid], "ssi");
             } else {
-                 DB::query("UPDATE users SET role = ? WHERE id = ?", [$role, $uid], "si");
+                DB::query("UPDATE users SET role = ? WHERE id = ?", [$role, $uid], "si");
             }
-            echo json_encode(['status'=>'success','message'=>'User updated successfully']);
+            echo json_encode(['status' => 'success', 'message' => 'User updated successfully']);
             break;
 
         case 'get_report_data':
-             $page = (int)($_POST['page'] ?? 1);
-             $limit = 20; $offset = ($page-1)*$limit;
-             $search = $_POST['search'] ?? '';
-             $dStart = $_POST['date_start'] ?? null;
-             $dEnd = $_POST['date_end'] ?? null;
+            $page = (int)($_POST['page'] ?? 1);
+            $limit = 20;
+            $offset = ($page - 1) * $limit;
+            $search = $_POST['search'] ?? '';
+            $dStart = $_POST['date_start'] ?? null;
+            $dEnd = $_POST['date_end'] ?? null;
 
-             // Stats
-             $stats = [];
-             $stats['total_users'] = DB::query("SELECT COUNT(*) c FROM users")->get_result()->fetch_assoc()['c'];
-             $stats['active_users'] = DB::query("SELECT COUNT(*) c FROM users WHERE status='active'")->get_result()->fetch_assoc()['c'];
-             $stats['blocked_users'] = DB::query("SELECT COUNT(*) c FROM users WHERE status='blocked'")->get_result()->fetch_assoc()['c'];
-             $stats['teachers'] = DB::query("SELECT COUNT(*) c FROM users WHERE role='teacher'")->get_result()->fetch_assoc()['c'];
-             $stats['verified_teachers'] = DB::query("SELECT COUNT(*) c FROM users WHERE role='teacher' AND teacher_verified=1")->get_result()->fetch_assoc()['c'];
-             
-             $tok = DB::query("SELECT 
+            // Stats
+            $stats = [];
+            $stats['total_users'] = DB::query("SELECT COUNT(*) c FROM users")->get_result()->fetch_assoc()['c'];
+            $stats['active_users'] = DB::query("SELECT COUNT(*) c FROM users WHERE status='active'")->get_result()->fetch_assoc()['c'];
+            $stats['blocked_users'] = DB::query("SELECT COUNT(*) c FROM users WHERE status='blocked'")->get_result()->fetch_assoc()['c'];
+            $stats['teachers'] = DB::query("SELECT COUNT(*) c FROM users WHERE role='teacher'")->get_result()->fetch_assoc()['c'];
+            $stats['verified_teachers'] = DB::query("SELECT COUNT(*) c FROM users WHERE role='teacher' AND teacher_verified=1")->get_result()->fetch_assoc()['c'];
+
+            $tok = DB::query("SELECT 
                 SUM(audio_tokens_in) as aud, 
                 SUM(text_tokens_in + text_tokens_out) as txt,
                 SUM(estimated_cost_audio) as cost_aud,
                 SUM(estimated_cost_text_in + estimated_cost_text_out) as cost_txt,
                 SUM(estimated_cost_total) as cost_total
                 FROM speech_token_cost_log")->get_result()->fetch_assoc();
-             $stats['tokens'] = $tok;
+            $stats['tokens'] = $tok;
 
-             // Geo Stats
-             $geo = [];
-             $resG = DB::query("SELECT IFNULL(u.country_code, 'Unknown') as cc, SUM(l.audio_tokens_in + l.text_tokens_in + l.text_tokens_out) as toks, SUM(l.estimated_cost_total) as cost FROM speech_token_cost_log l JOIN users u ON l.user_id = u.id GROUP BY u.country_code ORDER BY cost DESC LIMIT 20")->get_result();
-             while($r=$resG->fetch_assoc()) $geo[] = $r;
-             $stats['geo'] = $geo;
+            // Geo Stats
+            $geo = [];
+            $resG = DB::query("SELECT IFNULL(u.country_code, 'Unknown') as cc, SUM(l.audio_tokens_in + l.text_tokens_in + l.text_tokens_out) as toks, SUM(l.estimated_cost_total) as cost FROM speech_token_cost_log l JOIN users u ON l.user_id = u.id GROUP BY u.country_code ORDER BY cost DESC LIMIT 20")->get_result();
+            while ($r = $resG->fetch_assoc()) $geo[] = $r;
+            $stats['geo'] = $geo;
 
-             // IP Stats
-             $ips = [];
-             $resI = DB::query("SELECT user_ip, SUM(speech_count) as reqs, SUM(tokens_total_est) as toks, SUM(cost_total_est) as cost FROM ip_usage_monthly GROUP BY user_ip ORDER BY cost DESC LIMIT 20")->get_result();
-             while($r=$resI->fetch_assoc()) $ips[] = $r;
-             $stats['ips'] = $ips;
+            // IP Stats
+            $ips = [];
+            $resI = DB::query("SELECT user_ip, SUM(speech_count) as reqs, SUM(tokens_total_est) as toks, SUM(cost_total_est) as cost FROM ip_usage_monthly GROUP BY user_ip ORDER BY cost DESC LIMIT 20")->get_result();
+            while ($r = $resI->fetch_assoc()) $ips[] = $r;
+            $stats['ips'] = $ips;
 
-             // --- PHASE 15 COMPREHENSIVE REPORTING ---
+            // --- PHASE 15 COMPREHENSIVE REPORTING ---
 
-             // Global Filter Construction
-             $p15_where = ["1=1"];
-             $p15_params = []; $p15_types = "";
-             
-             if($dStart) { $p15_where[] = "DATE(created_at) >= ?"; $p15_params[] = $dStart; $p15_types.="s"; }
-             if($dEnd)   { $p15_where[] = "DATE(created_at) <= ?"; $p15_params[] = $dEnd; $p15_types.="s"; }
-             
-             // Search Filter (User, Country, Type)
-             if($search) {
-                 $searchTerm = "%$search%";
-                 $p15_where[] = "(country_code LIKE ? OR user_type LIKE ? OR user_id IN (SELECT id FROM users WHERE email LIKE ? OR full_name LIKE ?))";
-                 $p15_params[] = $searchTerm; 
-                 $p15_params[] = $searchTerm; 
-                 $p15_params[] = $searchTerm; 
-                 $p15_params[] = $searchTerm; 
-                 $p15_types .= "ssss";
-             }
-             
-             $wVisits = implode(" AND ", array_merge($p15_where, ["event_type = 'visit'"]));
-             $wButtons = implode(" AND ", array_merge($p15_where, ["event_type = 'button'"]));
-             $wDocs    = implode(" AND ", array_merge($p15_where, ["event_type = 'document'"]));
-             
-             // 1. APPS RANKING (Daily / Weekly / Monthly) - Independent of Date Filter (Snapshot)
-             $rankings = ['daily'=>[], 'weekly'=>[], 'monthly'=>[]];
-             // Daily (Last 24h)
-             $stmtD = DB::query("SELECT app_name, COUNT(*) as c FROM tracking_events WHERE event_type='visit' AND created_at >= NOW() - INTERVAL 1 DAY GROUP BY app_name ORDER BY c DESC LIMIT 5");
-             if($stmtD && $rD=$stmtD->get_result()) while($r=$rD->fetch_assoc()) $rankings['daily'][] = $r;
-             
-             // Weekly (Last 7d)
-             $stmtW = DB::query("SELECT app_name, COUNT(*) as c FROM tracking_events WHERE event_type='visit' AND created_at >= NOW() - INTERVAL 7 DAY GROUP BY app_name ORDER BY c DESC LIMIT 5");
-             if($stmtW && $rW=$stmtW->get_result()) while($r=$rW->fetch_assoc()) $rankings['weekly'][] = $r;
-             
-             // Monthly (Last 30d)
-             $stmtM = DB::query("SELECT app_name, COUNT(*) as c FROM tracking_events WHERE event_type='visit' AND created_at >= NOW() - INTERVAL 30 DAY GROUP BY app_name ORDER BY c DESC LIMIT 5");
-             if($stmtM && $rM=$stmtM->get_result()) while($r=$rM->fetch_assoc()) $rankings['monthly'][] = $r;
-             
-             $stats['rankings'] = $rankings;
+            // Global Filter Construction
+            $p15_where = ["1=1"];
+            $p15_params = [];
+            $p15_types = "";
 
-             // 2. DAILY TRENDS (Date-wise Metrics)
-             $dailyStats = [];
-             $qTrend = "SELECT 
+            if ($dStart) {
+                $p15_where[] = "DATE(created_at) >= ?";
+                $p15_params[] = $dStart;
+                $p15_types .= "s";
+            }
+            if ($dEnd) {
+                $p15_where[] = "DATE(created_at) <= ?";
+                $p15_params[] = $dEnd;
+                $p15_types .= "s";
+            }
+
+            // Search Filter (User, Country, Type)
+            if ($search) {
+                $searchTerm = "%$search%";
+                $p15_where[] = "(country_code LIKE ? OR user_type LIKE ? OR user_id IN (SELECT id FROM users WHERE email LIKE ? OR full_name LIKE ?))";
+                $p15_params[] = $searchTerm;
+                $p15_params[] = $searchTerm;
+                $p15_params[] = $searchTerm;
+                $p15_params[] = $searchTerm;
+                $p15_types .= "ssss";
+            }
+
+            $wVisits = implode(" AND ", array_merge($p15_where, ["event_type = 'visit'"]));
+            $wButtons = implode(" AND ", array_merge($p15_where, ["event_type = 'button'"]));
+            $wDocs    = implode(" AND ", array_merge($p15_where, ["event_type = 'document'"]));
+
+            // 1. APPS RANKING (Daily / Weekly / Monthly) - Independent of Date Filter (Snapshot)
+            $rankings = ['daily' => [], 'weekly' => [], 'monthly' => []];
+            // Daily (Last 24h)
+            $stmtD = DB::query("SELECT app_name, COUNT(*) as c FROM tracking_events WHERE event_type='visit' AND created_at >= NOW() - INTERVAL 1 DAY GROUP BY app_name ORDER BY c DESC LIMIT 5");
+            if ($stmtD && $rD = $stmtD->get_result()) while ($r = $rD->fetch_assoc()) $rankings['daily'][] = $r;
+
+            // Weekly (Last 7d)
+            $stmtW = DB::query("SELECT app_name, COUNT(*) as c FROM tracking_events WHERE event_type='visit' AND created_at >= NOW() - INTERVAL 7 DAY GROUP BY app_name ORDER BY c DESC LIMIT 5");
+            if ($stmtW && $rW = $stmtW->get_result()) while ($r = $rW->fetch_assoc()) $rankings['weekly'][] = $r;
+
+            // Monthly (Last 30d)
+            $stmtM = DB::query("SELECT app_name, COUNT(*) as c FROM tracking_events WHERE event_type='visit' AND created_at >= NOW() - INTERVAL 30 DAY GROUP BY app_name ORDER BY c DESC LIMIT 5");
+            if ($stmtM && $rM = $stmtM->get_result()) while ($r = $rM->fetch_assoc()) $rankings['monthly'][] = $r;
+
+            $stats['rankings'] = $rankings;
+
+            // 2. DAILY TRENDS (Date-wise Metrics)
+            $dailyStats = [];
+            $qTrend = "SELECT 
                             DATE(created_at) as log_date,
                             app_name,
                             COUNT(*) as total_visits,
@@ -262,159 +278,173 @@ try {
                         WHERE $wVisits
                         GROUP BY log_date, app_name
                         ORDER BY log_date DESC, total_visits DESC";
-            
-             $stmtTrend = DB::query($qTrend, $p15_params, $p15_types);
-             if ($stmtTrend && $resTrend = $stmtTrend->get_result()) {
-                 while($r=$resTrend->fetch_assoc()) $dailyStats[] = $r;
-             }
-             $stats['daily_trends'] = $dailyStats;
 
-             // 3. BUTTON HIT TRACKING
-             $btnStats = [];
-             $qBtn = "SELECT app_name, event_name as button_name, COUNT(*) as hits 
+            $stmtTrend = DB::query($qTrend, $p15_params, $p15_types);
+            if ($stmtTrend && $resTrend = $stmtTrend->get_result()) {
+                while ($r = $resTrend->fetch_assoc()) $dailyStats[] = $r;
+            }
+            $stats['daily_trends'] = $dailyStats;
+
+            // 3. BUTTON HIT TRACKING
+            $btnStats = [];
+            $qBtn = "SELECT app_name, event_name as button_name, COUNT(*) as hits 
                       FROM tracking_events 
                       WHERE $wButtons 
                       GROUP BY app_name, event_name 
                       ORDER BY hits DESC";
-             $stmtBtn = DB::query($qBtn, $p15_params, $p15_types);
-             if ($stmtBtn && $resBtn = $stmtBtn->get_result()) {
-                 while($r=$resBtn->fetch_assoc()) $btnStats[] = $r;
-             }
-             $stats['button_hits'] = $btnStats;
+            $stmtBtn = DB::query($qBtn, $p15_params, $p15_types);
+            if ($stmtBtn && $resBtn = $stmtBtn->get_result()) {
+                while ($r = $resBtn->fetch_assoc()) $btnStats[] = $r;
+            }
+            $stats['button_hits'] = $btnStats;
 
-             // 7. ENVIRONMENT STATS (Country & OS)
-             
-             // Country
-             $cStats = [];
-             $qCountry = "SELECT app_name, country_code, COUNT(*) as c FROM tracking_events WHERE $wVisits GROUP BY app_name, country_code ORDER BY c DESC";
-             $stmtCountry = DB::query($qCountry, $p15_params, $p15_types);
-             if ($stmtCountry && $resC = $stmtCountry->get_result()) {
-                 while($r=$resC->fetch_assoc()) $cStats[] = $r;
-             }
-             $stats['country_visits'] = $cStats;
+            // 7. ENVIRONMENT STATS (Country & OS)
 
-             // OS
-             $oStats = [];
-             $qOS = "SELECT app_name, os, COUNT(*) as c FROM tracking_events WHERE $wVisits GROUP BY app_name, os ORDER BY c DESC";
-             $stmtOS = DB::query($qOS, $p15_params, $p15_types);
-             if ($stmtOS && $resO = $stmtOS->get_result()) {
-                 while($r=$resO->fetch_assoc()) $oStats[] = $r;
-             }
-             $stats['os_stats'] = $oStats;
+            // Country
+            $cStats = [];
+            $qCountry = "SELECT app_name, country_code, COUNT(*) as c FROM tracking_events WHERE $wVisits GROUP BY app_name, country_code ORDER BY c DESC";
+            $stmtCountry = DB::query($qCountry, $p15_params, $p15_types);
+            if ($stmtCountry && $resC = $stmtCountry->get_result()) {
+                while ($r = $resC->fetch_assoc()) $cStats[] = $r;
+            }
+            $stats['country_visits'] = $cStats;
 
-             // 4. DOCUMENT ANALYTICS (Enhanced)
-             
-             // A. Total Opens
-             $totalDocOpens = 0;
-             $stmtTO = DB::query("SELECT COUNT(*) as c FROM tracking_events WHERE $wDocs", $p15_params, $p15_types);
-             if ($stmtTO && $resTO=$stmtTO->get_result()) {
-                 if($r=$resTO->fetch_assoc()) $totalDocOpens = $r['c'];
-             }
-             
-             // B. Grouping by Level & Chapter
-             $levels = [];
-             $stmtLev = DB::query("SELECT level_name, COUNT(*) as c FROM tracking_documents GROUP BY level_name ORDER BY c DESC");
-             if ($stmtLev && $resLev=$stmtLev->get_result()) {
-                 while($r=$resLev->fetch_assoc()) $levels[] = $r;
-             }
+            // OS
+            $oStats = [];
+            $qOS = "SELECT app_name, os, COUNT(*) as c FROM tracking_events WHERE $wVisits GROUP BY app_name, os ORDER BY c DESC";
+            $stmtOS = DB::query($qOS, $p15_params, $p15_types);
+            if ($stmtOS && $resO = $stmtOS->get_result()) {
+                while ($r = $resO->fetch_assoc()) $oStats[] = $r;
+            }
+            $stats['os_stats'] = $oStats;
 
-             $chapters = [];
-             $stmtChap = DB::query("SELECT chapter_name, COUNT(*) as c FROM tracking_documents GROUP BY chapter_name ORDER BY c DESC");
-             if ($stmtChap && $resChap=$stmtChap->get_result()) {
-                 while($r=$resChap->fetch_assoc()) $chapters[] = $r;
-             }
+            // 4. DOCUMENT ANALYTICS (Enhanced)
 
-             // C. Top 10 Documents
-             $topDocs = [];
-             $stmtTD = DB::query("SELECT document_name as title, COUNT(*) as views FROM tracking_documents GROUP BY document_name ORDER BY views DESC LIMIT 10");
-             if ($stmtTD && $resTD=$stmtTD->get_result()) {
-                 while($r=$resTD->fetch_assoc()) $topDocs[] = $r;
-             }
+            // A. Total Opens
+            $totalDocOpens = 0;
+            $stmtTO = DB::query("SELECT COUNT(*) as c FROM tracking_events WHERE $wDocs", $p15_params, $p15_types);
+            if ($stmtTO && $resTO = $stmtTO->get_result()) {
+                if ($r = $resTO->fetch_assoc()) $totalDocOpens = $r['c'];
+            }
 
-             $stats['doc_analytics'] = [
-                 'total_opens' => $totalDocOpens,
-                 'levels' => $levels,
-                 'chapters' => $chapters,
-                 'top_docs' => $topDocs
-             ];
+            // B. Grouping by Level & Chapter
+            $levels = [];
+            $stmtLev = DB::query("SELECT level_name, COUNT(*) as c FROM tracking_documents GROUP BY level_name ORDER BY c DESC");
+            if ($stmtLev && $resLev = $stmtLev->get_result()) {
+                while ($r = $resLev->fetch_assoc()) $levels[] = $r;
+            }
 
-             // 5. LIVE USERS (Detailed)
-             $liveStats = [];
-             $trackingServicePath = __DIR__ . '/../../auth/TrackingService.php';
-             
-             if (file_exists($trackingServicePath)) {
-                 require_once $trackingServicePath;
-                 // Total Live
-                 $liveStats['total'] = count(TrackingService::getLiveUsers());
-                 
-                 // By Country
-                 $resLC = DB::query("SELECT country_code, COUNT(*) as c FROM tracking_live_sessions WHERE last_heartbeat >= NOW() - INTERVAL 5 MINUTE GROUP BY country_code");
-                 if($resLC && $r=$resLC->get_result()) {
-                     while($row=$r->fetch_assoc()) $liveStats['by_country'][] = $row;
-                 }
-    
-                 // By App + Country
-                 $resLCA = DB::query("SELECT app_name, country_code, COUNT(*) as c FROM tracking_live_sessions WHERE last_heartbeat >= NOW() - INTERVAL 5 MINUTE GROUP BY app_name, country_code");
-                 if($resLCA && $r=$resLCA->get_result()) {
-                     while($row=$r->fetch_assoc()) $liveStats['by_app_country'][] = $row;
-                 }
-             } else {
-                 $liveStats['total'] = 0;
-                 $liveStats['error'] = 'TrackingService not found';
-             }
-             
-             $stats['live_users'] = $liveStats;
+            $chapters = [];
+            $stmtChap = DB::query("SELECT chapter_name, COUNT(*) as c FROM tracking_documents GROUP BY chapter_name ORDER BY c DESC");
+            if ($stmtChap && $resChap = $stmtChap->get_result()) {
+                while ($r = $resChap->fetch_assoc()) $chapters[] = $r;
+            }
 
+            // C. Top 10 Documents
+            $topDocs = [];
+            $stmtTD = DB::query("SELECT document_name as title, COUNT(*) as views FROM tracking_documents GROUP BY document_name ORDER BY views DESC LIMIT 10");
+            if ($stmtTD && $resTD = $stmtTD->get_result()) {
+                while ($r = $resTD->fetch_assoc()) $topDocs[] = $r;
+            }
 
-             // 6. REWARDS (Points)
-             $stats['rewards'] = ['total'=>0, 'top_earners'=>[]];
-             try {
-                 // Check if table exists (or just try query and catch)
-                 // Attempt Query
-                 $resTP = DB::query("SELECT SUM(points) as t FROM user_points");
-                 if($resTP && $r=$resTP->get_result()->fetch_assoc()) $stats['rewards']['total'] = $r['t'] ?? 0;
-                 
-                 $resE = DB::query("SELECT u.email, p.points FROM user_points p JOIN users u ON p.user_id = u.id ORDER BY p.points DESC LIMIT 5");
-                 if($resE && $reResult=$resE->get_result()) {
-                     while($r=$reResult->fetch_assoc()) $stats['rewards']['top_earners'][] = $r;
-                 }
-             } catch (Exception $e) {
-                 // Table likely missing, or other DB error. Return partial/empty to prevent dashboard crash.
-                 $stats['rewards']['error'] = 'Rewards data unavailable';
-             }
+            $stats['doc_analytics'] = [
+                'total_opens' => $totalDocOpens,
+                'levels' => $levels,
+                'chapters' => $chapters,
+                'top_docs' => $topDocs
+            ];
+
+            // 5. LIVE USERS (Detailed)
+            $liveStats = [];
+            $trackingServicePath = __DIR__ . '/../../auth/TrackingService.php';
+
+            if (file_exists($trackingServicePath)) {
+                require_once $trackingServicePath;
+                // Total Live
+                $liveStats['total'] = count(TrackingService::getLiveUsers());
+
+                // By Country
+                $resLC = DB::query("SELECT country_code, COUNT(*) as c FROM tracking_live_sessions WHERE last_heartbeat >= NOW() - INTERVAL 5 MINUTE GROUP BY country_code");
+                if ($resLC && $r = $resLC->get_result()) {
+                    while ($row = $r->fetch_assoc()) $liveStats['by_country'][] = $row;
+                }
+
+                // By App + Country
+                $resLCA = DB::query("SELECT app_name, country_code, COUNT(*) as c FROM tracking_live_sessions WHERE last_heartbeat >= NOW() - INTERVAL 5 MINUTE GROUP BY app_name, country_code");
+                if ($resLCA && $r = $resLCA->get_result()) {
+                    while ($row = $r->fetch_assoc()) $liveStats['by_app_country'][] = $row;
+                }
+            } else {
+                $liveStats['total'] = 0;
+                $liveStats['error'] = 'TrackingService not found';
+            }
+
+            $stats['live_users'] = $liveStats;
 
 
+            // 6. REWARDS (Points)
+            $stats['rewards'] = ['total' => 0, 'top_earners' => []];
+            try {
+                // Check if table exists (or just try query and catch)
+                // Attempt Query
+                $resTP = DB::query("SELECT SUM(points) as t FROM user_points");
+                if ($resTP && $r = $resTP->get_result()->fetch_assoc()) $stats['rewards']['total'] = $r['t'] ?? 0;
 
-             // Table (Users with Usage)
-             // Table (Users with Usage)
+                $resE = DB::query("SELECT u.email, p.points FROM user_points p JOIN users u ON p.user_id = u.id ORDER BY p.points DESC LIMIT 5");
+                if ($resE && $reResult = $resE->get_result()) {
+                    while ($r = $reResult->fetch_assoc()) $stats['rewards']['top_earners'][] = $r;
+                }
+            } catch (Exception $e) {
+                // Table likely missing, or other DB error. Return partial/empty to prevent dashboard crash.
+                $stats['rewards']['error'] = 'Rewards data unavailable';
+            }
 
-             $where = ['1=1'];
-             $params = []; $types = "";
-             
-             if($search) { $where[] = "(u.email LIKE ? OR u.full_name LIKE ?)"; $params[]="%$search%"; $params[]="%$search%"; $types.="ss"; }
-             if($dStart) { $where[] = "DATE(l.created_at) >= ?"; $params[] = $dStart; $types.="s"; }
-             if($dEnd)   { $where[] = "DATE(l.created_at) <= ?"; $params[] = $dEnd; $types.="s"; }
-             
-             $wStr = implode(" AND ", $where);
-             
-             // Totals (Filtered)
-             $tQ = "SELECT 
+
+
+            // Table (Users with Usage)
+            // Table (Users with Usage)
+
+            $where = ['1=1'];
+            $params = [];
+            $types = "";
+
+            if ($search) {
+                $where[] = "(u.email LIKE ? OR u.full_name LIKE ?)";
+                $params[] = "%$search%";
+                $params[] = "%$search%";
+                $types .= "ss";
+            }
+            if ($dStart) {
+                $where[] = "DATE(l.created_at) >= ?";
+                $params[] = $dStart;
+                $types .= "s";
+            }
+            if ($dEnd) {
+                $where[] = "DATE(l.created_at) <= ?";
+                $params[] = $dEnd;
+                $types .= "s";
+            }
+
+            $wStr = implode(" AND ", $where);
+
+            // Totals (Filtered)
+            $tQ = "SELECT 
                     SUM(l.audio_tokens_in) as aud_tok,
                     SUM(l.text_tokens_in + l.text_tokens_out) as txt_tok,
                     SUM(l.estimated_cost_total) as total_cost
                     FROM users u 
                     INNER JOIN speech_token_cost_log l ON u.id = l.user_id
                     WHERE $wStr";
-             // Reuse params/types (without limit) logic? 
-             // DB::query supports re-using params array if passed? Yes.
-             $totals = ['aud_tok'=>0, 'txt_tok'=>0, 'total_cost'=>0];
-             $stmtT = DB::query($tQ, $params, $types);
-             if($stmtT && $resT=$stmtT->get_result()) {
-                 $totals = $resT->fetch_assoc();
-             }
+            // Reuse params/types (without limit) logic? 
+            // DB::query supports re-using params array if passed? Yes.
+            $totals = ['aud_tok' => 0, 'txt_tok' => 0, 'total_cost' => 0];
+            $stmtT = DB::query($tQ, $params, $types);
+            if ($stmtT && $resT = $stmtT->get_result()) {
+                $totals = $resT->fetch_assoc();
+            }
 
-             // Data Query
-             $q = "SELECT u.email, u.full_name, u.last_login_at,
+            // Data Query
+            $q = "SELECT u.email, u.full_name, u.last_login_at,
                    SUM(l.audio_tokens_in) as aud_tok,
                    SUM(l.text_tokens_in + l.text_tokens_out) as txt_tok,
                    SUM(l.estimated_cost_audio) as aud_cost,
@@ -427,123 +457,245 @@ try {
                    GROUP BY u.id
                    ORDER BY total_cost DESC
                    LIMIT ? OFFSET ?";
-             
-             $params[] = $limit; $params[] = $offset; $types.="ii";
-             $rows = [];
-             $stmt = DB::query($q, $params, $types);
-             if($stmt && $res=$stmt->get_result()) {
-                 while($r=$res->fetch_assoc()) $rows[] = $r;
-             }
-             
-             echo json_encode(['status'=>'success', 'stats'=>$stats, 'table'=>$rows, 'totals'=>$totals, 'page'=>$page]);
-             break;
+
+            $params[] = $limit;
+            $params[] = $offset;
+            $types .= "ii";
+            $rows = [];
+            $stmt = DB::query($q, $params, $types);
+            if ($stmt && $res = $stmt->get_result()) {
+                while ($r = $res->fetch_assoc()) $rows[] = $r;
+            }
+
+            echo json_encode(['status' => 'success', 'stats' => $stats, 'table' => $rows, 'totals' => $totals, 'page' => $page]);
+            break;
 
         case 'get_app_metrics':
-             $appName = $_POST['app_name'] ?? '';
-             $dStart = $_POST['date_start'] ?? null;
-             $dEnd = $_POST['date_end'] ?? null;
-             
-             if (!$appName) {
-                 echo json_encode(['status' => 'error', 'message' => 'App name required']);
-                 break;
-             }
-             
-             // Build WHERE clause - use 'te.' alias for queries that join tables
-             $where = ["app_name = ?"];
-             $whereWithAlias = ["te.app_name = ?"];
-             $params = [$appName];
-             $types = "s";
-             
-             if ($dStart) { 
-                 $where[] = "DATE(created_at) >= ?"; 
-                 $whereWithAlias[] = "DATE(te.created_at) >= ?"; 
-                 $params[] = $dStart; 
-                 $types .= "s"; 
-             }
-             if ($dEnd) { 
-                 $where[] = "DATE(created_at) <= ?"; 
-                 $whereWithAlias[] = "DATE(te.created_at) <= ?"; 
-                 $params[] = $dEnd; 
-                 $types .= "s"; 
-             }
-             
-             $wVisits = implode(" AND ", array_merge($where, ["event_type = 'visit'"]));
-             $wButtons = implode(" AND ", array_merge($where, ["event_type = 'button'"]));
-             $wDocs = implode(" AND ", array_merge($where, ["event_type = 'document'"]));
-             // For queries with JOINs, use the aliased version
-             $wJoinBase = implode(" AND ", $whereWithAlias);
+            $appName = $_POST['app_name'] ?? '';
+            $dStart = $_POST['date_start'] ?? null;
+            $dEnd = $_POST['date_end'] ?? null;
 
-             
-             $metrics = [];
-             
-             // Total Visits
-             $res = DB::query("SELECT COUNT(*) as c FROM tracking_events WHERE $wVisits", $params, $types);
-             $metrics['total_visits'] = $res ? $res->get_result()->fetch_assoc()['c'] : 0;
-             
-             // Student Visits
-             $res = DB::query("SELECT COUNT(*) as c FROM tracking_events WHERE $wVisits AND user_type = 'student'", $params, $types);
-             $metrics['student_visits'] = $res ? $res->get_result()->fetch_assoc()['c'] : 0;
-             
-             // Teacher Visits
-             $res = DB::query("SELECT COUNT(*) as c FROM tracking_events WHERE $wVisits AND user_type = 'teacher'", $params, $types);
-             $metrics['teacher_visits'] = $res ? $res->get_result()->fetch_assoc()['c'] : 0;
-             
-             // Button Clicks
-             $res = DB::query("SELECT COUNT(*) as c FROM tracking_events WHERE $wButtons", $params, $types);
-             $metrics['button_clicks'] = $res ? $res->get_result()->fetch_assoc()['c'] : 0;
-             
-             // Desktop vs Mobile
-             $res = DB::query("SELECT COUNT(*) as c FROM tracking_events WHERE $wVisits AND device_type = 'desktop'", $params, $types);
-             $metrics['desktop_visits'] = $res ? $res->get_result()->fetch_assoc()['c'] : 0;
-             
-             $res = DB::query("SELECT COUNT(*) as c FROM tracking_events WHERE $wVisits AND device_type = 'mobile'", $params, $types);
-             $metrics['mobile_visits'] = $res ? $res->get_result()->fetch_assoc()['c'] : 0;
-             
-             // Countries
-             $countries = [];
-             $res = DB::query("SELECT country_code, COUNT(*) as count FROM tracking_events WHERE $wVisits GROUP BY country_code ORDER BY count DESC LIMIT 10", $params, $types);
-             if ($res && $r = $res->get_result()) {
-                 while ($row = $r->fetch_assoc()) $countries[] = $row;
-             }
-             $metrics['countries'] = $countries;
-             
-             // Button Names
-             $buttons = [];
-             $res = DB::query("SELECT event_name, COUNT(*) as count FROM tracking_events WHERE $wButtons GROUP BY event_name ORDER BY count DESC LIMIT 10", $params, $types);
-             if ($res && $r = $res->get_result()) {
-                 while ($row = $r->fetch_assoc()) $buttons[] = $row;
-             }
-             $metrics['buttons'] = $buttons;
-             
-             // Top 10 Users by Activity
-             $topUsers = [];
-             $res = DB::query("SELECT u.email, u.full_name, COUNT(*) as count FROM tracking_events te LEFT JOIN users u ON te.user_id = u.id WHERE $wJoinBase AND te.user_id IS NOT NULL GROUP BY te.user_id ORDER BY count DESC LIMIT 10", $params, $types);
-             if ($res && $r = $res->get_result()) {
-                 while ($row = $r->fetch_assoc()) $topUsers[] = $row;
-             }
-             $metrics['top_users'] = $topUsers;
-             
-             // Documents (for DViz)
-             if (strtolower($appName) === 'dviz') {
-                 $docMetrics = [];
-                 
-                 // Total opens
-                 $res = DB::query("SELECT COUNT(*) as c FROM tracking_events WHERE $wDocs", $params, $types);
-                 $docMetrics['total_opens'] = $res ? $res->get_result()->fetch_assoc()['c'] : 0;
-                 
-                 // Top documents
-                 $topDocs = [];
-                 $res = DB::query("SELECT document_name as title, COUNT(*) as views FROM tracking_documents WHERE app_name = ? GROUP BY document_name ORDER BY views DESC LIMIT 10", [$appName], "s");
-                 if ($res && $r = $res->get_result()) {
-                     while ($row = $r->fetch_assoc()) $topDocs[] = $row;
-                 }
-                 $docMetrics['top'] = $topDocs;
-                 
-                 $metrics['documents'] = $docMetrics;
-             }
-             
-             echo json_encode(['status' => 'success', 'metrics' => $metrics]);
-             break;
+            if (!$appName) {
+                echo json_encode(['status' => 'error', 'message' => 'App name required']);
+                break;
+            }
+
+            // Build WHERE clause - use 'te.' alias for queries that join tables
+            $where = ["app_name = ?"];
+            $whereWithAlias = ["te.app_name = ?"];
+            $params = [$appName];
+            $types = "s";
+
+            if ($dStart) {
+                $where[] = "DATE(created_at) >= ?";
+                $whereWithAlias[] = "DATE(te.created_at) >= ?";
+                $params[] = $dStart;
+                $types .= "s";
+            }
+            if ($dEnd) {
+                $where[] = "DATE(created_at) <= ?";
+                $whereWithAlias[] = "DATE(te.created_at) <= ?";
+                $params[] = $dEnd;
+                $types .= "s";
+            }
+
+            $wVisits = implode(" AND ", array_merge($where, ["event_type = 'visit'"]));
+            $wButtons = implode(" AND ", array_merge($where, ["event_type = 'button'"]));
+            $wDocs = implode(" AND ", array_merge($where, ["event_type = 'document'"]));
+            // For queries with JOINs, use the aliased version
+            $wJoinBase = implode(" AND ", $whereWithAlias);
+
+
+            $metrics = [];
+
+            // Total Visits
+            $res = DB::query("SELECT COUNT(*) as c FROM tracking_events WHERE $wVisits", $params, $types);
+            $metrics['total_visits'] = $res ? $res->get_result()->fetch_assoc()['c'] : 0;
+
+            // Student Visits
+            $res = DB::query("SELECT COUNT(*) as c FROM tracking_events WHERE $wVisits AND user_type = 'student'", $params, $types);
+            $metrics['student_visits'] = $res ? $res->get_result()->fetch_assoc()['c'] : 0;
+
+            // Teacher Visits
+            $res = DB::query("SELECT COUNT(*) as c FROM tracking_events WHERE $wVisits AND user_type = 'teacher'", $params, $types);
+            $metrics['teacher_visits'] = $res ? $res->get_result()->fetch_assoc()['c'] : 0;
+
+            // Button Clicks
+            $res = DB::query("SELECT COUNT(*) as c FROM tracking_events WHERE $wButtons", $params, $types);
+            $metrics['button_clicks'] = $res ? $res->get_result()->fetch_assoc()['c'] : 0;
+
+            // Desktop vs Mobile
+            $res = DB::query("SELECT COUNT(*) as c FROM tracking_events WHERE $wVisits AND device_type = 'desktop'", $params, $types);
+            $metrics['desktop_visits'] = $res ? $res->get_result()->fetch_assoc()['c'] : 0;
+
+            $res = DB::query("SELECT COUNT(*) as c FROM tracking_events WHERE $wVisits AND device_type = 'mobile'", $params, $types);
+            $metrics['mobile_visits'] = $res ? $res->get_result()->fetch_assoc()['c'] : 0;
+
+            // Countries
+            $countries = [];
+            $res = DB::query("SELECT country_code, COUNT(*) as count FROM tracking_events WHERE $wVisits GROUP BY country_code ORDER BY count DESC LIMIT 10", $params, $types);
+            if ($res && $r = $res->get_result()) {
+                while ($row = $r->fetch_assoc()) $countries[] = $row;
+            }
+            $metrics['countries'] = $countries;
+
+            // Button Names
+            $buttons = [];
+            $res = DB::query("SELECT event_name, COUNT(*) as count FROM tracking_events WHERE $wButtons GROUP BY event_name ORDER BY count DESC LIMIT 10", $params, $types);
+            if ($res && $r = $res->get_result()) {
+                while ($row = $r->fetch_assoc()) $buttons[] = $row;
+            }
+            $metrics['buttons'] = $buttons;
+
+            // Top 10 Users by Activity
+            $topUsers = [];
+            $res = DB::query("SELECT u.email, u.full_name, COUNT(*) as count FROM tracking_events te LEFT JOIN users u ON te.user_id = u.id WHERE $wJoinBase AND te.user_id IS NOT NULL GROUP BY te.user_id ORDER BY count DESC LIMIT 10", $params, $types);
+            if ($res && $r = $res->get_result()) {
+                while ($row = $r->fetch_assoc()) $topUsers[] = $row;
+            }
+            $metrics['top_users'] = $topUsers;
+
+            // Documents (for DViz)
+            if (strtolower($appName) === 'dviz') {
+                $docMetrics = [];
+
+                // Total opens
+                $res = DB::query("SELECT COUNT(*) as c FROM tracking_events WHERE $wDocs", $params, $types);
+                $docMetrics['total_opens'] = $res ? $res->get_result()->fetch_assoc()['c'] : 0;
+
+                // Top documents
+                $topDocs = [];
+                $res = DB::query("SELECT document_name as title, COUNT(*) as views FROM tracking_documents WHERE app_name = ? GROUP BY document_name ORDER BY views DESC LIMIT 10", [$appName], "s");
+                if ($res && $r = $res->get_result()) {
+                    while ($row = $r->fetch_assoc()) $topDocs[] = $row;
+                }
+                $docMetrics['top'] = $topDocs;
+
+                $metrics['documents'] = $docMetrics;
+            }
+
+            echo json_encode(['status' => 'success', 'metrics' => $metrics]);
+            break;
+
+        case 'hard_delete':
+            // Hard delete user - copy to users_dump first, then delete from users
+            $adminEmail = Auth::user()['email'] ?? 'unknown';
+
+            // First, get the user data
+            $userQ = DB::query("SELECT * FROM users WHERE email = ?", [$email], "s");
+            if (!$userQ) {
+                echo json_encode(['status' => 'error', 'message' => 'Database error fetching user']);
+                break;
+            }
+            $userRes = $userQ->get_result();
+
+            if ($userRes->num_rows === 0) {
+                echo json_encode(['status' => 'error', 'message' => 'User not found']);
+                break;
+            }
+
+            $user = $userRes->fetch_assoc();
+            $userId = $user['id'];
+
+            // Prevent deleting admin users
+            if ($user['role'] === 'admin') {
+                echo json_encode(['status' => 'error', 'message' => 'Cannot delete admin users']);
+                break;
+            }
+
+            // Check if users_dump table exists, if not create it
+            $checkTable = DB::connect()->query("SHOW TABLES LIKE 'users_dump'");
+            if ($checkTable->num_rows === 0) {
+                $createTableSQL = "CREATE TABLE IF NOT EXISTS users_dump (
+                    id bigint(20) NOT NULL,
+                    full_name varchar(120) NOT NULL,
+                    email varchar(190) NOT NULL,
+                    password_hash varchar(255) NOT NULL,
+                    phone_e164 varchar(20) NOT NULL,
+                    country_code char(2) DEFAULT NULL,
+                    role enum('student','teacher','admin') NOT NULL DEFAULT 'student',
+                    email_verified_at datetime DEFAULT NULL,
+                    teacher_verified tinyint(1) NOT NULL DEFAULT 0,
+                    status enum('active','suspended','deleted') NOT NULL DEFAULT 'active',
+                    suspended_reason varchar(255) DEFAULT NULL,
+                    consent_at datetime DEFAULT NULL,
+                    created_at datetime NOT NULL,
+                    updated_at datetime NOT NULL,
+                    reward_credits int(11) DEFAULT 0,
+                    last_login_at datetime DEFAULT NULL,
+                    quota_daily int(11) DEFAULT NULL,
+                    quota_monthly int(11) DEFAULT NULL,
+                    deleted_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    deleted_by varchar(190) DEFAULT NULL,
+                    PRIMARY KEY (id, deleted_at)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci";
+                DB::connect()->query($createTableSQL);
+            }
+
+            // Copy user to users_dump
+            $insertSQL = "INSERT INTO users_dump (id, full_name, email, password_hash, phone_e164, country_code, role, email_verified_at, teacher_verified, status, suspended_reason, consent_at, created_at, updated_at, reward_credits, last_login_at, quota_daily, quota_monthly, deleted_at, deleted_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?)";
+
+            $insertResult = DB::query($insertSQL, [
+                $user['id'],
+                $user['full_name'],
+                $user['email'],
+                $user['password_hash'],
+                $user['phone_e164'],
+                $user['country_code'],
+                $user['role'],
+                $user['email_verified_at'],
+                $user['teacher_verified'],
+                $user['status'],
+                $user['suspended_reason'],
+                $user['consent_at'],
+                $user['created_at'],
+                $user['updated_at'],
+                $user['reward_credits'] ?? 0,
+                $user['last_login_at'],
+                $user['quota_daily'],
+                $user['quota_monthly'],
+                $adminEmail
+            ], "isssssssisssssisiis");
+
+            if (!$insertResult) {
+                echo json_encode(['status' => 'error', 'message' => 'Failed to backup user data before deletion']);
+                break;
+            }
+
+            // Delete related records first (foreign key constraints)
+            // User sessions
+            DB::query("DELETE FROM user_sessions WHERE user_id = ?", [$userId], "i");
+            // User email verifications
+            DB::query("DELETE FROM user_email_verifications WHERE user_id = ?", [$userId], "i");
+            // User password resets
+            DB::query("DELETE FROM user_password_resets WHERE user_id = ?", [$userId], "i");
+            // User activity log
+            DB::query("DELETE FROM user_activity_log WHERE user_id = ?", [$userId], "i");
+            // User credit daily
+            DB::query("DELETE FROM user_credit_daily WHERE user_id = ?", [$userId], "i");
+            // User credit monthly
+            DB::query("DELETE FROM user_credit_monthly WHERE user_id = ?", [$userId], "i");
+            // User points
+            DB::query("DELETE FROM user_points WHERE user_id = ?", [$userId], "i");
+            // User point logs
+            DB::query("DELETE FROM user_point_logs WHERE user_id = ?", [$userId], "i");
+            // Teacher verification requests
+            DB::query("DELETE FROM teacher_verification_requests WHERE user_id = ?", [$userId], "i");
+            // Tracking events (optional - keep for analytics?)
+            // DB::query("DELETE FROM tracking_events WHERE user_id = ?", [$userId], "i");
+            // Speech token cost log
+            DB::query("DELETE FROM speech_token_cost_log WHERE user_id = ?", [$userId], "i");
+
+            // Finally, delete the user
+            $deleteResult = DB::query("DELETE FROM users WHERE id = ?", [$userId], "i");
+
+            if ($deleteResult) {
+                error_log("Hard delete: User $email (ID: $userId) permanently deleted by $adminEmail");
+                echo json_encode(['status' => 'success', 'message' => "User $email has been permanently deleted. A backup was saved to users_dump table."]);
+            } else {
+                echo json_encode(['status' => 'error', 'message' => 'Failed to delete user from database']);
+            }
+            break;
 
         default:
             echo json_encode(['status' => 'error', 'message' => 'Invalid action']);
@@ -553,5 +705,3 @@ try {
     error_log("UserAction Error: " . $e->getMessage());
     echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
 }
-
-

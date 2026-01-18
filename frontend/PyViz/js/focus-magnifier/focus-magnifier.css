@@ -1,0 +1,395 @@
+/**
+ * Focus Magnifier - Global Header Feature
+ * Classroom/Presentation support for distant viewing
+ * v2.0 - In-Place Zoom Approach
+ * 
+ * When enabled, clicked elements zoom/scale up in place for better visibility
+ */
+
+/* ==========================================
+   TOGGLE BUTTON STYLES
+   ========================================== */
+.focus-magnifier-toggle {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: linear-gradient(135deg, rgba(30, 41, 59, 0.9) 0%, rgba(51, 65, 85, 0.8) 100%);
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    font-family: 'Outfit', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    color: #94a3b8;
+    user-select: none;
+}
+
+.focus-magnifier-toggle:hover {
+    background: linear-gradient(135deg, rgba(51, 65, 85, 0.9) 0%, rgba(71, 85, 105, 0.8) 100%);
+    border-color: rgba(148, 163, 184, 0.4);
+    color: #e2e8f0;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.focus-magnifier-toggle.active {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.9) 0%, rgba(37, 99, 235, 0.8) 100%);
+    border-color: rgba(96, 165, 250, 0.6);
+    color: #ffffff;
+    box-shadow: 0 0 20px rgba(59, 130, 246, 0.4), 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.focus-magnifier-toggle .fm-icon {
+    font-size: 14px;
+    transition: transform 0.3s ease;
+}
+
+.focus-magnifier-toggle.active .fm-icon {
+    transform: scale(1.2);
+    text-shadow: 0 0 8px rgba(255, 255, 255, 0.5);
+}
+
+.focus-magnifier-toggle .fm-label {
+    display: none;
+}
+
+@media (min-width: 768px) {
+    .focus-magnifier-toggle .fm-label {
+        display: inline;
+    }
+}
+
+/* ==========================================
+   MAGNIFIED ELEMENT STYLES (In-Place Zoom)
+   ========================================== */
+
+/* The magnified element wrapper */
+.fm-magnified-wrapper {
+    position: fixed !important;
+    z-index: 10000 !important;
+    background: linear-gradient(145deg, rgba(15, 23, 42, 0.98) 0%, rgba(30, 41, 59, 0.95) 100%);
+    border: 3px solid #3b82f6;
+    border-radius: 12px;
+    padding: 16px;
+    box-shadow:
+        0 0 40px rgba(59, 130, 246, 0.4),
+        0 20px 60px rgba(0, 0, 0, 0.5);
+    animation: fm-zoom-in 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Label shown above the zoomed element */
+.fm-magnified-label {
+    display: block;
+    font-family: 'Outfit', sans-serif;
+    font-size: 18px;
+    font-weight: 700;
+    color: #ffffff;
+    margin-bottom: 12px;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+}
+
+/* The cloned/zoomed input element */
+.fm-magnified-input {
+    width: 100%;
+    min-width: 400px;
+    max-width: 600px;
+    font-size: 28px !important;
+    font-weight: 600 !important;
+    padding: 16px 20px !important;
+    border: 2px solid rgba(59, 130, 246, 0.5) !important;
+    border-radius: 8px !important;
+    background: rgba(30, 41, 59, 0.9) !important;
+    color: #22c55e !important;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace !important;
+    outline: none !important;
+    box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.3) !important;
+}
+
+.fm-magnified-input:focus {
+    border-color: #60a5fa !important;
+    box-shadow:
+        inset 0 2px 8px rgba(0, 0, 0, 0.3),
+        0 0 20px rgba(59, 130, 246, 0.3) !important;
+}
+
+.fm-magnified-input::placeholder {
+    color: #64748b !important;
+    font-style: italic;
+}
+
+/* For select dropdowns */
+.fm-magnified-select {
+    width: 100%;
+    min-width: 400px;
+    max-width: 600px;
+    font-size: 24px !important;
+    font-weight: 600 !important;
+    padding: 16px 20px !important;
+    border: 2px solid rgba(59, 130, 246, 0.5) !important;
+    border-radius: 8px !important;
+    background: rgba(30, 41, 59, 0.9) !important;
+    color: #22c55e !important;
+    font-family: 'Outfit', sans-serif !important;
+    outline: none !important;
+    cursor: pointer;
+}
+
+.fm-magnified-select option {
+    font-size: 20px;
+    padding: 12px;
+    background: #1e293b;
+    color: #e2e8f0;
+}
+
+/* For textareas */
+.fm-magnified-textarea {
+    width: 100%;
+    min-width: 400px;
+    max-width: 600px;
+    min-height: 150px;
+    font-size: 24px !important;
+    font-weight: 500 !important;
+    padding: 16px 20px !important;
+    border: 2px solid rgba(59, 130, 246, 0.5) !important;
+    border-radius: 8px !important;
+    background: rgba(30, 41, 59, 0.9) !important;
+    color: #22c55e !important;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace !important;
+    outline: none !important;
+    resize: vertical;
+}
+
+/* For buttons - just show them bigger */
+.fm-magnified-button {
+    font-size: 24px !important;
+    font-weight: 700 !important;
+    padding: 16px 32px !important;
+    border-radius: 8px !important;
+    cursor: pointer;
+}
+
+/* Close hint */
+.fm-close-hint {
+    display: block;
+    font-family: 'Outfit', sans-serif;
+    font-size: 12px;
+    color: #64748b;
+    margin-top: 12px;
+    text-align: center;
+}
+
+.fm-close-hint kbd {
+    display: inline-block;
+    padding: 2px 6px;
+    background: rgba(71, 85, 105, 0.5);
+    border: 1px solid rgba(100, 116, 139, 0.5);
+    border-radius: 4px;
+    font-family: monospace;
+    font-size: 11px;
+    color: #94a3b8;
+}
+
+/* Backdrop - subtle darkening */
+.fm-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+    z-index: 9999;
+    opacity: 0;
+    transition: opacity 0.25s ease;
+    /* IMPORTANT: Must be none by default so it doesn't block clicks */
+    pointer-events: none;
+}
+
+.fm-backdrop.visible {
+    opacity: 1;
+    /* Only block clicks when actually visible */
+    pointer-events: auto;
+}
+
+/* Original element highlight when zoomed */
+.fm-original-highlighted {
+    outline: 3px dashed #3b82f6 !important;
+    outline-offset: 2px;
+    opacity: 0.5;
+}
+
+/* ==========================================
+   ANIMATIONS
+   ========================================== */
+@keyframes fm-zoom-in {
+    from {
+        opacity: 0;
+        transform: scale(0.8);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+@keyframes fm-zoom-out {
+    from {
+        opacity: 1;
+        transform: scale(1);
+    }
+
+    to {
+        opacity: 0;
+        transform: scale(0.8);
+    }
+}
+
+/* ==========================================
+   RESPONSIVE ADJUSTMENTS
+   ========================================== */
+@media (max-width: 640px) {
+    .fm-magnified-wrapper {
+        left: 16px !important;
+        right: 16px !important;
+        width: auto !important;
+    }
+
+    .fm-magnified-input,
+    .fm-magnified-select,
+    .fm-magnified-textarea {
+        min-width: unset !important;
+        max-width: 100% !important;
+        font-size: 20px !important;
+    }
+
+    .fm-magnified-label {
+        font-size: 16px;
+    }
+}
+
+/* ==========================================
+   SCREEN ZOOM TOGGLE BUTTON
+   ========================================== */
+.screen-zoom-toggle {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: linear-gradient(135deg, rgba(30, 41, 59, 0.9) 0%, rgba(51, 65, 85, 0.8) 100%);
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    font-family: 'Outfit', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    color: #94a3b8;
+    user-select: none;
+    margin-left: 4px;
+}
+
+.screen-zoom-toggle:hover {
+    background: linear-gradient(135deg, rgba(51, 65, 85, 0.9) 0%, rgba(71, 85, 105, 0.8) 100%);
+    border-color: rgba(148, 163, 184, 0.4);
+    color: #e2e8f0;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.screen-zoom-toggle.active {
+    background: linear-gradient(135deg, rgba(34, 197, 94, 0.9) 0%, rgba(22, 163, 74, 0.8) 100%);
+    border-color: rgba(74, 222, 128, 0.6);
+    color: #ffffff;
+    box-shadow: 0 0 20px rgba(34, 197, 94, 0.4), 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.screen-zoom-toggle .sz-icon {
+    font-size: 14px;
+    transition: transform 0.3s ease;
+}
+
+.screen-zoom-toggle.active .sz-icon {
+    transform: scale(1.2);
+}
+
+.screen-zoom-toggle .sz-label {
+    display: none;
+}
+
+@media (min-width: 768px) {
+    .screen-zoom-toggle .sz-label {
+        display: inline;
+    }
+}
+
+/* ==========================================
+   SCREEN ZOOM LENS (Magnifying Glass)
+   ========================================== */
+.screen-zoom-lens {
+    position: fixed;
+    width: 300px;
+    height: 300px;
+    border: 4px solid rgba(34, 197, 94, 0.8);
+    border-radius: 50%;
+    box-shadow:
+        0 0 30px rgba(34, 197, 94, 0.4),
+        0 0 60px rgba(0, 0, 0, 0.5),
+        inset 0 0 20px rgba(0, 0, 0, 0.3);
+    overflow: hidden;
+    pointer-events: none;
+    z-index: 100000;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    background: #0f172a;
+}
+
+.screen-zoom-lens.visible {
+    opacity: 1;
+}
+
+.screen-zoom-lens-content {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    transform-origin: center center;
+    pointer-events: none;
+}
+
+/* Crosshair in center of lens */
+.screen-zoom-lens::before,
+.screen-zoom-lens::after {
+    content: '';
+    position: absolute;
+    background: rgba(34, 197, 94, 0.5);
+    z-index: 1;
+}
+
+.screen-zoom-lens::before {
+    width: 2px;
+    height: 20px;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.screen-zoom-lens::after {
+    width: 20px;
+    height: 2px;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+/* Screen zoom active indicator on body */
+body.screen-zoom-active {
+    cursor: none;
+}
+
+body.screen-zoom-active * {
+    cursor: none !important;
+}

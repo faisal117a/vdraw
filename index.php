@@ -217,44 +217,34 @@ $currentUser = Auth::user();
         </div>
 
         <!-- Video Section -->
-        <!-- Video Section (Lazy Load) -->
-        <div class="w-full max-w-3xl mx-auto mb-16 rounded-2xl overflow-hidden shadow-2xl border border-slate-700/50 animate-fade-in-up md:h-[400px] relative bg-slate-900 group cursor-pointer"
-            style="animation-delay: 0.2s;"
-            onclick="playVDrawVideo(this)">
+        <!-- Hero Image Section -->
+        <div class="w-full max-w-5xl mx-auto mb-20 relative animate-fade-in-up group" style="animation-delay: 0.2s;">
+            <div class="absolute -inset-1 bg-gradient-to-r from-brand-500 to-purple-600 rounded-2xl blur opacity-20 group-hover:opacity-40 transition duration-1000 group-hover:duration-200"></div>
+            <div class="relative rounded-2xl overflow-hidden shadow-2xl border border-slate-700/50 bg-slate-900">
+                <img src="images/home.png" alt="VDraw Dashboard" class="w-full h-auto object-cover transform group-hover:scale-[1.01] transition-transform duration-700">
 
-            <!-- Cover Image -->
-            <img src="images/pyviz.png" alt="VDraw Demo" class="w-full h-full object-cover opacity-80 group-hover:opacity-60 transition-opacity duration-300">
-
-            <!-- Play Button Overlay -->
-            <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
-                <div class="w-20 h-20 rounded-full bg-brand-600/90 text-white flex items-center justify-center text-4xl shadow-lg group-hover:scale-110 transition-transform duration-300 pl-2">
-                    <i class="fa-solid fa-play"></i>
-                </div>
+                <!-- Overlay Gradient -->
+                <div class="absolute inset-0 bg-gradient-to-t from-slate-900/60 via-transparent to-transparent pointer-events-none"></div>
             </div>
-
-            <video id="vdraw-video" class="w-full h-full absolute inset-0 hidden" controls playsinline>
-                <source src="images/vdraw.mp4" type="video/mp4">
-            </video>
         </div>
 
         <script>
-            function playVDrawVideo(container) {
-                const img = container.querySelector('img');
-                const btn = container.querySelector('div.absolute');
+            // Video playback handler for App cards
+            function playAppVideo(container) {
+                const img = container.querySelector('.app-cover');
+                const btn = container.querySelector('.play-btn');
                 const video = container.querySelector('video');
 
-                // Hide cover and button
-                img.style.display = 'none';
-                btn.style.display = 'none';
+                if (video) {
+                    // Hide cover and button
+                    if (img) img.style.display = 'none';
+                    if (btn) btn.style.display = 'none';
 
-                // Show and play video
-                video.classList.remove('hidden');
-                video.playbackRate = 1.15; // Set speed
-                video.play();
-
-                // Remove onclick handler so clicking controls doesn't re-trigger
-                container.onclick = null;
-                container.classList.remove('cursor-pointer');
+                    // Show and play video
+                    video.classList.remove('hidden');
+                    video.playbackRate = 1.15; // Set speed requested by user
+                    video.play();
+                }
             }
         </script>
 
@@ -299,40 +289,77 @@ $currentUser = Auth::user();
                     // Check if the image file exists
                     $imgPath = 'images/' . $imgFile;
                     $imgExists = file_exists($imgPath);
+
+                    // Check if video file exists
+                    $vidFile = strtolower($app['name']) . '.mp4';
+                    $vidPath = 'images/' . $vidFile;
+                    $vidExists = file_exists($vidPath);
                 ?>
-                    <a href="<?php echo $url; ?>" target="_blank" class="w-full max-w-sm group">
+                    <div class="w-full max-w-sm group">
                         <div class="glass-card h-full p-8 rounded-3xl relative overflow-hidden flex flex-col items-center text-center animate-fade-in-up"
                             style="animation-delay: <?php echo ($index * 0.1); ?>s;">
                             <div
                                 class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r <?php echo $theme['gradient']; ?> transform origin-left scale-x-0 group-hover:scale-x-100 transition-transform duration-500">
                             </div>
 
-                            <?php if ($imgExists): ?>
-                                <div class="w-full mb-6 relative group-hover:-translate-y-2 transition-transform duration-500">
-                                    <img src="images/<?php echo $imgFile; ?>"
+                            <?php if ($vidExists): ?>
+                                <!-- Video Container -->
+                                <div class="w-full mb-6 relative rounded-2xl overflow-hidden shadow-lg border border-slate-700/50 cursor-pointer h-48 bg-slate-900 group/video" onclick="playAppVideo(this)">
+
+                                    <!-- Poster Image -->
+                                    <img src="images/<?php echo $imgExists ? $imgFile : 'favicon.png'; ?>"
                                         alt="<?php echo htmlspecialchars($app['home_title']); ?>"
-                                        class="w-full h-40 object-cover rounded-2xl shadow-lg border border-slate-700/50">
-                                    <div class="absolute -bottom-4 left-1/2 transform -translate-x-1/2 w-12 h-12 rounded-xl <?php echo $theme['icon_bg']; ?> <?php echo $theme['icon_text']; ?> flex items-center justify-center shadow-lg backdrop-blur-md border border-slate-700/50">
-                                        <i class="<?php echo $app['icon_class']; ?>"></i>
+                                        class="app-cover w-full h-full object-cover opacity-90 group-hover/video:opacity-75 transition-opacity duration-300">
+
+                                    <!-- Play Button -->
+                                    <div class="play-btn absolute inset-0 flex items-center justify-center pointer-events-none">
+                                        <div class="w-14 h-14 rounded-full bg-slate-900/50 backdrop-blur-sm border border-white/20 text-white flex items-center justify-center text-2xl shadow-xl group-hover/video:scale-110 group-hover/video:bg-brand-600 transition-all duration-300 pl-1">
+                                            <i class="fa-solid fa-play"></i>
+                                        </div>
+                                    </div>
+
+                                    <!-- Video Element -->
+                                    <video class="w-full h-full absolute inset-0 hidden object-cover" controls playsinline preload="none">
+                                        <source src="images/<?php echo $vidFile; ?>" type="video/mp4">
+                                    </video>
+
+                                    <!-- App Icon Badge (visible only when video not playing) -->
+                                    <div class="play-btn absolute -bottom-0 right-0 p-2 z-10">
+                                        <div class="w-10 h-10 rounded-lg <?php echo $theme['icon_bg']; ?> <?php echo $theme['icon_text']; ?> flex items-center justify-center shadow-lg border border-slate-700/50">
+                                            <i class="<?php echo $app['icon_class']; ?>"></i>
+                                        </div>
                                     </div>
                                 </div>
+                            <?php elseif ($imgExists): ?>
+                                <a href="<?php echo $url; ?>" target="_blank" class="w-full block">
+                                    <div class="w-full mb-6 relative group-hover:-translate-y-2 transition-transform duration-500">
+                                        <img src="images/<?php echo $imgFile; ?>"
+                                            alt="<?php echo htmlspecialchars($app['home_title']); ?>"
+                                            class="w-full h-40 object-cover rounded-2xl shadow-lg border border-slate-700/50">
+                                        <div class="absolute -bottom-4 left-1/2 transform -translate-x-1/2 w-12 h-12 rounded-xl <?php echo $theme['icon_bg']; ?> <?php echo $theme['icon_text']; ?> flex items-center justify-center shadow-lg backdrop-blur-md border border-slate-700/50">
+                                            <i class="<?php echo $app['icon_class']; ?>"></i>
+                                        </div>
+                                    </div>
+                                </a>
                                 <div class="mt-4"></div>
                             <?php else: ?>
-                                <div
-                                    class="w-16 h-16 rounded-2xl <?php echo $theme['icon_bg']; ?> <?php echo $theme['icon_text']; ?> flex items-center justify-center mb-6 text-3xl group-hover:scale-110 group-hover:text-white <?php echo $theme['icon_hover']; ?> transition-all duration-300 icon-glow">
-                                    <i class="<?php echo $app['icon_class']; ?>"></i>
-                                </div>
+                                <a href="<?php echo $url; ?>" target="_blank" class="w-full block">
+                                    <div
+                                        class="w-16 h-16 rounded-2xl <?php echo $theme['icon_bg']; ?> <?php echo $theme['icon_text']; ?> flex items-center justify-center mb-6 text-3xl group-hover:scale-110 group-hover:text-white <?php echo $theme['icon_hover']; ?> transition-all duration-300 icon-glow mx-auto">
+                                        <i class="<?php echo $app['icon_class']; ?>"></i>
+                                    </div>
+                                </a>
                             <?php endif; ?>
 
                             <h3 class="text-2xl font-bold text-white mb-4"><?php echo htmlspecialchars($app['home_title']); ?></h3>
                             <p class="text-slate-400 leading-relaxed text-sm"><?php echo htmlspecialchars($app['home_description']); ?></p>
                             <div
                                 class="mt-auto pt-6 opacity-0 group-hover:opacity-100 transition-opacity transform translate-y-2 group-hover:translate-y-0">
-                                <span class="<?php echo $theme['link_text']; ?> text-sm font-bold flex items-center justify-center gap-2">Launch
-                                    App <i class="fa-solid fa-arrow-right"></i></span>
+                                <a href="<?php echo $url; ?>" target="_blank" class="<?php echo $theme['link_text']; ?> text-sm font-bold flex items-center justify-center gap-2 hover:underline">Launch
+                                    App <i class="fa-solid fa-arrow-right"></i></a>
                             </div>
                         </div>
-                    </a>
+                    </div>
 
                     <?php
                     // Insert Ad after 4th item (index 3) or similar logic if needed
@@ -392,17 +419,12 @@ $currentUser = Auth::user();
 
             <div class="p-8">
                 <div class="flex flex-col md:flex-row gap-6 items-center md:items-start">
-                    <!-- Image -->
-                    <div class="w-20 h-20 md:w-24 md:h-24 shrink-0 rounded-2xl overflow-hidden border-2 border-slate-700 shadow-lg bg-slate-800">
-                        <img src="frontend/images/me.png" alt="Faisal Hassan" class="w-full h-full object-cover">
-                    </div>
-
                     <!-- Info -->
-                    <div class="text-center md:text-left pt-1">
-                        <h3 class="text-2xl font-bold text-white mb-1">Faisal Hassan</h3>
-                        <p class="text-brand-400 text-xs font-medium italic mb-4">a geek, a teacher, a developer</p>
+                    <div class="text-center md:text-left pt-1 w-full">
+                        <h3 class="text-3xl font-bold text-white mb-2">VDraw.cc Team</h3>
+                        <p class="text-brand-400 text-sm font-medium italic mb-6">Innovating Education through Visualization</p>
 
-                        <a href="mailto:hello@vdraw.cc" class="inline-flex items-center gap-2 text-slate-400 hover:text-white text-sm transition-colors group">
+                        <a href="mailto:hello@vdraw.cc" class="inline-flex items-center gap-2 text-slate-400 hover:text-white text-sm transition-colors group justify-center md:justify-start">
                             <i class="fa-regular fa-envelope group-hover:text-brand-400 transition-colors"></i>
                             <span>hello@vdraw.cc</span>
                         </a>
@@ -410,10 +432,10 @@ $currentUser = Auth::user();
                 </div>
 
                 <!-- Quote -->
-                <div class="mt-8 bg-slate-800/50 rounded-xl p-5 relative border border-slate-700/50">
-                    <i class="fa-solid fa-quote-left text-brand-500/20 text-3xl absolute -top-2 -left-2"></i>
-                    <p class="text-slate-300 text-sm leading-relaxed italic relative z-10">
-                        "I developed this suite to bridge the gap between abstract concepts and visual understanding. As a teacher myself, I felt the need for tools that bring modern education to life, contributing to a brighter future for students and educators alike."
+                <div class="mt-8 bg-slate-800/50 rounded-xl p-6 relative border border-slate-700/50">
+                    <i class="fa-solid fa-quote-left text-brand-500/20 text-4xl absolute -top-3 -left-2"></i>
+                    <p class="text-slate-300 text-base leading-relaxed italic relative z-10">
+                        "We developed this suite to bridge the gap between abstract concepts and visual understanding. As educators and developers, we felt the need for tools that bring modern education to life, contributing to a brighter future for students and teachers alike."
                     </p>
                 </div>
             </div>
